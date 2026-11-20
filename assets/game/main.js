@@ -4,10 +4,12 @@ import {createAvatar,avatarFromPerson} from "./avatar.js?v=office-2b-doors-20261
 
 /* A responsive office runtime. 3D art and camera are independent from the existing Supabase UI. */
 const UP=new THREE.Vector3(0,1,0);
+// Camera stands near the window looking SOUTH toward the decorated stage.
+// Previous positive-z follow camera looked north, hiding the entire celebration.
 const MODES={
-  three:{offset:[6.3,7.8,11.0],look:[0,1.1,-2.5],fov:43},
-  close:{offset:[2.4,3.85,5.7],look:[0,1.0,-2.3],fov:48},
-  wide:{offset:[4.0,13.9,15.8],look:[0,.3,-3.5],fov:45}
+  three:{offset:[3.2,7.0,-5.25],look:[-1.25,1.10,5.7],fov:47},
+  close:{offset:[1.70,3.65,-3.15],look:[-.50,1.25,2.4],fov:49},
+  wide:{offset:[1.5,13.6,-6.25],look:[-1.3,.6,8.1],fov:45}
 };
 const TWO_PI=Math.PI*2;
 function v2(x,z){return {x,z};}
@@ -305,7 +307,7 @@ export function mountOffice(host,profile,notice=()=>{}){
       const cfg=MODES[mode],offset=new THREE.Vector3(...cfg.offset);
       const target=hero.group.position.clone();
       const aspectFactor=clamp(camera.aspect,.62,1.8);
-      if(camera.aspect<.75){offset.z+=2;offset.y+=1.5;offset.x-=1.5;}
+      if(camera.aspect<.75){offset.z+=.45;offset.y+=1.65;offset.x-=1.25;}
       if(mode==="wide"&&office.bays>13)offset.y+=Math.min(7,office.bays*.17);
       const desired=target.clone().add(offset);
       camera.position.lerp(desired,Math.min(1,dt*4.3));
@@ -337,6 +339,12 @@ export function mountOffice(host,profile,notice=()=>{}){
       office.twinkle[i].material.emissiveIntensity=.72+Math.sin(elapsed*2.5+i*1.8)*.35;
     }
     renderer.render(scene,camera);
+  }
+  // Establish the correct first frame immediately, without an initial
+  // north-facing camera swing through the window and nearby walls.
+  if(hero){
+    camera.position.copy(hero.group.position).add(new THREE.Vector3(...MODES.three.offset));
+    camera.lookAt(hero.group.position.clone().add(new THREE.Vector3(...MODES.three.look)));
   }
   const prevMode=mode;setCamera(prevMode);render();
   return {
