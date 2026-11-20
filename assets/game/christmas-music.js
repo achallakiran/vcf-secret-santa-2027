@@ -60,7 +60,7 @@ export function createChristmasMusic(){
   let context=null,source=null,gain=null,entered=false;
   function updateGain(){
     if(!gain||!context)return;
-    gain.gain.setTargetAtTime(!muted&&entered?.19:0,context.currentTime,.08);
+    gain.gain.setTargetAtTime((!muted&&entered)? .19 : 0,context.currentTime,.08);
   }
   function unlock(){
     if(!context){
