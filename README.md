@@ -60,6 +60,7 @@ The participant-code flow now opens a new procedural Three.js 3D office scene in
 assets/game/
   avatar.js          # authored articulated procedural character geometry and shared rig
   avatar-parts.js    # expressive face, layered hair, modeled footwear
+  artisan-voxels.js # true high-density voxel face, hair, fabric and shoe detailing
   wardrobe.js        # actual contemporary Indian garment sculptures and detailing
   palette.js         # shared indexed colors including pure black and white
   visual-materials.js# authored procedural garment fabrics and textile patterns
@@ -73,6 +74,20 @@ assets/game/
 ```
 
 The Three.js module is loaded at a pinned CDN version via an import map. This new game scene requires network access and WebGL; the previous static login/backend screens remain as before. We have checked module syntax, DOM references, a mocked run of scalable office generation, avatar animation-rig calls, and representative navigation routes. **Full browser rendering, visual fidelity relative to the reference image, performance on real mobile phones, and end-to-end GitHub Pages gameplay still require live verification.**
+
+### Artisan voxel sculpture v5 — higher-density full-detail characters
+
+The character factory now builds **real extra box voxels**, not merely surface textures or cosmetic labels. The new `assets/game/artisan-voxels.js` creates instanced, individually shaded microvoxels for the expression, layered frontal crown and back of all four hairstyles, front/back clothing embroidery, cuffs, shoulder seams and shoes.
+
+- All player, office coworker and avatar-studio characters use the **same** `createAvatar` factory, now integrating `sculptFaceVoxels`, `sculptHairVoxels`, `sculptGarmentVoxels`, `sculptSleeveVoxels` and `sculptShoeVoxels`.
+- The hairstyle changes silhouette and voxel count: short cropped hair, layered shoulder-length locks, longer back curtain, and a braided ponytail are modeled as distinct volumes.
+- Outfit-specific details: salwar trim and dupatta stitching, suit tailoring and pinstripes, knit snowflake patterns, dress pleats, shirt cuffs and sneaker/formal/shoe eyelets.
+- Each microvoxel is actual 3D geometry, batched into `THREE.InstancedMesh` within its **original articulated parent** (head, torso, arms, legs) to preserve the motion, while reducing draw calls. No distant character impostor, simplified LOD or photo asset is added.
+- Scripted mock-construction tests across six full character variants returned **475–803 additional individual 3D detail voxels** per avatar, grouped into **nine instanced batches**, on top of the preexisting 136–215 sculpted mesh components. The increase varies with haircut and clothing.
+- The pause-menu styling preview, existing avatar saves, swatch choices, Hi/Clap/Dance/Cheer animations, cameras, controls, office environment and Supabase backend are preserved.
+- Game and studio imports now request `voxel-art-v5` through versioned module URLs to avoid stale client caches.
+
+**Verification is technical only:** full character creation and action calls passed scripted geometry tests and JavaScript syntax checks. Browser screenshot quality, iPhone frame rates, and head/hand clipping under live WebGL have **not yet been measured**, especially for events containing many fully sculpted coworkers.
 
 ### Environment polish v1 — implemented in the real 3D office
 
