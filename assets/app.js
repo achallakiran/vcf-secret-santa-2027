@@ -378,6 +378,7 @@ $("invite-cancel").addEventListener("click",closeInvitation);
 $("invite-dialog").addEventListener("close",()=>{
   $("invite-phone").value="";
   transientInvite.participantId=null;
+  clearWhatsAppLink();
 });
 $("invite-form").addEventListener("submit",e=>{
   e.preventDefault();
