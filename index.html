@@ -18,7 +18,7 @@
       <div class="title-wrap"><h1 class="voxel-title"><span class="red">SECRET</span><span class="green">SANTA</span></h1><div class="year" id="hero-year">2026</div></div>
       <p class="intro">A little mystery. A lot of Christmas cheer.</p>
       <form id="entry-form" class="entry-form">
-        <label for="entry-code">YOUR INVITATION CODE</label>
+        <label for="entry-code">YOUR INVITATION CODE</label><p id="entry-event" class="field-note" aria-live="polite">Open the event link shared by your organizer.</p>
         <div class="entry-row"><input id="entry-code" type="text" maxlength="4" inputmode="numeric" autocomplete="one-time-code" placeholder="••••" pattern="[0-9]{4}" required aria-label="Four-digit invitation code"/><button type="submit" class="arrow-button" aria-label="Enter office">➜</button></div>
         <p id="entry-note" class="field-note" aria-live="polite">Enter the four digits shared by your organizer. Open your event invitation link first.</p>
       </form>
@@ -30,11 +30,12 @@
     <header class="admin-header"><a class="back" href="./">← Return to Christmas</a><span>SECRET SANTA · ORGANIZER</span><button id="sign-out" class="small-outline hidden">Sign out</button></header>
     <div class="admin-intro"><p class="eyebrow">THE CONTROL ROOM</p><h2>Your Christmas office<br/><em>starts here.</em></h2><p>Create an event, invite colleagues, and keep the surprise safely hidden.</p></div>
     <section id="auth-area" class="panel auth-panel">
-      <div class="section-head"><h3>Organizer sign in</h3><span class="chip">SECURE ACCESS</span></div>
+      <div class="section-head"><h3>Organizer console</h3><span class="chip">PIN ACCESS</span></div>
       <form id="auth-form" class="stack">
-        <label>Administrator PIN<input type="password" id="auth-pin" inputmode="numeric" autocomplete="off" maxlength="12" pattern="[0-9]{4,12}" placeholder="••••" required/></label>
-        <div class="button-row"><button type="submit" class="primary" id="login-btn">Enter console →</button></div>
-      </form><p class="muted">No email or Supabase password needed. The organizer PIN is checked by the protected backend. You can change it after signing in.</p>
+        <label>Administrator PIN<input type="password" id="admin-pin" inputmode="numeric" pattern="[0-9]{4,12}" minlength="4" maxlength="12" autocomplete="off" placeholder="••••" required/></label>
+        <button type="submit" class="primary" id="login-btn">Unlock organizer console →</button>
+      </form>
+      <p class="muted">No email or Supabase account is needed. This PIN is verified securely on the server. Change the temporary PIN after entering.</p>
     </section>
     <section id="dashboard" class="hidden">
       <div class="dashboard-row"><span id="signed-in-user" class="muted"></span><button id="refresh-events" class="small-outline">↻ Refresh</button></div>
@@ -90,6 +91,50 @@
       </section>
       <button type="button" id="player-sign-out" class="small-outline">Exit to Christmas title</button>
     </section>
+  </main>
+  <main id="player" class="admin page hidden">
+    <header class="admin-header">
+      <span>✦ SECRET SANTA · MY CORNER</span>
+      <div class="button-row"><button type="button" id="player-refresh" class="small-outline" title="Refresh personal data">↻</button><button type="button" id="player-logout" class="small-outline">Exit</button></div>
+    </header>
+    <div class="admin-intro"><p class="eyebrow">THE CHRISTMAS OFFICE</p><h2 id="player-greeting">Welcome, Santa!</h2><p id="player-event-name"></p></div>
+    <section class="panel">
+      <div class="section-head"><h3>My personal corner</h3><span class="chip">PRIVATE</span></div>
+      <p class="muted">Your avatar will explore the Christmas office in the next game milestone. Your wishlist and daily Secret Santa tasks are already connected to Supabase.</p>
+      <h4>My wishlist</h4>
+      <div id="wishlist-items" class="mini-list"></div>
+      <form id="wishlist-form" class="form-row">
+        <label class="grow">Add a wish<input id="wish-input" maxlength="240" placeholder="A thoughtful book, a desk plant…" required/></label>
+        <button class="primary" type="submit">+ Add wish</button>
+      </form>
+    </section>
+    <section class="panel">
+      <div class="section-head"><h3>Tasks from my anonymous Santa</h3><span class="chip">DAILY</span></div>
+      <p class="muted">Your Santa decides when a task has been completed. Scheduled tasks appear on their assigned date.</p>
+      <div id="received-tasks" class="mini-list"></div>
+    </section>
+    <section class="panel" id="my-child-panel">
+      <div class="section-head"><h3>My Secret Child</h3><button type="button" id="reveal-child" class="small-outline">◉ Reveal privately</button></div>
+      <div id="child-private-content" class="hidden">
+        <h4 id="child-name"></h4>
+        <p class="eyebrow">THEIR WISHLIST</p>
+        <div id="child-wishlist" class="mini-list"></div>
+        <label class="toggle-line"><input type="checkbox" id="gift-purchased"/> I've purchased a gift for my Secret Child</label>
+        <h4>Tasks for my Child</h4>
+        <div id="my-child-tasks" class="mini-list"></div>
+        <form id="task-form" class="form-row">
+          <label class="grow">New cheerful task<input id="task-text" maxlength="1000" placeholder="Make three colleagues smile…" required/></label>
+          <label>Task date<input id="task-date" type="date" required/></label>
+          <button type="submit" class="primary">+ Assign</button>
+        </form>
+        <h4>A heartfelt Christmas message</h4>
+        <textarea id="santa-message" class="message-input" maxlength="5000" rows="4" placeholder="Tell your Child something warm and special…"></textarea>
+        <button type="button" class="secondary" id="save-message">Save private message</button>
+        <p class="muted small">Your message remains hidden from your Child until the organizer-controlled final ceremony.</p>
+      </div>
+      <p class="muted" id="no-child-label">Your Secret Child is concealed. Reveal only when you are somewhere private.</p>
+    </section>
+    <p class="admin-footer">The full voxel office and finale are under development. Your personal information is saved securely.</p>
   </main>
   <div class="toast hidden" id="toast" role="status" aria-live="polite"></div>
   <script type="module" src="./assets/app.js"></script>
