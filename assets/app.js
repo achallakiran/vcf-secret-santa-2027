@@ -251,8 +251,8 @@ $("entry-form").addEventListener("submit", withBusy(async e => {
 }));
 $("auth-form").addEventListener("submit", withBusy(async e => {
   e.preventDefault();
-  const result = await gateway("admin_login", {pin:$("auth-pin").value});
-  $("auth-pin").value = "";
+  const result = await gateway("admin_login", {pin:$("admin-pin").value});
+  $("admin-pin").value = "";
   saveSession(result);
   await refreshEvents();
   toast("Organizer console unlocked.");
