@@ -51,14 +51,8 @@ class Navigation{
     const r=this.office.room;
     if(x<r.left+.35||x>r.right-.35||
       z<r.front+.34||z>r.back-.35)return true;
-    // The west perimeter is solid except for the real door breaks every
-    // four workstations. Walking through a door leads into a shallow alcove.
-    // There is no invisible wall across the door, or unrestricted walking
-    // along the exterior of the building.
-    if(x<r.mainLeft+.08){
-      const validDoor=(this.office.doorCenters||[]).some(center=>Math.abs(z-center)<.75);
-      if(!validDoor)return true;
-    }
+    // Passage mouths are dark non-playable blackboxes. Navigation never
+    // crosses the west wall or enters a room beyond it.
     for(const c of this.office.colliders){
       if(Math.abs(x-c.x)<c.hx+.25 && Math.abs(z-c.z)<c.hz+.25)return true;
     }
