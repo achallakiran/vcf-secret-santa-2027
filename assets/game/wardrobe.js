@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import {clothMaterial} from "./visual-materials.js?v=visual-atelier-v2";
 
 /**
  * Contemporary Indian wardrobe detailing for the existing humanoid game rig.
@@ -8,7 +9,7 @@ import * as THREE from "three";
 const GOLD=0xd6b477,IVORY=0xf4e4cd,PEARL=0xf7ebdd,INK=0x263a4a;
 export function sculptWardrobe(hips,p,kit){
   const {part,orb,mat}=kit;
-  const w=p.build||1,top=mat(p.colorHex),highlight=mat(0xf1d9ac,.53,.12);
+  const w=p.build||1,top=clothMaterial(p.outfit,p.colorHex),highlight=mat(0xf1d9ac,.53,.12);
   const bone=mat(IVORY),ink=mat(INK),gold=mat(GOLD,.45,.20);
   const trim=mat(p.outfit==="salwar"?0xe2ad78:0xf1d9be);
   const pearl=mat(PEARL,.38,.06),skin=mat(p.skinHex);
@@ -61,7 +62,7 @@ export function sculptWardrobe(hips,p,kit){
     shoulderDetail(gold);
   }else if(p.outfit==="suit"){
     // Tailored blazer: proper overlapping panels, angled lapels, pockets.
-    const blazer=mat(0x31445d),blazerLight=mat(0x465c70);
+    const blazer=top,blazerLight=mat(new THREE.Color(p.colorHex).offsetHSL(0,0,.085));
     for(const side of [-1,1]){
       const panel=part(hips,.34,.57,.10,blazer,side*.169,.341,.234,.065);
       panel.rotation.z=-side*.035;
