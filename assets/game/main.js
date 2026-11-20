@@ -48,8 +48,17 @@ class Navigation{
   world(x,z){return v2(this.office.room.left+(x+.5)*this.cell,this.office.room.front+(z+.5)*this.cell);}
   cellAt(x,z){return {x:Math.floor((x-this.office.room.left)/this.cell),z:Math.floor((z-this.office.room.front)/this.cell)};}
   collision(x,z){
-    if(x<this.office.room.left+.35||x>this.office.room.right-.35||
-      z<this.office.room.front+.34||z>this.office.room.back-.35)return true;
+    const r=this.office.room;
+    if(x<r.left+.35||x>r.right-.35||
+      z<r.front+.34||z>r.back-.35)return true;
+    // The west perimeter is solid except for the real door breaks every
+    // four workstations. Walking through a door leads into a shallow alcove.
+    // There is no invisible wall across the door, or unrestricted walking
+    // along the exterior of the building.
+    if(x<r.mainLeft+.08){
+      const validDoor=(this.office.doorCenters||[]).some(center=>Math.abs(z-center)<.75);
+      if(!validDoor)return true;
+    }
     for(const c of this.office.colliders){
       if(Math.abs(x-c.x)<c.hx+.25 && Math.abs(z-c.z)<c.hz+.25)return true;
     }
