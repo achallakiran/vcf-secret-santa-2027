@@ -39,6 +39,11 @@ $("player-music").addEventListener("click",()=>{
   christmasMusic.toggle();
   syncChristmasMusic();
 });
+$("office-view").addEventListener("pointerdown",()=>{
+  // Restored mobile sessions have no fresh login gesture; the first in-game
+  // touch is a valid moment to resume the soundtrack without autoplay errors.
+  if(player&&!christmasMusic.muted)christmasMusic.unlock();
+},{passive:true});
 syncChristmasMusic();
 const codes=new Map();
 function toast(message,error=false){
