@@ -1,6 +1,7 @@
 
 "use strict";
 import {createVisualAvatarEditor} from "./game/avatar-editor.js?v=visual-atelier-v3";
+import {createChristmasMusic} from "./game/christmas-music.js?v=jingle-bells-v1";
 const GATEWAY="https://fwrievuhudjkeffmszqf.supabase.co/functions/v1/ss-gateway";
 const PUBLIC_KEY="sb_publishable_SJo2kgXdHNFZI65iAvQmxw_q56zuVLO";
 const PARAMS=new URLSearchParams(location.search);
@@ -23,6 +24,22 @@ let officeRuntime=null,officeLoading=null,officeKey=null,officeNoticeTimer=null;
 let avatarBaseline=null,avatarPreviewTimer=null;
 let avatarStudio=null,avatarStudioLoading=null,activeStudioTab="look",visualEditor=null;
 let adminEditingParticipant=null;
+const christmasMusic=createChristmasMusic();
+function syncChristmasMusic(){
+  const button=$("player-music");
+  if(!button)return;
+  const muted=christmasMusic.muted;
+  button.textContent=muted?"♩":"♫";
+  button.title=muted?"Play Jingle Bells":"Mute Jingle Bells";
+  button.setAttribute("aria-label",button.title);
+  button.setAttribute("aria-pressed",String(muted));
+}
+$("player-music").addEventListener("click",()=>{
+  christmasMusic.unlock();
+  christmasMusic.toggle();
+  syncChristmasMusic();
+});
+syncChristmasMusic();
 const codes=new Map();
 function toast(message,error=false){
   const el=$("toast");el.textContent=message;
@@ -112,6 +129,7 @@ function setSession(info){
 function endSession(){
   if(adminEditingParticipant)closeAdminCharacterEditor();
   document.body.classList.remove("office-playing");
+  christmasMusic.leave();
   if(avatarStudio){avatarStudio.dispose();avatarStudio=null;}
   avatarStudioLoading=null;
   if(officeRuntime){officeRuntime.dispose();officeRuntime=null;}
@@ -650,6 +668,7 @@ async function loadPlayer(){
   $("admin").classList.add("hidden");
   $("player").classList.remove("hidden");
   document.body.classList.add("office-playing");
+  christmasMusic.enter();
   void enterOffice(player);
   $("player-greeting").textContent="✦ "+player.me.display_name;
   $("player-event-title").textContent=player.event.title;
@@ -723,6 +742,9 @@ $("entry-code").addEventListener("input",e=>{
 $("entry-form").addEventListener("submit",run(async e=>{
   e.preventDefault();
   if(!EVENT_SLUG)throw Error("Use the event-specific invitation link sent by your organizer.");
+  // Unlock Web Audio inside the user's form-submit gesture. Audio remains
+  // silent until the invitation is verified and the office actually opens.
+  christmasMusic.unlock();
   const result=await api("player_login",{event_slug:EVENT_SLUG,code:$("entry-code").value});
   setSession(result);
   $("entry-code").value="";
@@ -769,6 +791,7 @@ $("assign-btn").addEventListener("click",run(async()=>{
   toast(res.assigned+" Secret Santa pairs created.");
 }));
 $("player-pause").addEventListener("click",()=>{
+  christmasMusic.unlock();
   const menu=$("player-menu");
   if(!menu.classList.contains("hidden")){closePlayerMenu();return;}
   menu.classList.remove("hidden");
@@ -781,6 +804,7 @@ $("player-close").addEventListener("click",closePlayerMenu);
 const OFFICE_ACTIONS=["hi","dance","clap","cheer"];
 let lastOfficeAction=-1;
 $("player-action").addEventListener("click",()=>{
+  christmasMusic.unlock();
   if(!$("player-menu").classList.contains("hidden"))return;
   if(!officeRuntime){officeToast("Office is still loading.");return;}
   // Four actions are equally likely on the first press. Subsequent presses
