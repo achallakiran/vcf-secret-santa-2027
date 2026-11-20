@@ -1,60 +1,41 @@
 # VCF Voxel Secret Santa
 
-Festive browser-based Secret Santa experience for multiple offices and annual events.
+A multi-event Christmas office Secret Santa experience. Current milestone: **PIN-only admin console and participant personal dashboard**, with the detailed 3D voxel office still in development.
 
-## Current build — Phase 1 organizer foundation
+## Access
 
-This repository currently contains:
-- A responsive black-background Christmas landing page with animated snowfall, voxel-inspired title lettering, clear gift-giving rules, and the four-digit code UI.
-- An authenticated organizer console for creating an event, adding/editing employees, assigning workstations, issuing and regenerating four-digit invitation codes, and opening prefilled WhatsApp invitations.
-- A transactionally generated one-to-one Secret Santa assignment cycle; each participant gives to exactly one different participant and receives from exactly one.
-- Supabase Edge Function source under `supabase/functions/ss-organizer/`.
-- The eight existing, isolated Secret Santa database tables, created under the `ss_` prefix in Supabase project `fwrievuhudjkeffmszqf`.
-
-**Not yet implemented:** Participant-code redemption, playable voxel office, customizable avatars in the UI, wishlists and daily tasks UI, personalized hints, or final-stage reveal. The landing page clearly explains that player entry is not enabled. Do not send invitations to participants as if the game were ready to play.
+- Admin console: `https://achallakiran.github.io/vcf-secret-santa-2027/?admin=1`. Enter the temporary administrator PIN chosen for this project. **No Supabase email or password is required.**
+- Player: open the **event-specific** invitation URL, `https://achallakiran.github.io/vcf-secret-santa-2027/?event=<event-slug>`, then enter the organizer-provided four-digit invitation code. **No player registration or additional credentials.**
+- From the admin console: create an event, add colleagues, record optional WhatsApp numbers and desk IDs, generate and share their codes, and lock randomized one-to-one Secret Santa assignments.
+- Players can edit itemized wishlists, receive scheduled daily tasks without learning their Santa's identity, assign tasks to their own Secret Child and mark them complete, record gift status, and write a private finale message.
 
 ## Deployment
 
-GitHub repository: https://github.com/achallakiran/vcf-secret-santa-2027
+Enable **Settings → Pages → Deploy from branch → main / (root)** to serve `index.html`. The published Pages URL has not yet been independently confirmed live.
 
-To publish with GitHub Pages:
-1. Open the repository's **Settings → Pages**.
-2. Select **Deploy from a branch**, branch **main**, directory **/(root)** and save.
-3. The expected site address is `https://achallakiran.github.io/vcf-secret-santa-2027/`. This URL should not be advertised as live until GitHub Pages has been enabled and verified.
-4. Visit `?admin=1` on the published site to reach the organizer console.
+The frontend consists of `index.html`, `assets/app.js`, and `assets/styles.css` with no package build step; Supabase connectivity is required. The visual office is presently a placeholder.
 
-Only `index.html`, `assets/app.js`, and `assets/styles.css` are required for this static frontend. An internet connection is required for organizer authentication and Supabase operations.
+## Backend
 
-## Organizer workflow
+Supabase project: `fwrievuhudjkeffmszqf` (the owner's existing project).
 
-1. Visit the organizer console; create a Supabase email/password account or sign in. If the shared project's authentication settings require email confirmation, follow the verification email before signing in.
-2. Create an event; the server generates a unique event slug for a shareable event URL.
-3. Add each participant, optionally with an international WhatsApp number (`+91...`) and desk ID.
-4. Upon registration, the new four-digit code is displayed **once** in the organizer's current browser tab. Use WhatsApp or Copy while the code is still visible. After a refresh, use **New code** to rotate it; rotation invalidates the previous code.
-5. When the roster is final, generate and lock assignments. The organizer console can see the pairings, while the participant interface (to be built later) must never expose the complete assignment table.
+- Eight application tables under the `ss_` prefix, plus security-only `ss_auth_guard` for verifier/lockout state.
+- Active Edge Function: `supabase/functions/ss-gateway/index.ts` (`verify_jwt=false`, **custom server-side authentication**).
+- Old email-based Edge Function: `supabase/functions/ss-organizer/index.ts`, retired (returns HTTP 410).
+- Admin PIN verifier: salted PBKDF2; short-lived server-signed admin sessions and rate-limited attempts.
+- Player code verifier: server-keyed fingerprint; event-scoped sessions, date-aware tasks, code rotation, and server-filtered player data.
+- Public frontend contains only the Supabase **publishable key**, not the service-role key.
+- Existing unrelated tables, project-wide Auth settings, and data have not been changed.
 
-**Security:** The four-digit codes are not stored in plaintext in the database. The Edge Function calculates a keyed HMAC; credential verification and rate-limited redemption are still outstanding. Client-to-table reads are disabled by default, and only the authorized Edge Function operates on the new tables. Do not expose `service_role` secrets in the browser.
+**Security note:** A common four-digit admin PIN is a weak temporary credential for a low-stakes prototype. Change it to a longer PIN inside the admin console before sharing widely. This build currently has **one global administrator role for all Secret Santa events**; per-office organizers will need event-scoped admin permissions before separate offices are onboarded.
 
-## Architecture
+## Verification status
 
-- Frontend: plain HTML/CSS/JavaScript, GitHub Pages, no build system.
-- Auth: existing Supabase Auth email/password for organizers, without changing other applications' Auth settings.
-- Backend: Supabase `ss-organizer` Edge Function with authenticated user checks and organizer ownership checks for every event operation.
-- Database: eight `public.ss_*` tables with foreign keys, uniqueness constraints, and RLS enabled.
-- Assignment/registration functions: `ss_register_participant`, `ss_rotate_access_code`, `ss_lock_assignments`. These are invoker-security functions executable only by `service_role`.
+Database registration, assignment generation and login-attempt functions were tested in rollback-only transactions. Frontend JavaScript syntax and DOM element references were checked. The Edge Function is deployed. **Live browser login, end-to-end API requests and GitHub Pages availability have not yet been independently tested.**
 
-Existing Supabase tables belonging to other apps were not modified. This project intentionally shares the existing database without changing project-wide authentication configuration.
+## Remaining development
 
-### Next engineering milestones
-
-- Secure, rate-limited participant code redemption and device session binding, with explicit privacy tests.
-- Full profile/wishlist/daily task APIs with role-dependent disclosures.
-- Reusable, detailed voxel avatar editor and office scene with wall desks, double-sided workstations, single far-end window and Christmas decorations.
-- NPC greeting and tap-to-move gameplay, daily deterministic desk-object scenes, truthful personalized hints.
-- Organizer-controlled Christmas stage and Secret Santa reveal.
-
-## Notes
-
-- The branding on the initial landing page says **Secret Santa 2026**, matching the original brief, although this repository is named `vcf-secret-santa-2027`. Event titles are configurable in the organizer console.
-- The static frontend includes the Supabase **publishable** key (safe to ship by design), never the secret/service-role key.
-- This is an initial organizer foundation, not yet a complete playable game.
+- Visual 3D voxel office and detailed character customization.
+- NPC movement, tap-to-walk interactions and daily shared office snapshots.
+- Truthful personalized daily hints.
+- Organizer-controlled final Christmas stage and reveal.
