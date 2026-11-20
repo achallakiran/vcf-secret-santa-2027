@@ -17,7 +17,10 @@ const shade=(hex,l)=>{
 };
 export function sculptHead(head,p,kit){
   const {part,orb,mat}=kit;
-  const female=p.gender==="female",style=p.hairstyle%4;
+  const female=p.gender==="female",cut=Number(p.hairstyle)||0;
+  const style=cut<4?cut:cut<=6?0:cut<=9?1:cut<=12?2:0;
+  const parting=cut>=4&&cut<=12?(cut-4)%3: -1; // 0 left, 1 right, 2 middle
+  const faded=cut>=13,shortSides=cut===13||cut===15||cut===19;
   const skin=mat(p.skinHex,.76),skinLight=mat(shade(p.skinHex,.045),.78);
   const skinShade=mat(shade(p.skinHex,-.055),.82);
   const hair=mat(p.hairHex,.8),high=mat(shade(p.hairHex,.10),.74);
@@ -78,17 +81,30 @@ export function sculptHead(head,p,kit){
   part(head,.14,.023,.019,mat(0xf5b0a0),0,.103,.436,.008).castShadow=false;
   for(const side of [-1,1])
     orb(head,.017,skinShade,side*.137,.171,.412,.75,.6,.6).castShadow=false;
-  // Male styles differ in silhouette and beard. Beard is optional and tied
-  // to the selected hair style, not forced onto every male employee.
-  if(!female&&(style===1||style===3)){
-    for(const side of [-1,1]){
-      part(head,.11,.21,.074,deep,side*.39,.090,.266,.037);
-      part(head,.22,.085,.065,deep,side*.20,-.043,.333,.039);
+  // Separate facial hair geometry: moustaches and beards never force each other.
+  if(!female){
+    const face=p.facialHair||"none";
+    const beard=face.startsWith("beard")||face.startsWith("combo");
+    const moustache=face.startsWith("moustache")||face.startsWith("combo");
+    const full=face.endsWith("full"),handlebar=face==="moustache-handlebar";
+    if(beard){
+      for(const side of [-1,1]){
+        part(head,full?.17:.115,full?.27:.19,.077,deep,side*.39,.085,.281,.041);
+        part(head,.20,full?.15:.09,.074,hair,side*.205,full?-.055:-.018,.367,.038);
+        if(full)part(head,.10,.16,.06,deep,side*.35,-.075,.32,.025);
+      }
+      part(head,.31,full?.16:.08,.080,deep,0,full?-.099:-.063,.334,.025);
     }
-    const left=part(head,.135,.056,.050,hair,-.080,.210,.419,.022);
-    const right=part(head,.135,.056,.050,hair,.080,.210,.419,.022);
-    left.rotation.z=-.12;right.rotation.z=.12;
-    part(head,.26,.055,.070,deep,0,-.07,.309,.026);
+    if(moustache){
+      for(const side of [-1,1]){
+        const whisker=part(head,handlebar?.17:.14,handlebar?.075:.055,.072,hair,side*.085,.194,.461,.025);
+        whisker.rotation.z=side*(handlebar?.25:.10);
+        if(handlebar){
+          const tip=part(head,.085,.042,.060,hair,side*.212,.215,.445,.021);
+          tip.rotation.z=side*.53;
+        }
+      }
+    }
   }
   // Hair is now constructed as a stepped crown with overlapping voxel
   // locks and *different length/volume silhouettes* for all four styles.
@@ -107,10 +123,10 @@ export function sculptHead(head,p,kit){
     const x=(j-(fringeCount-1)/2)*(.79/fringeCount);
     const offset=(j*3+style)%3;
     const height=.17+offset*.035;
-    const sweep=style===3?-.065:style===1?.064:.018;
+    const sweep=parting===0?.12:parting===1?-.12:parting===2?((j-(fringeCount-1)/2)>0?.10:-.10):style===3?-.065:style===1?.064:.018;
     const lock=part(head,.195,height,.205,j%3===0?high:j%3===1?middle:hair,
       x+sweep,.777-offset*.022,.365,.038);
-    lock.rotation.z=(j-(fringeCount-1)/2)*-.073;
+    lock.rotation.z=(j-(fringeCount-1)/2)*-.073+(parting===0?-.20:parting===1?.20:0);
   }
   if(style===0){
     // Smart short layered hair / rounded female bob.
@@ -156,20 +172,67 @@ export function sculptHead(head,p,kit){
       tail.rotation.z=(j-1.5)*.076;
     }
   }
-  if(p.glasses){
-    const frame=mat(0x644c40,.39,.17);
-    const lens=new THREE.MeshPhysicalMaterial({
-      color:0xd5eef3,roughness:.12,metalness:0,transparent:true,
-      opacity:.10,depthWrite:false
-    });
-    for(const x of [-.225,.225]){
-      for(const y of [.51,.325])part(head,.269,.027,.046,frame,x,y,.484,.017);
-      for(const xx of [-.134,.134])part(head,.030,.19,.043,frame,x+xx,.418,.481,.013);
-      part(head,.22,.14,.007,lens,x,.415,.481,.029).castShadow=false;
+  // Visible three-dimensional scalp part, sweeping locks and short tapered sides.
+  if(parting>=0){
+    const partX=parting===0?-.22:parting===1?.22:0;
+    for(let j=0;j<8;j++){
+      const z=-.29+j*.094;
+      part(head,.023,.024,.074,mat(shade(p.skinHex,-.08)),partX,.936-j*.003,z,.009);
     }
-    part(head,.18,.031,.05,frame,0,.428,.491,.013);
-    for(const side of [-1,1])
-      part(head,.13,.032,.035,frame,side*.49,.445,.356,.015);
+    for(let j=0;j<6;j++){
+      const start=parting===0?-.16:parting===1?.16:(j%2?-.07:.07);
+      const direction=parting===0?1:parting===1?-1:j%2?1:-1;
+      const lock=part(head,.16,.095,.26,j%2?high:hair,start+direction*(.06+j*.105),
+        .882-j*.014,.30-j*.016,.035);
+      lock.rotation.z=direction*.16;
+    }
+  }
+  if(faded){
+    const sides=cut===14||cut===16?0.73:0.43;
+    for(const sign of [-1,1]){
+      // A close crop overlays long side locks and creates a pronounced fade.
+      part(head,.071,.40,.58,mat(shade(p.skinHex,-.04)),sign*.552,.51,-.025,.032);
+      for(let j=0;j<4;j++)part(head,.09,.08,.48,j%2?middle:deep,sign*.552,.62-j*.075,-.04,.020)
+        .scale.set(1,sides+(3-j)*.05,1);
+    }
+    if(cut===14||cut===15||cut===18){
+      for(let j=0;j<6;j++){
+        const q=part(head,.15,.19,.24,j%2?high:hair,(j-2.5)*.14,.995,.25,.045);
+        q.rotation.z=cut===18?-.43:cut===15?.4:.14;
+      }
+    }else if(cut===16||cut===17){
+      for(let j=0;j<7;j++){
+        const q=part(head,.13,.21,.16,j%2?deep:high,(j-3)*.135,1.01,
+          .21+Math.sin(j*2)*.075,.043);
+        q.rotation.z=cut===16?(j-3)*.13:Math.sin(j*1.8)*.22;
+      }
+    }
+  }
+  if(p.glassesStyle&&p.glassesStyle!=="none"){
+    const kind=p.glassesStyle,frame=mat(p.glassesHex??0x644c40,.39,.17);
+    const lens=new THREE.MeshPhysicalMaterial({color:0xd5eef3,roughness:.12,metalness:0,transparent:true,opacity:.09,depthWrite:false});
+    for(const x of [-.225,.225]){
+      if(kind==="round"||kind==="aviator"){
+        const radius=kind==="round"?.145:.161;
+        const ring=new THREE.Mesh(new THREE.TorusGeometry(radius,.018,5,20),frame);
+        ring.position.set(x,.415,.492);ring.scale.y=kind==="aviator"?1.14:1;
+        head.add(ring);
+        const glass=new THREE.Mesh(new THREE.CircleGeometry(radius-.019,20),lens);
+        glass.position.set(x,.415,.488);glass.scale.y=kind==="aviator"?1.14:1;
+        head.add(glass);
+      }else{
+        const wide=kind==="cat-eye"?.30:.272;
+        const high=kind==="square"?.29:kind==="cat-eye"?.225:.20;
+        for(const dy of [-1,1]){
+          const top=part(head,wide,.027,.044,frame,x,.415+dy*high/2,.487,.012);
+          top.rotation.z=kind==="cat-eye"?dy*(x<0?.16:-.16):0;
+        }
+        for(const sign of [-1,1])part(head,.029,high,.044,frame,x+sign*wide/2,.415,.487,.012);
+        part(head,wide-.046,high-.03,.007,lens,x,.415,.486,.011).castShadow=false;
+      }
+    }
+    part(head,.17,.028,.05,frame,0,.432,.496,.012);
+    for(const sign of [-1,1])part(head,.14,.03,.043,frame,sign*.49,.438,.37,.012);
   }
   return head;
 }
@@ -183,8 +246,8 @@ export function sculptFoot(pivot,p,kit){
     (p.footwear==="auto"?auto:p.footwear):auto;
   const sneaker=style==="sneakers",formal=style==="formal",flat=style==="flats";
   const sandal=style==="sandals";
-  const sole=mat(sneaker?0xf4f0e9:formal?0x343033:flat?0x8c5855:0x9e624b,.69);
-  const upper=mat(sneaker?0xe1e0d8:formal?0x4c3b36:flat?0xb36e6a:0xb26f56,.73);
+  const sole=mat(p.shoeHex??(sneaker?0xf4f0e9:formal?0x343033:flat?0x8c5855:0x9e624b),.69);
+  const upper=mat(p.shoeHex??(sneaker?0xe1e0d8:formal?0x4c3b36:flat?0xb36e6a:0xb26f56),.73);
   const trim=mat(sneaker?0xf9f6ef:formal?0xb6a084:flat?0xe8c1a8:0xe9c38b,.52);
   // All footwear shares the same foot pivot for consistent animation.
   part(pivot,.305,flat?.09:sandal?.085:.147,.45,upper,0,-.552,.132,.072);
