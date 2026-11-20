@@ -1,6 +1,8 @@
 import * as THREE from "three";
+import {sculptHead,sculptFoot} from "./avatar-parts.js";
+import {sculptWardrobe} from "./wardrobe.js";
 /**
- * Authored procedural mini-voxel adults. No external or unverified character assets.
+ * Hybrid voxel adults with modular, richly sculpted faces and contemporary Indian garments. No external or unverified character assets.
  * The body is rigged with real limb pivots and features layered face and hair meshes.
  */
 const SKINS=[0xf1c69e,0xddad84,0xbc805d,0x955d46,0x714331];
@@ -13,7 +15,18 @@ const shadowMaterials=[
   new THREE.MeshBasicMaterial({color:0x243e35,opacity:.10,transparent:true,depthWrite:false})
 ];
 for(const material of shadowMaterials)material.userData.sharedVoxelMaterial=true;
-function mat(color,roughness=.76,metalness=0){return new THREE.MeshStandardMaterial({color,roughness,metalness});}
+// One stable set of sculpting materials across all locally rendered characters.
+const materialCache=new Map();
+function mat(color,roughness=.76,metalness=0){
+  const hex=color?.isColor?color.getHex():color;
+  const id=[hex,roughness,metalness].join(":");
+  if(!materialCache.has(id)){
+    const m=new THREE.MeshStandardMaterial({color:hex,roughness,metalness});
+    m.userData.sharedVoxelMaterial=true;
+    materialCache.set(id,m);
+  }
+  return materialCache.get(id);
+}
 function roundedBox(w,h,d,r=.075,steps=2){
   const key=[w,h,d,r,steps].join(":");
   if(shared.has(key))return shared.get(key);
@@ -125,100 +138,14 @@ export function createAvatar(input={},mini=false){
     part(hips,.6,.04,.036,mat(0xe8cba6),0,.09,.275);
     for(const side of [-1,1])part(hips,.034,.25,.024,accent,side*.29,-.06,.269,.012);
   }
-  // Neck and expressive oversized head.
-  part(hips,.22,.19,.22,skin,0,.82,0,.055);
+  // Premium garment overlays preserve the known animation skeleton and save schema.
+  const sculptParams={...p,skinHex:SKINS[p.skin],hairHex:HAIR[p.hair],colorHex:COLORS[p.color]};
+  const kit={part,orb,mat};
+  sculptWardrobe(hips,sculptParams,kit);
+  // The original rig is kept; only visible face/hair/eyes are resculpted.
+  part(hips,.20,.17,.21,skin,0,.83,0,.056);
   const headPivot=new THREE.Group();headPivot.position.set(0,.93,0);hips.add(headPivot);
-  part(headPivot,.79,.73,.68,skin,0,.28,0,.17);
-  orb(headPivot,.12,skin,-.414,.25,.015,.60,1,.65);
-  orb(headPivot,.12,skin,.414,.25,.015,.60,1,.65);
-  // Hair volume: layered brows, chunky locks, occasional bangs and ponytail.
-  part(headPivot,.86,.2,.75,hair,0,.66,-.025,.10);
-  part(headPivot,.83,.17,.76,hair,0,.58,-.035,.12);
-  part(headPivot,.19,.30,.70,hair,-.37,.48,-.015,.07);
-  part(headPivot,.19,.30,.70,hair,.37,.48,-.015,.07);
-  for(let i=0;i<4;i++){
-    const x=-.30+i*.20;
-    const lock=part(headPivot,.20,.12,.18,hair,x,.58,.315,.035);
-    lock.rotation.z=[.12,-.10,.08,-.16][i];
-  }
-  // Hairstyle 0: bob/short textured, 1: layered mid-length, 2: long
-  // flowing hair, 3: tied ponytail. Same rig supports both genders.
-  if(p.hairstyle===0){
-    for(let j=0;j<5;j++){
-      const x=-.29+j*.145;
-      const strand=part(headPivot,.15,.16,.13,hair,x,.68,.31,.046);
-      strand.rotation.z=(j-2)*-.10;
-    }
-    if(feminine){
-      part(headPivot,.18,.27,.31,hair,-.38,.30,-.18,.065);
-      part(headPivot,.18,.27,.31,hair,.38,.30,-.18,.065);
-    }
-  }else if(p.hairstyle===1){
-    for(let j=0;j<4;j++){
-      const x=-.26+j*.175;
-      part(headPivot,.15,.12,.15,hair,x,.68,.32,.038);
-    }
-    for(const side of [-1,1]){
-      const lock=part(headPivot,.17,.49,.30,hair,side*.39,.17,-.10,.06);
-      lock.rotation.z=side*.06;
-    }
-    part(headPivot,.55,.30,.16,hair,0,.11,-.37,.10);
-  }else if(p.hairstyle===2){
-    for(const side of [-1,1]){
-      for(let k=0;k<3;k++){
-        const strand=part(headPivot,.13,.62,.25,hair,side*(.28+k*.055),.03,-.10-k*.04,.055);
-        strand.rotation.z=side*(k*.08);
-      }
-    }
-    part(headPivot,.63,.60,.17,hair,0,-.01,-.38,.085);
-  }else{
-    part(headPivot,.68,.24,.18,hair,0,.25,-.38,.085);
-    const pony=orb(headPivot,.24,hair,.28,.30,-.44,.75,1.25,.84);
-    part(headPivot,.17,.53,.20,hair,.37,-.02,-.51,.075);
-    part(headPivot,.20,.06,.12,mat(0xddb58e),.34,.07,-.43,.035);
-    for(let j=0;j<3;j++){
-      const lock=part(headPivot,.16,.15,.13,hair,-.22+j*.22,.66,.30,.045);
-      lock.rotation.z=j*.09;
-    }
-  }
-  const eyes=mat(0x20212c),shine=mat(0xffffff),lips=mat(0xab5860),brow=mat(HAIR[p.hair]);
-  for(const x of [-.17,.17]){
-    orb(headPivot,.071,eyes,x,.30,.349,.73,1.05,.45);
-    orb(headPivot,.018,shine,x-.015,.33,.393,.8,1,.4);
-    ellipse(headPivot,.15,.029,brow,x,.435,.351);
-    if(feminine){part(headPivot,.046,.018,.025,brow,x+Math.sign(x)*.065,.356,.377,.009);}
-    orb(headPivot,.091,0xeaaa89,x*1.35,.18,.34,.9,.55,.24);
-  }
-  orb(headPivot,.047,skin,0,.205,.378,.7,.75,.58);
-  // A curved sculpted smile instead of one flat horizontal mouth.
-  ellipse(headPivot,.15,.025,lips,0,.10,.365);
-  for(const side of [-1,1]){
-    const corner=orb(headPivot,.022,lips,side*.074,.115,.364,.65,.55,.48);
-    corner.castShadow=false;
-    if(feminine){
-      const earring=orb(headPivot,.036,0xe4c080,side*.426,.13,.055,.70,1.2,.6);
-      earring.castShadow=false;
-    }
-  }
-  part(headPivot,.20,.024,.028,mat(0xf2d1ba),0,.073,.352,.013);
-  if(p.glasses){
-    for(const x of [-.17,.17]){
-      const rim=part(headPivot,.195,.16,.035,dark,x,.305,.367,.05);
-      part(headPivot,.154,.12,.044,mat(0xc4d8e3,.2,.1),x,.305,.38,.035);
-    }
-    part(headPivot,.12,.035,.035,dark,0,.33,.387,.012);
-    part(headPivot,.12,.025,.035,dark,.34,.32,.28,.012);
-    part(headPivot,.12,.025,.035,dark,-.34,.32,.28,.012);
-  }
-  // Neckline, patterned garment details and ID badge give a modern office identity.
-  part(hips,.28,.055,.04,accent,0,.735,.225,.025);
-  if(p.outfit==="shirt"||p.outfit==="tshirt"){
-    part(hips,.045,.28,.03,accent,.08,.4,.255,.015);
-  }
-  const lanyard=part(hips,.027,.48,.024,mat(0xd5bb75),.02,.44,.24,.01);
-  lanyard.rotation.z=.21;
-  part(hips,.20,.17,.035,white,.10,.18,.26,.02);
-  part(hips,.13,.035,.04,mat(0x65908b),.10,.20,.282,.01);
+  sculptHead(headPivot,sculptParams,kit);
   // Seams, embroidered cuffs and a miniature pocket create believable
   // contemporary garments when seen close-up in the 3D avatar studio.
   if(!isEthnic&&p.outfit!=="dress"){
@@ -247,9 +174,7 @@ export function createAvatar(input={},mini=false){
       part(pivot,.014,.36,.02,mat(0x627589),side*.08,-.29,.163,.007);
       part(pivot,legWidth+.018,.05,.325,mat(0x5a6670),0,-.49,0,.018);
     }
-    const shoe=isEthnic||p.outfit==="dress"?mat(0xb97756):mat(0xd6d1c7);
-    part(pivot,.28,.13,.42,shoe,0,-.55,.10,.04);
-    part(pivot,.29,.105,.43,isEthnic?mat(0x9b5c4f):mat(0xffffff),0,-.615,.12,.04);
+    sculptFoot(pivot,sculptParams,kit);
     return pivot;
   }
   const lLeg=leg(-1),rLeg=leg(1);
