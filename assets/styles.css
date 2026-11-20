@@ -465,3 +465,25 @@ body.office-playing #player-menu textarea{
     max-height:calc(100dvh - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px));
   }
 }
+
+/* Stable small-viewport sizing on touch devices: the browser's address bar
+   showing/hiding must not stretch or shrink the gameplay canvas. */
+@supports(height:100svh){
+  @media(pointer:coarse){
+    body.office-playing,
+    body.office-playing .player.page{
+      height:100svh;max-height:100svh;
+    }
+    body.office-playing #player-menu.player-menu{
+      max-height:calc(100svh - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px));
+    }
+  }
+}
+.studio-camera-footer #camera-reset{
+  white-space:nowrap;min-height:42px;padding:9px 12px;
+  font-weight:750;font-size:11px;flex:0 0 auto;
+}
+@media(max-width:740px){
+  .studio-camera-footer{flex-wrap:wrap}
+  .studio-camera-footer #camera-reset{margin-left:auto}
+}
