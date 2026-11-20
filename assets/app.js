@@ -172,11 +172,12 @@ async function loadEvents(){
     row.append(text,button("Manage →",run(()=>openEvent(item))));
     dest.append(row);
   }
-  if(event){
-    const current=events.find(e=>e.id===event.id);
-    if(current)await openEvent(current);
-    else{$("event-workspace").classList.add("hidden");event=null;}
-  }
+  // Immediately show the most recent event's complete participant roster
+  // on organizer login. Previously, all rows stayed hidden until Manage
+  // was clicked even when only one event existed.
+  const selected=(event&&events.find(e=>e.id===event.id))||events[0];
+  if(selected)await openEvent(selected);
+  else{$("event-workspace").classList.add("hidden");event=null;codes.clear();}
 }
 async function openEvent(e){
   const result=await api("list_participants",{event_id:e.id});
