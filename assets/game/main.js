@@ -1,7 +1,7 @@
 import * as THREE from "three";
-import {buildOffice} from "./office.js?v=art-hero-v1";
-import {createAvatar,avatarFromPerson} from "./avatar.js?v=art-hero-v1";
-import {createInstancedCrowd} from "./crowd.js";
+import {buildOffice} from "./office.js?v=art-lod-v2";
+import {createAvatar,avatarFromPerson} from "./avatar.js?v=art-lod-v2";
+import {createInstancedCrowd} from "./crowd.js?v=art-lod-v2";
 
 /* A responsive office runtime. 3D art and camera are independent from the existing Supabase UI. */
 const UP=new THREE.Vector3(0,1,0);
