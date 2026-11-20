@@ -294,7 +294,7 @@ async function enterOffice(info){
   }
   $("office-loading").classList.remove("hidden");
   officeLoading=(async()=>{
-    const module=await import("./game/main.js?v=office-2b-doors-20261120");
+    const module=await import("./game/main.js?v=celebration-richness-v3");
     officeRuntime=module.mountOffice($("office-canvas"),info,officeToast);
     let cam=null;
     try{cam=localStorage.getItem("vcf-ss-office-camera");}catch{}
@@ -445,7 +445,7 @@ async function ensureAvatarStudio(){
   if(avatarStudio||avatarStudioLoading||!officeRuntime||!player)return;
   if($("player-menu").classList.contains("hidden")||$("player-character").classList.contains("hidden"))return;
   avatarStudioLoading=(async()=>{
-    const module=await import("./game/studio.js?v=visual-richness-20261120");
+    const module=await import("./game/studio.js?v=celebration-richness-v3");
     if($("player-menu").classList.contains("hidden")||$("player-character").classList.contains("hidden"))return;
     avatarStudio=module.mountAvatarStudio($("avatar-studio-canvas"),readAvatarEditor());
   })();
