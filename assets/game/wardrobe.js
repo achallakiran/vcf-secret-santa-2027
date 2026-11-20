@@ -135,4 +135,66 @@ export function sculptWardrobe(hips,p,kit){
     }
     part(hips,.63,.045,.034,gold,0,-.395,.275,.011);
   }
+
+  // Over-the-shoulder gameplay mostly sees the BACK of the character.
+  // Different outfits therefore need identifiable back silhouettes and
+  // constructed garment geometry—not just colorful front-facing details.
+  const backDetail=mat(p.outfit==="suit"?0x52637c:
+    p.outfit==="salwar"?0xf3c98f:
+    p.outfit==="sweater"?0xffebcf:
+    p.outfit==="dress"?0xefc4ad:0xe3c7a6,.79);
+  if(p.outfit==="salwar"){
+    // A long, layered salwar-kameez back with stepped border, side pleats
+    // and flowing draped dupatta. Visible from follow camera.
+    const backPanel=part(hips,.78*w,.69,.10,top,0,-.062,-.247,.072);
+    part(hips,.80*w,.064,.099,backDetail,0,-.384,-.255,.017);
+    for(const xx of [-.29,.29]){
+      part(hips,.047,.63,.08,backDetail,xx,-.06,-.31,.025);
+      for(let i=0;i<3;i++){
+        const y=.28-i*.16;
+        part(hips,.087,.033,.042,gold,xx,y,-.348,.016);
+      }
+    }
+    // Dupatta hangs past the waist, with a broad embroidered edge.
+    const draped=part(hips,.195,.89,.12,mat(0xf0cfac),-.24,.25,-.34,.063);
+    draped.rotation.z=-.13;
+    part(hips,.206,.06,.136,gold,-.30,-.13,-.35,.023);
+    for(let j=0;j<4;j++)
+      part(hips,.022,.77,.027,j%2?gold:backDetail,-.31+j*.045,.20,-.417,.01);
+  }else if(p.outfit==="suit"){
+    // Proper jacket yoke, vents and shoulder pads distinguish suit from shirt.
+    part(hips,.70*w,.34,.085,mat(0x40536b),0,.40,-.248,.07);
+    part(hips,.12,.60,.04,backDetail,0,.33,-.287,.015);
+    for(const side of [-1,1]){
+      part(hips,.04,.31,.034,mat(0x35475d),side*.245,.12,-.30,.015);
+      part(hips,.18,.07,.055,backDetail,side*.18,.635,-.272,.022);
+    }
+    part(hips,.72*w,.055,.085,mat(0x25364e),0,.035,-.272,.025);
+  }else if(p.outfit==="dress"){
+    // A much wider hem than an office shirt: visible A-line silhouette.
+    part(hips,.79*w,.37,.085,top,0,-.15,-.29,.085);
+    part(hips,.87*w,.077,.10,backDetail,0,-.38,-.295,.028);
+    for(const xx of [-.28,0,.28])
+      part(hips,.028,.33,.032,backDetail,xx,-.15,-.34,.011);
+    part(hips,.57,.065,.09,gold,0,.15,-.255,.025);
+  }else if(p.outfit==="sweater"){
+    // Knitted back sweater motif, big enough to read at office distance.
+    part(hips,.59*w,.055,.038,backDetail,0,.47,-.244,.017);
+    part(hips,.63*w,.052,.04,backDetail,0,.24,-.245,.017);
+    part(hips,.63*w,.052,.04,backDetail,0,.04,-.245,.017);
+    for(let x=-2;x<=2;x++){
+      const stripe=part(hips,.06,.24,.041,
+        x%2?backDetail:mat(0xbb5865),x*.113,.34,-.271,.022);
+      stripe.rotation.z=x*.16;
+    }
+  }else if(p.outfit==="shirt"){
+    // Crisp back shoulder yoke, seam and cuffs.
+    part(hips,.66*w,.12,.051,backDetail,0,.61,-.249,.038);
+    part(hips,.02,.45,.033,backDetail,0,.39,-.252,.011);
+    part(hips,.60*w,.042,.042,backDetail,0,.061,-.248,.016);
+  }else if(p.outfit==="tshirt"){
+    part(hips,.57*w,.065,.045,backDetail,0,.06,-.238,.024);
+    part(hips,.29,.082,.048,backDetail,0,.68,-.237,.027);
+    part(hips,.14,.15,.043,mat(0xe1c88b),0,.44,-.253,.045);
+  }
 }
