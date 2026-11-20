@@ -759,7 +759,7 @@ body.office-playing #player-menu textarea{
 }
 #event-workspace .participant-entry:nth-child(even){background:#1a2d28aa}
 #event-workspace .participant-entry:hover{background:#234137aa}
-@media(max-width:760px){
+@media(max-width:1024px){
   #event-workspace .table-wrap{
     overflow:visible;
     border:0;
@@ -830,4 +830,151 @@ body.office-playing #player-menu textarea{
   }
   #event-workspace .table-wrap td[colspan]{display:block}
   #event-workspace .participant-code-cell code.organizer-code{font-size:19px}
+}
+
+/* Compact roster without horizontal scrolling, including smaller tablets. */
+#event-workspace .table-wrap{overflow-x:visible!important}
+#event-workspace .table-wrap table{
+  width:100%;min-width:0;max-width:100%;table-layout:fixed;white-space:normal;
+}
+#event-workspace .table-wrap th:nth-child(1){width:29%}
+#event-workspace .table-wrap th:nth-child(2){width:9%}
+#event-workspace .table-wrap th:nth-child(3){width:16%}
+#event-workspace .table-wrap th:nth-child(4){width:23%}
+#event-workspace .table-wrap th:nth-child(5){width:23%}
+#event-workspace .participant-name-cell{width:auto;min-width:0;overflow-wrap:anywhere}
+#event-workspace .participant-code-cell,
+#event-workspace .participant-invite-cell,
+#event-workspace .participant-manage-cell{min-width:0;max-width:100%}
+#event-workspace .participant-code-cell .organizer-code{font-size:15px}
+#event-workspace .participant-invite-cell .roster-whatsapp{
+  display:inline-flex;gap:3px;justify-content:center;align-items:center;
+  width:100%;max-width:126px;line-height:1.2;padding:9px 6px;
+  margin:2px 0;white-space:nowrap;box-sizing:border-box;
+  background:#1c6b52;border-color:#56a37d;color:#f6fbf5;
+  font-size:11px;font-weight:800;
+}
+#event-workspace .participant-manage-cell{white-space:normal}
+#event-workspace .participant-manage-cell .roster-icon-button{
+  display:inline-grid;place-items:center;width:36px;height:36px;
+  min-width:34px;padding:0;margin:2px 4px 2px 0;
+  font-size:19px;line-height:1;vertical-align:middle;
+}
+#event-workspace .workspace-heading{width:100%;min-width:0;overflow:hidden}
+#event-workspace .workspace-url-row{
+  display:flex;align-items:center;justify-content:flex-start;
+  gap:7px;min-width:0;max-width:100%;margin-top:9px
+}
+#event-workspace .workspace-url-row #workspace-slug{
+  overflow-wrap:anywhere;min-width:0;max-width:100%;
+  font-size:11px;line-height:1.45;margin:0;
+}
+#event-workspace .workspace-url-row #workspace-copy-link{
+  flex-shrink:0;padding:8px 9px;font-size:11px;white-space:nowrap
+}
+#event-workspace .roster-add-form{
+  align-items:end;gap:9px
+}
+#event-workspace .roster-add-form label{min-width:0;flex:1 1 130px}
+#event-workspace .roster-add-form label:has(#participant-desk){flex:0 1 130px}
+#event-workspace .roster-add-form .primary{min-height:43px}
+@media(max-width:1024px){
+  #event-workspace .table-wrap table{display:block;table-layout:auto}
+  #event-workspace .participant-invite-cell .roster-whatsapp{width:auto;max-width:none}
+  #event-workspace .participant-manage-cell .roster-icon-button{width:42px;height:42px}
+  #event-workspace .workspace-url-row{align-items:flex-start}
+  #event-workspace .workspace-url-row #workspace-copy-link{position:relative}
+}
+@media(max-width:480px){
+  #event-workspace .roster-add-form label{flex:1 1 100%;width:100%}
+  #event-workspace .roster-add-form label:has(#participant-desk){flex:1 1 100%}
+  #event-workspace .roster-add-form .primary{width:100%}
+  #event-workspace .workspace-url-row{align-items:flex-start}
+  #event-workspace .workspace-url-row #workspace-copy-link span{display:none}
+  #event-workspace .metrics{gap:8px}
+}
+/* Organizer edits the SAME actual avatar studio used in the Pause menu.
+   It lives in a modal outside the game, not a second low-fidelity creator. */
+.admin-avatar-dialog{
+  box-sizing:border-box;width:min(1160px,calc(100vw - 12px));
+  max-width:none;max-height:94svh;max-height:94dvh;overflow:auto;
+  padding:15px 16px 18px;border:1px solid #dcb5bb;border-radius:18px;
+  color:#4e3143;background:linear-gradient(125deg,#fff9f3,#f9e7eb);
+  box-shadow:0 30px 90px #160a1cbb;overscroll-behavior:contain
+}
+.admin-avatar-dialog::backdrop{background:#130f1dcc;backdrop-filter:blur(5px)}
+.admin-avatar-header{
+  display:flex;align-items:center;justify-content:space-between;gap:10px;
+  padding-bottom:9px;border-bottom:1px solid #e3c7c5;
+}
+.admin-avatar-header h3{margin:5px 0 0;color:#4d2945;font-size:20px}
+.admin-avatar-header .eyebrow{color:#ae6680}
+.admin-avatar-header button{
+  flex:0 0 42px;height:42px;font-size:20px;border:1px solid #d4aab4;
+  background:#fff6f2;color:#873d65;
+}
+.admin-character-details{
+  display:flex;align-items:end;gap:9px;flex-wrap:wrap;
+  padding:12px 0 1px;color:#533747;
+}
+.admin-character-details label{
+  display:flex;flex:1 1 190px;flex-direction:column;gap:4px;
+  font-weight:750;font-size:11px;color:#7e5367;
+}
+.admin-character-details label:has(#admin-character-desk){flex:0 1 160px}
+.admin-character-details input{
+  min-width:0;width:100%;min-height:39px;padding:8px 10px;
+  color:#422b3c;background:#fff;border:1px solid #d5b5be;border-radius:9px;
+  font-size:14px;
+}
+.admin-character-details button{
+  min-height:39px;padding:9px 13px;
+  color:#fff;background:#a34f73;border-color:#a34f73;
+}
+.admin-character-details button:disabled,
+.admin-character-details input:disabled{opacity:.55}
+#admin-avatar-dialog #player-character{
+  width:100%;min-height:0;background:none;overflow:visible
+}
+#admin-avatar-dialog .avatar-atelier{margin-top:12px}
+#admin-avatar-dialog .studio-office-link,
+#admin-avatar-dialog .studio-camera-footer,
+#admin-avatar-dialog .camera-gesture-help{display:none!important}
+#admin-avatar-dialog .atelier-preview .avatar-studio-canvas{min-height:300px}
+#admin-avatar-dialog .studio-save-bar{background:#fff9f6}
+#admin-avatar-dialog #avatar-preview-status{color:#7b5a68}
+@media(max-width:700px){
+  .admin-avatar-dialog{
+    width:100vw;max-width:100vw;height:100svh;max-height:100svh;
+    margin:0;padding:10px 11px;border-radius:0;
+  }
+  .admin-avatar-header h3{font-size:17px}
+  .admin-character-details label{flex:1 1 160px}
+  .admin-character-details label:has(#admin-character-desk){flex:1 1 115px}
+  .admin-character-details button{flex:1 1 100%}
+  #admin-avatar-dialog .avatar-atelier{gap:7px}
+  #admin-avatar-dialog .atelier-preview .avatar-studio-canvas{height:310px}
+}
+/* A stable mobile game viewport. The small viewport does not jump as the
+   browser expands/collapses toolbars after touching action buttons. */
+@media(max-width:1024px),(pointer:coarse){
+  body.office-playing{position:fixed;inset:0;width:100%;height:100svh;overflow:hidden;overscroll-behavior:none}
+  .player.page{
+    position:fixed!important;inset:0!important;
+    height:100vh;height:100svh;min-height:100svh!important;
+    max-height:100svh!important;width:100%;max-width:100%;
+    overflow:hidden;overscroll-behavior:none;
+  }
+  .office-view{
+    position:absolute!important;inset:0!important;
+    width:100%;height:100svh;max-height:100svh;
+    overflow:hidden;touch-action:none;
+  }
+  .office-canvas,.office-canvas canvas{
+    display:block!important;position:absolute;inset:0;
+    width:100%!important;height:100%!important;
+    overflow:hidden;touch-action:none;
+  }
+  .office-pause{touch-action:manipulation}
+  .office-action{touch-action:manipulation}
 }
