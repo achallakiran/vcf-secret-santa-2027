@@ -86,7 +86,12 @@
       </div>
       <div id="office-toast" class="office-toast hidden" role="status" aria-live="polite"></div>
     </div>
-    <section id="player-menu" class="player-menu panel hidden" aria-label="Pause menu">
+    <section id="player-menu" class="player-menu panel hidden" aria-label="Character studio and pause menu" role="dialog" aria-modal="true">
+      <div id="character-intro" class="character-intro hidden">
+        <span class="character-step">WELCOME TO YOUR CHRISTMAS OFFICE · STEP 1 OF 2</span>
+        <h2>Make a little character that's <em>you.</em></h2>
+        <p>Choose your face, hair and Indian contemporary fashion. Rotate your fully modeled character before you walk into the celebration.</p>
+      </div>
       <div class="section-head">
         <div><p class="eyebrow">CHRISTMAS NOTEBOOK</p><h3 id="player-greeting">SECRET SANTA</h3><p id="player-event-title" class="muted">Christmas office</p></div>
         <button id="player-close" class="small-outline" type="button" aria-label="Resume game">✕</button>
@@ -100,8 +105,8 @@
           <div class="character-preview-shell">
             <div class="studio-brand">
               <span class="studio-eyebrow">THE CHRISTMAS OFFICE</span>
-              <strong>MY CHARACTER</strong>
-              <p>Little details. Big personality.</p>
+              <strong>YOUR VOXEL AVATAR</strong>
+              <p>Every choice changes the 3D model.</p>
             </div>
             <div id="avatar-studio-canvas" class="avatar-studio-canvas" aria-label="Rotatable full-body 3D voxel character preview"></div>
             <div class="studio-rotate">
@@ -109,7 +114,7 @@
               <span>Drag to rotate · 360°</span>
               <button type="button" id="avatar-turn-right" aria-label="Rotate character right" title="Rotate right">↷</button>
             </div>
-            <button id="avatar-view" type="button" class="studio-office-link">See me in the office <span aria-hidden="true">↗</span></button>
+            <button id="avatar-view" type="button" class="studio-office-link"><span id="avatar-view-label">See me in the office</span><span aria-hidden="true">↗</span></button>
           </div>
           <div class="studio-workbench">
             <div class="studio-workbench-heading">
@@ -161,6 +166,7 @@
                     </select>
                   </label>
                 </div>
+                <div id="hairstyle-tiles" class="studio-visual-choices" aria-label="Select a modeled hairstyle"></div>
               </section>
               <section data-studio-panel="fashion" class="studio-fields hidden" role="tabpanel">
                 <h5>Contemporary Indian fashion</h5>
@@ -185,6 +191,7 @@
                     </select>
                   </label>
                 </div>
+                <div id="outfit-tiles" class="studio-visual-choices" aria-label="Select a modeled outfit"></div>
                 <label class="studio-color-title">Garment color</label>
                 <input id="avatar-color" type="hidden" value="0"/>
                 <div class="avatar-palette" role="group" aria-label="Clothing colors">
@@ -213,6 +220,7 @@
                 <div class="studio-save-buttons">
                   <button id="avatar-reset" class="studio-reset" type="button" title="Reset to saved appearance">↶ Reset</button>
                   <button id="avatar-save" class="studio-save" type="submit">Save look ✓</button>
+                  <button id="avatar-continue" class="studio-continue hidden" type="button">Enter Office ✦</button>
                 </div>
               </div>
             </form>
