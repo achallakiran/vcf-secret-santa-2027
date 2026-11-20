@@ -723,6 +723,10 @@ document.querySelectorAll("[data-camera]").forEach(b=>b.addEventListener("click"
   try{localStorage.setItem("vcf-ss-office-camera",cam);}catch{}
   syncCameraButtons();
 }));
+$("camera-reset").addEventListener("click",()=>{
+  officeRuntime?.resetCameraOrbit();
+  officeToast("Camera direction and zoom restored.");
+});
 $("player-tab-character").addEventListener("click",()=>showPlayerTab("character"));
 $("player-tab-personal").addEventListener("click",()=>showPlayerTab("personal"));
 $("player-sign-out").addEventListener("click",()=>{
