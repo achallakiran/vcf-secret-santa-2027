@@ -39,3 +39,31 @@ body.processing{cursor:progress}
 .personal-layout .form-row{align-items:end}
 .personal-layout .form-row input{width:100%}
 @media(max-width:700px){.player-bar{gap:8px;font-size:10px}.player-bar>span:nth-child(2){display:none}.personal-layout{grid-template-columns:1fr}.player-menu{margin:-48px auto 0}.personal-layout section{padding:14px}.office-placeholder{min-height:370px}}
+
+/* Temporary WhatsApp contact entry; numbers are never persisted. */
+.form-row select,.invite-dialog select{
+  width:100%;min-height:43px;padding:12px;background:#0b1515;border:1px solid #466053;
+  border-radius:8px;color:#f3f0e9;font:inherit;outline:none;
+}
+.form-row select:focus,.invite-dialog input:focus,.invite-dialog select:focus{
+  border-color:#d7bd80;
+}
+.form-row label:has(#participant-country){min-width:160px}
+.invite-dialog{
+  width:min(480px,calc(100vw - 28px));max-height:85vh;overflow:auto;
+  padding:24px;background:#14221f;color:#f3f0e9;
+  border:1px solid #698477;border-radius:16px;box-shadow:0 22px 90px #000b;
+}
+.invite-dialog::backdrop{background:#020908c8;backdrop-filter:blur(5px)}
+.invite-dialog h3{margin:0}
+.invite-dialog .form-row{align-items:stretch}
+.invite-dialog label{display:flex;flex-direction:column;gap:7px;font-size:12px;color:#d4e2d9}
+.invite-dialog input{
+  width:100%;padding:13px 12px;background:#0b1515;
+  border:1px solid #466053;border-radius:8px;color:#fff;font:inherit;
+}
+.invite-dialog .button-row{margin-top:18px}
+@media(max-width:650px){
+  .form-row label:has(#participant-country){min-width:130px}
+  .invite-dialog{padding:18px}
+}
