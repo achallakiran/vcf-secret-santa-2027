@@ -160,6 +160,19 @@ The `?preview=1` fictional coworker mode has been removed. Without a real event-
 
 **Verification:** source syntax, DOM-control wiring and authorization checks have passed. Full interactive browser rendering and responsive device QA remain outstanding.
 
+### Living Office update — routines, space, social actions and music
+
+This release implements the requested gameplay behavior in actual scene modules:
+
+- **Workstations:** desk surface expanded from 0.73 m × 1.52 m to 0.99 m × 3.36 m (approximately **3× tabletop area**). Workstation row pitch grows from 2.42 m to 4.80 m, leaving about 1.44 m between the end partitions of neighboring desks. Each desk has **left and right end partitions** and a rear privacy partition, second monitor, document tray and lamp. Desk and chair collision volumes match the larger furniture.
+- **Real-roster coworker life:** `assets/game/office-life.js` schedules typing, coffee breaks, eating apples, short walks between workstations, and two-person desk conversations. Each NPC remains a full-quality, articulated character from the authenticated event roster. Walking and greeting use the same A* walkable floor as the player, never a straight-line teleport through desks.
+- **Interaction distance:** coworker-to-coworker and player-to-coworker approaches choose navigable points about **1.55 m apart**, with a dynamic minimum separation of approximately 0.86–0.91 m while moving. NPC visitors reserve their conversation partner before walking over. Approaching an NPC turns both characters face-to-face and triggers reciprocal **Hi** gestures, an on-scene **Hello!** speech bubble and the existing office toast. A nearby colleague also mimics the player's Hi, Dance, Clap, or Cheer button action.
+- **Animated props:** the coffee mug and apple are modeled 3D meshes attached to the avatar wrist, shown only while the coworker performs the associated routine. All routines use the existing skeletal/voxel arms, wrists, head, hips and walking legs.
+- **Music:** `assets/game/christmas-music.js` produces a looping, synthesized, public-domain **Jingle Bells** melody directly in Web Audio, with no streamed or copied commercial recording. A speaker icon in the gameplay screen mutes/unmutes and remembers the setting. Browser autoplay restrictions are respected: sound is unlocked on participant interaction rather than playing before consent to interact.
+- **Mobile layouts:** the game remains inside its stable `100svh` viewport with responsive canvas and inset controls; the admin console has contained widths, vertically scrolling roster cards and 16px input fields to prevent Safari focus zoom.
+
+**Automated checks:** authored JavaScript parsed successfully. Procedural geometry and A* paths were tested for 1, 12, 48 and 150 participants; desk gaps and stage routes remained passable. In 14-coworker real-floor simulation, voluntary visits led to reciprocal greetings without observed overlap. The synthesized audio loop, mute/unmute, and disposal were tested with a Web Audio test double. **Still required:** visual and frame-rate checks on real iOS/Android/desktop browsers, particularly the long 150-person office and 3D character animation aesthetics.
+
 ## Deployment
 
 Repository: https://github.com/achallakiran/vcf-secret-santa-2027
