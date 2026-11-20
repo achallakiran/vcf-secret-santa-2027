@@ -110,6 +110,7 @@ function setSession(info){
   paintLogin();
 }
 function endSession(){
+  if(adminEditingParticipant)closeAdminCharacterEditor();
   document.body.classList.remove("office-playing");
   if(avatarStudio){avatarStudio.dispose();avatarStudio=null;}
   avatarStudioLoading=null;
@@ -361,13 +362,15 @@ function setAvatarEditor(values){
   visualEditor?.refresh(activeStudioTab);
 }
 function previewAvatarNow(){
-  if(!officeRuntime)return;
+  if(!officeRuntime&&!adminEditingParticipant)return;
   const data=readAvatarEditor();
-  officeRuntime.previewAvatar(data);
+  if(!adminEditingParticipant)officeRuntime?.previewAvatar(data);
   avatarStudio?.update(data);
   $("avatar-height-out").textContent=Math.round(Number(data.height)*100)+"%";
   $("avatar-build-out").textContent=Math.round(Number(data.build)*100)+"%";
-  $("avatar-preview-status").textContent="Unsaved changes are visible on your 3D character.";
+  $("avatar-preview-status").textContent=adminEditingParticipant?
+    "Changes are visible in the 3D preview. Save to update this participant.":
+    "Unsaved changes are visible on your 3D character.";
 }
 function previewAvatarSoon(){
   clearTimeout(avatarPreviewTimer);
@@ -393,6 +396,7 @@ visualEditor=createVisualAvatarEditor({
 });
 visualEditor.refresh(activeStudioTab);
 $("avatar-view").addEventListener("click",()=>{
+  if(adminEditingParticipant)return; // Admin never enters the game screen.
   clearTimeout(avatarPreviewTimer);
   previewAvatarNow();
   officeRuntime?.focusAvatar();
@@ -404,15 +408,33 @@ $("avatar-reset").addEventListener("click",()=>{
   clearTimeout(avatarPreviewTimer);
   if(!avatarBaseline)return;
   setAvatarEditor(avatarBaseline);
-  officeRuntime?.previewAvatar(avatarBaseline);
+  if(!adminEditingParticipant)officeRuntime?.previewAvatar(avatarBaseline);
   avatarStudio?.update(avatarBaseline);
-  officeToast("Restored the last saved appearance.");
+  if(adminEditingParticipant)toast("Restored this participant's saved appearance.");
+  else officeToast("Restored the last saved appearance.");
 });
 $("avatar-form").addEventListener("submit",run(async e=>{
   e.preventDefault();
   clearTimeout(avatarPreviewTimer);
-  if(!player?.me?.id)throw Error("Please enter the office using your invitation code.");
   const avatar=readAvatarEditor();
+  if(adminEditingParticipant){
+    const edited=adminEditingParticipant;
+    const result=await api("admin_save_avatar",{
+      event_id:event.id,participant_id:edited.id,
+      avatar,version:edited.version
+    });
+    if(adminEditingParticipant!==edited)return;
+    edited.version=result.version;
+    edited.avatar=result.avatar;
+    avatarBaseline=result.avatar;
+    avatarStudio?.update(result.avatar);
+    setAvatarEditor(result.avatar);
+    $("avatar-preview-status").textContent="✓ Saved to this participant's profile.";
+    await openEvent(event);
+    toast("Participant character saved.");
+    return;
+  }
+  if(!player?.me?.id)throw Error("Please enter using your invitation code.");
   const result=await api("save_avatar",{avatar,version:player.me.avatar_version||1});
   player.me.avatar=result.avatar;
   player.me.avatar_version=result.version;
@@ -451,18 +473,77 @@ $("avatar-zoom-out").addEventListener("click",()=>avatarStudio?.zoom(1.24));
 $("avatar-zoom-in").addEventListener("click",()=>avatarStudio?.zoom(.81));
 $("avatar-fit").addEventListener("click",()=>avatarStudio?.fit());
 async function ensureAvatarStudio(){
-  if(avatarStudio||avatarStudioLoading||!officeRuntime||!player)return;
-  if($("player-menu").classList.contains("hidden")||$("player-character").classList.contains("hidden"))return;
+  if(avatarStudio||avatarStudioLoading)return;
+  const isVisible=()=>adminEditingParticipant?
+    $("admin-avatar-dialog").open&&$("player-character").parentElement===$("admin-avatar-editor-host"):
+    Boolean(officeRuntime&&player&&!$("player-menu").classList.contains("hidden")
+      &&!$("player-character").classList.contains("hidden"));
+  if(!isVisible())return;
   avatarStudioLoading=(async()=>{
     const module=await import("./game/studio.js?v=voxel-art-v5");
-    if($("player-menu").classList.contains("hidden")||$("player-character").classList.contains("hidden"))return;
+    if(!isVisible())return;
     avatarStudio=module.mountAvatarStudio($("avatar-studio-canvas"),readAvatarEditor());
     visualEditor?.refresh(activeStudioTab);
   })();
   try{await avatarStudioLoading;}
-  catch(err){officeToast("3D avatar preview unavailable. The office character can still be customized.");console.error(err);}
-  finally{avatarStudioLoading=null;}
+  catch(err){
+    toast("3D character preview couldn't load. Please try reopening the editor.",true);
+    console.error(err);
+  }finally{avatarStudioLoading=null;}
 }
+function closeAdminCharacterEditor(){
+  clearTimeout(avatarPreviewTimer);
+  const dialog=$("admin-avatar-dialog");
+  if(avatarStudio){avatarStudio.dispose();avatarStudio=null;}
+  const section=$("player-character"),parent=$("player-menu");
+  if(section.parentElement!==parent)parent.insertBefore(section,$("player-personal"));
+  adminEditingParticipant=null;
+  document.body.classList.remove("admin-avatar-editing");
+  if(dialog.open)dialog.close();
+}
+async function openAdminCharacterEditor(person){
+  if(!ADMIN||!session?.token||!event)return;
+  const p=participants.find(x=>x.id===person.id);
+  if(!p){toast("Participant no longer exists. Refresh the roster.",true);return;}
+  if(adminEditingParticipant)closeAdminCharacterEditor();
+  adminEditingParticipant={
+    id:p.id,version:p.avatar_version||1,avatar:p.avatar||{},
+    eventId:event.id,name:p.display_name
+  };
+  $("admin-avatar-name").textContent=p.display_name;
+  $("admin-character-name").value=p.display_name;
+  $("admin-character-desk").value=p.desk_key||"";
+  const detailsLocked=!!event.assignments_locked_at;
+  $("admin-character-name").disabled=detailsLocked;
+  $("admin-character-desk").disabled=detailsLocked;
+  $("admin-character-save-details").disabled=detailsLocked;
+  $("admin-avatar-editor-host").append($("player-character"));
+  $("admin-avatar-dialog").showModal();
+  document.body.classList.add("admin-avatar-editing");
+  avatarBaseline=p.avatar||{};
+  setAvatarEditor(avatarBaseline);
+  setStudioTab("look");
+  await ensureAvatarStudio();
+}
+$("admin-avatar-close").addEventListener("click",closeAdminCharacterEditor);
+$("admin-avatar-dialog").addEventListener("close",closeAdminCharacterEditor);
+$("admin-character-details").addEventListener("submit",run(async e=>{
+  e.preventDefault();
+  const edited=adminEditingParticipant;
+  if(!edited)return;
+  const display_name=$("admin-character-name").value.trim();
+  if(!display_name)throw Error("Enter the participant's name.");
+  const desk_key=$("admin-character-desk").value.trim();
+  const p=participants.find(p=>p.id===edited.id);
+  await api("edit_participant",{
+    event_id:edited.eventId,participant_id:edited.id,
+    display_name,desk_key,is_active:p?.is_active??true
+  });
+  edited.name=display_name;
+  $("admin-avatar-name").textContent=display_name;
+  await openEvent(event);
+  toast("Participant details saved.");
+}));
 function closePlayerMenu(){
   $("player-menu").classList.add("hidden");
   officeRuntime?.setPaused(false);
