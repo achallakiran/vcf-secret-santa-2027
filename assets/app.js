@@ -21,6 +21,7 @@ const button=(label,handler,style="small-outline")=>{
 let session=null, busy=false, events=[],event=null,participants=[],assignments=[],player=null,childVisible=false;
 let officeRuntime=null,officeLoading=null,officeKey=null,officeNoticeTimer=null;
 let avatarBaseline=null,avatarPreviewTimer=null;
+let avatarStudio=null,avatarStudioLoading=null,activeStudioTab="look";
 const codes=new Map();
 function toast(message,error=false){
   const el=$("toast");el.textContent=message;
@@ -107,6 +108,8 @@ function setSession(info){
   paintLogin();
 }
 function endSession(){
+  if(avatarStudio){avatarStudio.dispose();avatarStudio=null;}
+  avatarStudioLoading=null;
   if(officeRuntime){officeRuntime.dispose();officeRuntime=null;}
   clearTimeout(avatarPreviewTimer);
   avatarBaseline=null;officeLoading=null;officeKey=null;
@@ -360,11 +363,13 @@ function setAvatarEditor(values){
     "Visual preview: customize freely. Saving is available after participant login.":
     "Your changes preview immediately. Save when you are happy with your look.";
   $("avatar-save").disabled=!!player?.preview;
+  avatarStudio?.update(settings);
 }
 function previewAvatarNow(){
   if(!officeRuntime)return;
   const data=readAvatarEditor();
   officeRuntime.previewAvatar(data);
+  avatarStudio?.update(data);
   $("avatar-height-out").textContent=Math.round(Number(data.height)*100)+"%";
   $("avatar-build-out").textContent=Math.round(Number(data.build)*100)+"%";
   $("avatar-preview-status").textContent="Unsaved changes are visible on your 3D character.";
@@ -388,7 +393,7 @@ $("avatar-view").addEventListener("click",()=>{
   clearTimeout(avatarPreviewTimer);
   previewAvatarNow();
   officeRuntime?.focusAvatar();
-  $("player-menu").classList.add("hidden");
+  closePlayerMenu();
   syncCameraButtons();
   officeToast("Inspect your avatar up close. Return to Pause to save this look.");
 });
@@ -397,6 +402,7 @@ $("avatar-reset").addEventListener("click",()=>{
   if(!avatarBaseline)return;
   setAvatarEditor(avatarBaseline);
   officeRuntime?.previewAvatar(avatarBaseline);
+  avatarStudio?.update(avatarBaseline);
   officeToast("Restored the last saved appearance.");
 });
 $("avatar-form").addEventListener("submit",run(async e=>{
@@ -411,10 +417,47 @@ $("avatar-form").addEventListener("submit",run(async e=>{
   avatarBaseline=result.avatar;
   officeKey=avatarIdentity(player);
   officeRuntime?.previewAvatar(result.avatar);
+  avatarStudio?.update(result.avatar);
   setAvatarEditor(result.avatar);
   $("avatar-preview-status").textContent="✓ Saved to your Secret Santa participant profile.";
   officeToast("✓ Your appearance is saved.");
 }));
+
+
+function setStudioTab(name){
+  if(!["look","hair","fashion","shape"].includes(name))return;
+  activeStudioTab=name;
+  document.querySelectorAll("[data-studio-tab]").forEach(button=>{
+    const selected=button.dataset.studioTab===name;
+    button.classList.toggle("active",selected);
+    button.setAttribute("aria-selected",String(selected));
+  });
+  document.querySelectorAll("[data-studio-panel]").forEach(panel=>{
+    panel.classList.toggle("hidden",panel.dataset.studioPanel!==name);
+  });
+}
+document.querySelectorAll("[data-studio-tab]").forEach(button=>
+  button.addEventListener("click",()=>setStudioTab(button.dataset.studioTab))
+);
+$("avatar-turn-left").addEventListener("click",()=>avatarStudio?.rotate(-Math.PI/5));
+$("avatar-turn-right").addEventListener("click",()=>avatarStudio?.rotate(Math.PI/5));
+async function ensureAvatarStudio(){
+  if(avatarStudio||avatarStudioLoading||!officeRuntime||!player)return;
+  if($("player-menu").classList.contains("hidden")||$("player-character").classList.contains("hidden"))return;
+  avatarStudioLoading=(async()=>{
+    const module=await import("./game/studio.js?v=visual-richness-20261120");
+    if($("player-menu").classList.contains("hidden")||$("player-character").classList.contains("hidden"))return;
+    avatarStudio=module.mountAvatarStudio($("avatar-studio-canvas"),readAvatarEditor());
+  })();
+  try{await avatarStudioLoading;}
+  catch(err){officeToast("3D avatar preview unavailable. The office character can still be customized.");console.error(err);}
+  finally{avatarStudioLoading=null;}
+}
+function closePlayerMenu(){
+  $("player-menu").classList.add("hidden");
+  officeRuntime?.setPaused(false);
+  if(avatarStudio){avatarStudio.dispose();avatarStudio=null;}
+}
 
 function showPlayerTab(name){
   const personal=name==="personal";
@@ -422,6 +465,12 @@ function showPlayerTab(name){
   $("player-personal").classList.toggle("hidden",!personal);
   $("player-tab-character").classList.toggle("active",!personal);
   $("player-tab-personal").classList.toggle("active",personal);
+  if(!personal){
+    setStudioTab(activeStudioTab);
+    void ensureAvatarStudio();
+  }else if(avatarStudio){
+    avatarStudio.dispose();avatarStudio=null;
+  }
 }
 async function loadPlayer(){
   player=await api("player_dashboard");
@@ -642,13 +691,14 @@ $("assign-btn").addEventListener("click",run(async()=>{
   toast(res.assigned+" Secret Santa pairs created.");
 }));
 $("player-pause").addEventListener("click",()=>{
-  $("player-menu").classList.toggle("hidden");
-  if(!$("player-menu").classList.contains("hidden")){
-    showPlayerTab("character");
-    syncCameraButtons();
-  }
+  const menu=$("player-menu");
+  if(!menu.classList.contains("hidden")){closePlayerMenu();return;}
+  menu.classList.remove("hidden");
+  officeRuntime?.setPaused(true);
+  showPlayerTab("character");
+  syncCameraButtons();
 });
-$("player-close").addEventListener("click",()=>$("player-menu").classList.add("hidden"));
+$("player-close").addEventListener("click",closePlayerMenu);
 // One permanent action button: tap executes, long-press selects from four emotes.
 // One tap, one random action. No dropdown or action selection UI.
 const OFFICE_ACTIONS=["hi","dance","clap","cheer"];
