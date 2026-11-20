@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import {buildOffice} from "./office.js?v=office-social-v1";
-import {createAvatar,avatarFromPerson} from "./avatar.js?v=avatar-expanded-v1";
+import {createAvatar,avatarFromPerson} from "./avatar.js?v=avatar-expanded-v2";
 import {createOfficeLife} from "./office-life.js?v=office-social-v1";
 
 /* A responsive office runtime. 3D art and camera are independent from the existing Supabase UI. */
