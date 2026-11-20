@@ -1,6 +1,8 @@
 import * as THREE from "three";
 // Fully procedural office furniture, lights and festive scenery; no external models.
 const boxGeo=new THREE.BoxGeometry(1,1,1);
+boxGeo.userData.officeInstancing=true;
+const cachedBallGeometries=new Map();
 const matCache=new Map();
 const mat=(hex,opts={})=>{
   const key=hex+"|"+(opts.metalness||0)+"|"+(opts.roughness??.74)+"|"+(opts.emissive||0);
@@ -12,7 +14,13 @@ function block(parent,x,y,z,w,h,d,color,cast=true){
   m.position.set(x,y,z);m.scale.set(w,h,d);m.castShadow=cast;m.receiveShadow=true;parent.add(m);return m;
 }
 function ball(parent,x,y,z,r,color,detail=0){
-  const m=new THREE.Mesh(new THREE.IcosahedronGeometry(r,detail),typeof color==="number"?mat(color):color);
+  const key=r.toFixed(4)+":"+detail;
+  if(!cachedBallGeometries.has(key)){
+    const geometry=new THREE.IcosahedronGeometry(r,detail);
+    geometry.userData.officeInstancing=true;
+    cachedBallGeometries.set(key,geometry);
+  }
+  const m=new THREE.Mesh(cachedBallGeometries.get(key),typeof color==="number"?mat(color):color);
   m.position.set(x,y,z);m.castShadow=r>.2;parent.add(m);return m;
 }
 function cyl(parent,x,y,z,rTop,rBottom,height,color,segments=10){
@@ -232,6 +240,49 @@ function sign(parent,x,y,z,text){
   p.rotation.y=Math.PI; // readable from the window-side entrance camera
   parent.add(p);return p;
 }
+/**
+ * Merge repeated, stationary voxel boxes and bulbs into small, spatially
+ * chunked InstancedMeshes. This preserves independently placed props and
+ * their varied materials while dramatically reducing draw calls on phones.
+ * Animated bulbs and camera-aware fixtures are deliberately excluded.
+ */
+function batchOfficeStaticGeometry(root,overhead,twinkle){
+  if(!root.updateMatrixWorld||!THREE.InstancedMesh)return 0;
+  root.updateMatrixWorld(true);
+  const protectedObjects=new Set(twinkle);
+  for(const fixture of overhead)fixture.object.traverse(o=>protectedObjects.add(o));
+  const groups=new Map(),inv=root.matrixWorld.clone().invert();
+  root.traverse(object=>{
+    if(!object.isMesh||protectedObjects.has(object))return;
+    if(!object.geometry?.userData?.officeInstancing)return;
+    if(!object.material?.isMeshStandardMaterial)return;
+    const position=new THREE.Vector3().setFromMatrixPosition(object.matrixWorld);
+    const chunk=Math.floor(position.z/9);
+    const key=object.geometry.uuid+":"+object.material.uuid+":"+chunk+
+      ":"+(object.castShadow?1:0)+":"+(object.receiveShadow?1:0);
+    if(!groups.has(key))groups.set(key,[]);
+    groups.get(key).push(object);
+  });
+  let batches=0;
+  for(const objects of groups.values()){
+    if(objects.length<3)continue;
+    const first=objects[0],mesh=new THREE.InstancedMesh(first.geometry,first.material,objects.length);
+    mesh.castShadow=first.castShadow;
+    mesh.receiveShadow=first.receiveShadow;
+    mesh.name="Static holiday geometry x"+objects.length;
+    const matrix=new THREE.Matrix4();
+    objects.forEach((object,i)=>{
+      matrix.multiplyMatrices(inv,object.matrixWorld);
+      mesh.setMatrixAt(i,matrix);
+      object.parent.remove(object);
+    });
+    mesh.instanceMatrix.needsUpdate=true;
+    mesh.computeBoundingSphere?.();
+    root.add(mesh);
+    batches++;
+  }
+  return batches;
+}
 export function buildOffice(count=12){
   const bays=Math.max(4,Math.ceil(Math.min(150,Math.max(1,count))/3));
   // 2.42 m workstation pitch leaves ~0.90 m free between 1.52 m desk tops.
@@ -379,7 +430,8 @@ export function buildOffice(count=12){
   for(let k=0;k<3;k++)picture(root,7.94,3.06,front+5+k*5,[0xc6c6ad,0xb1c6cb,0xe3cdb2][k]);
   const spawn={x:4.2,z:Math.min(4.0,rowEnd-.3)};
   const rows=bays;
-  return {root,colliders,seats,spawn,bays,
+  const optimizedBatches=batchOfficeStaticGeometry(root,overhead,twinkle);
+  return {root,colliders,seats,spawn,bays,optimizedBatches,
     // Structural wall passages are not additional explorable rooms.
     room:{left,right,front,back},
     partyStart,twinkle,overhead,passageCenters,rowZ,deskPitch:step,passageGap};
