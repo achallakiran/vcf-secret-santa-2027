@@ -26,7 +26,7 @@ const shade=(hex,l)=>{
 export function sculptHead(head,p,kit){
   const {part,orb,mat}=kit;
   const female=p.gender==="female",cut=Number(p.hairstyle)||0;
-  const style=cut<4?cut:cut<=6?0:cut<=9?1:cut<=12?2:0;
+  const style=cut<4?cut:cut<=6?0:cut<=9?1:cut<=12?2:cut>=21?3:0;
   const parting=cut>=4&&cut<=12?(cut-4)%3: -1; // 0 left, 1 right, 2 middle
   const faded=cut>=13,shortSides=cut===13||cut===15||cut===19;
   const skin=mat(p.skinHex,.76),skinLight=mat(shade(p.skinHex,.045),.78);
@@ -89,31 +89,58 @@ export function sculptHead(head,p,kit){
   part(head,.14,.023,.019,mat(0xf5b0a0),0,.103,.436,.008).castShadow=false;
   for(const side of [-1,1])
     orb(head,.017,skinShade,side*.137,.171,.412,.75,.6,.6).castShadow=false;
-  // Separate facial hair geometry: moustaches and beards never force each other.
+  // Optional facial hair is independent of head hairstyle. Ear-to-ear beards
+  // include real sideburns attached near each ear and a jaw-to-chin silhouette.
   if(!female){
     const face=p.facialHair||"none";
     const beard=face.startsWith("beard")||face.startsWith("combo");
     const moustache=face.startsWith("moustache")||face.startsWith("combo");
-    const full=face.endsWith("full"),handlebar=face==="moustache-handlebar";
+    const stubble=face.startsWith("stubble");
+    const earBeard=face.endsWith("-ear");
+    const full=face.endsWith("full")||earBeard;
+    const handlebar=face==="moustache-handlebar";
     if(beard){
       for(const side of [-1,1]){
-        part(head,full?.17:.115,full?.27:.19,.077,deep,side*.39,.085,.281,.041);
-        part(head,.20,full?.15:.09,.074,hair,side*.205,full?-.055:-.018,.367,.038);
-        if(full)part(head,.10,.16,.06,deep,side*.35,-.075,.32,.025);
+        part(head,full?.17:.115,full?.28:.19,.088,deep,side*.392,.080,.280,.041);
+        part(head,.22,full?.15:.095,.082,hair,side*.20,full?-.065:-.018,.370,.036);
+        if(full)part(head,.115,.16,.065,deep,side*.35,-.076,.32,.026);
+        if(earBeard){
+          part(head,.145,.42,.146,deep,side*.484,.226,.138,.055);
+          part(head,.16,.21,.072,hair,side*.433,.08,.284,.037);
+          for(let i=0;i<4;i++){
+            const tuft=part(head,.10,.09,.071,i%2?hair:middle,
+              side*(.47-i*.011),.20-i*.082,.276,.026);
+            tuft.rotation.z=side*.08;
+          }
+        }
       }
-      part(head,.31,full?.16:.08,.080,deep,0,full?-.099:-.063,.334,.025);
+      part(head,.33,full?.18:.08,.082,deep,0,full?-.097:-.063,.346,.028);
+    }
+    if(stubble){
+      const heavy=face==="stubble-heavy",coverage=face!=="stubble-light";
+      const haze=mat(shade(p.hairHex,heavy?.19:.28),.89);
+      for(const side of [-1,1]){
+        part(head,coverage?.135:.095,coverage?.19:.115,.019,haze,
+          side*.405,.08,.347,.023);
+        part(head,.17,heavy?.07:.035,.018,haze,
+          side*.20,-.048,.408,.012);
+      }
+      part(head,.29,heavy?.07:.035,.021,haze,0,-.065,.388,.014);
     }
     if(moustache){
       for(const side of [-1,1]){
-        const whisker=part(head,handlebar?.17:.14,handlebar?.075:.055,.072,hair,side*.085,.194,.461,.025);
+        const whisker=part(head,handlebar?.17:.14,handlebar?.075:.055,.072,
+          hair,side*.085,.194,.461,.025);
         whisker.rotation.z=side*(handlebar?.25:.10);
         if(handlebar){
-          const tip=part(head,.085,.042,.060,hair,side*.212,.215,.445,.021);
+          const tip=part(head,.085,.042,.06,hair,side*.212,.215,.445,.021);
           tip.rotation.z=side*.53;
         }
       }
     }
   }
+  // Completely bald is a real hair-free head, not a skin-colored hair mesh.
+  if(cut!==20){
   // Hair is now constructed as a stepped crown with overlapping voxel
   // locks and *different length/volume silhouettes* for all four styles.
   const crown=part(head,1.12,.29,.82,deep,0,.779,-.042,.095);
@@ -169,15 +196,37 @@ export function sculptHead(head,p,kit){
     }
     for(let j=0;j<6;j++)
       part(head,.16,.15,.17,j%2?high:hair,(j-2.5)*.15,-.38,-.46,.049);
-  }else{
-    // Ponytail with a distinct swept-back crown and cascading locks.
+  }else if(cut===3){
+    // A centered ponytail is gathered at the occipital middle, not one side.
     part(head,.86,.42,.29,deep,0,.48,-.385,.085);
-    part(head,.36,.24,.33,middle,.315,.467,-.495,.083);
-    part(head,.28,.12,.29,jewelry,.365,.406,-.51,.045);
-    for(let j=0;j<5;j++){
-      const tail=part(head,.242,.235,.30,j%2?hair:middle,
-        .38+Math.sin(j*.8)*.065,.322-j*.19,-.52-j*.019,.085);
-      tail.rotation.z=(j-1.5)*.076;
+    part(head,.38,.23,.31,middle,0,.467,-.495,.083);
+    part(head,.27,.12,.29,jewelry,0,.408,-.53,.045);
+    for(let j=0;j<7;j++){
+      const tail=part(head,.235,.215,.29,j%2?hair:middle,
+        Math.sin(j*.8)*.045,.32-j*.17,-.57-j*.021,.076);
+      tail.rotation.z=Math.sin(j*.8)*.085;
+    }
+  }else if(cut>=21){
+    // Indian choti/plait: swept-back roots and a distinctly interwoven
+    // three-strand braid behind the head. 21/22 are central, 23 is twin.
+    part(head,.88,.32,.29,deep,0,.52,-.39,.083);
+    const twin=cut===23;
+    const count=cut===22?23:twin?15:18;
+    for(const center of (twin?[-.34,.34]:[0])){
+      const startZ=twin?-.48:-.58;
+      part(head,twin?.27:.36,.22,.24,deep,center,.41,startZ,.052);
+      for(let j=0;j<count;j++){
+        const ratio=j/count,taper=Math.max(.40,1-ratio*.58);
+        const wave=Math.sin(j*1.13)*(twin?.035:.046);
+        const x=center+wave,y=.33-j*.104,z=startZ-.065-Math.sin(j*.45)*.014;
+        part(head,.225*taper,.132,.25*taper,j%2?middle:hair,x,y,z,.045);
+        const strand=part(head,.133*taper,.114,.136*taper,j%2?high:deep,
+          x+(j%2?-.079:.079)*taper,y+.021,z+.095*taper,.029);
+        strand.rotation.z=(j%2?.27:-.27);
+      }
+      const tip=.33-count*.104;
+      part(head,.18,.08,.21,mat(0xd5a75f,.48,.12),center,tip,startZ-.06,.026);
+      part(head,.12,.18,.15,hair,center,tip-.12,startZ-.06,.038);
     }
   }
   // Visible three-dimensional scalp part, sweeping locks and short tapered sides.
@@ -216,6 +265,7 @@ export function sculptHead(head,p,kit){
       }
     }
   }
+  } // Hair finished; bald heads skip the entire scalp/hair sculpture.
   if(p.glassesStyle&&p.glassesStyle!=="none"){
     const kind=p.glassesStyle,frame=mat(p.glassesHex??0x644c40,.39,.17);
     const lens=new THREE.MeshPhysicalMaterial({color:0xd5eef3,roughness:.12,metalness:0,transparent:true,opacity:.09,depthWrite:false});
