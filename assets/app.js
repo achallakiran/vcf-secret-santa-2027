@@ -706,10 +706,13 @@ let lastOfficeAction=-1;
 $("player-action").addEventListener("click",()=>{
   if(!$("player-menu").classList.contains("hidden"))return;
   if(!officeRuntime){officeToast("Office is still loading.");return;}
-  // Avoid doing the same animation twice in a row.
-  const pick=(lastOfficeAction+1+Math.floor(Math.random()*(OFFICE_ACTIONS.length-1)))%OFFICE_ACTIONS.length;
-  lastOfficeAction=pick;
-  officeRuntime.playAction(OFFICE_ACTIONS[pick]);
+  // Four actions are equally likely on the first press. Subsequent presses
+  // randomly choose among the other three so the animation visibly changes.
+  const available=OFFICE_ACTIONS.map((name,index)=>({name,index}))
+    .filter(item=>item.index!==lastOfficeAction);
+  const pick=available[Math.floor(Math.random()*available.length)];
+  lastOfficeAction=pick.index;
+  officeRuntime.playAction(pick.name);
 });
 document.querySelectorAll("[data-camera]").forEach(b=>b.addEventListener("click",()=>{
   const cam=b.dataset.camera;
