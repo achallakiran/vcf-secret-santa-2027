@@ -253,8 +253,8 @@ function sanitizedAvatar(data:unknown){
     glassesStyle:strVal("glassesStyle",["none","round","rectangle","square","aviator","cat-eye"],r.glasses===true?"rectangle":"none"),
     glassesColor:intVal("glassesColor",11),
     glasses:r.glassesStyle!==undefined?r.glassesStyle!=="none":r.glasses===true,
-    height:numVal("height",.86,1.16,1),
-    build:numVal("build",.83,1.2,1)
+    height:numVal("height",.80,1.30,1),
+    build:numVal("build",.65,1.55,1)
   };
 }
 function today(tz:string){
