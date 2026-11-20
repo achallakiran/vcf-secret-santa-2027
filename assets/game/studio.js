@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import {createAvatar} from "./avatar.js?v=braid-camera-v1";
+import {createAvatar} from "./avatar.js?v=visual-qa-v1";
 
 /** Dedicated procedural character studio: a rotatable, fully rendered model. */
 export function mountAvatarStudio(host,appearance){
@@ -87,6 +87,7 @@ export function mountAvatarStudio(host,appearance){
     updateCameraPosition();
   }
   const swap=(props)=>{
+    const firstModel=!model;
     if(model){
       orbit.remove(model.group);
       // Geometries are authored and cached in avatar.js. Only bespoke per-model
@@ -102,7 +103,9 @@ export function mountAvatarStudio(host,appearance){
     }
     model=createAvatar(props);
     orbit.add(model.group);
-    frameAvatar();
+    // Keep the same camera while changing body dimensions. Re-fitting on
+    // every slider event previously normalized away height/build differences.
+    if(firstModel)frameAvatar();
     return model;
   };
   const touchDistance=()=>{
@@ -163,7 +166,7 @@ export function mountAvatarStudio(host,appearance){
   }else window.addEventListener("resize",resize);
   // The SAME character factory powers option thumbnails. One reusable render
   // target avoids creating a WebGL renderer/context for each visual card.
-  const thumbWidth=132,thumbHeight=164;
+  const thumbWidth=152,thumbHeight=180;
   const thumbTarget=new THREE.WebGLRenderTarget(thumbWidth,thumbHeight,{
     depthBuffer:true,samples:4
   });
@@ -185,21 +188,33 @@ export function mountAvatarStudio(host,appearance){
     const sample=createAvatar(props);
     thumbScene.add(sample.group);
     sample.update(0,false);
+    sample.group.updateMatrixWorld(true);
     const tb=new THREE.Box3().setFromObject(sample.group);
     const center=tb.getCenter(new THREE.Vector3());
     const size=tb.getSize(new THREE.Vector3());
-    thumbCamera.fov=portrait?29:38;
+    thumbCamera.fov=portrait?36:38;
     if(portrait){
-      // Portrait cards may focus on the head, but never cut its hair off.
-      center.y=tb.max.y-size.y*.30;
-      const headHeight=Math.max(1.18,size.y*.50);
-      const h=headHeight/(2*Math.tan(THREE.MathUtils.degToRad(thumbCamera.fov)/2))*1.3;
-      thumbCamera.position.set(center.x+h*.22,center.y+h*.08,center.z+h*.975);
+      // The previous formula centered a portrait relative to the FULL BODY
+      // bounds, frequently cutting off the hairline, face, or both (especially
+      // for chotis). Instead frame around the true head pivot and reserve
+      // vertical space for its highest hair volume and both cheeks.
+      const headWorld=sample.head.getWorldPosition(new THREE.Vector3());
+      const headScale=sample.head.getWorldScale(new THREE.Vector3());
+      const headBox=new THREE.Box3().setFromObject(sample.head);
+      center.set(headWorld.x,headWorld.y+.38*headScale.y,headWorld.z);
+      const top=Math.max(1,headBox.max.y-center.y);
+      const bottom=Math.max(.72,center.y-headWorld.y+.24*headScale.y);
+      const visibleHeight=Math.max(1.95,2*Math.max(top,bottom)+.30);
+      const verticalDistance=visibleHeight/(2*Math.tan(THREE.MathUtils.degToRad(thumbCamera.fov)/2));
+      const horizontalDistance=(Math.max(1.35,headBox.max.x-headBox.min.x)+.30)/
+        (2*Math.tan(THREE.MathUtils.degToRad(thumbCamera.fov)/2)*(thumbWidth/thumbHeight));
+      const dist=Math.max(verticalDistance,horizontalDistance)*1.12;
+      thumbCamera.position.set(center.x+dist*.055,center.y+dist*.025,center.z+dist*.999);
     }else{
-      const v=size.y/(2*Math.tan(THREE.MathUtils.degToRad(thumbCamera.fov)/2))*1.30;
-      const h=Math.max(size.x,size.z)/(2*Math.tan(THREE.MathUtils.degToRad(thumbCamera.fov)/2)*(thumbWidth/thumbHeight))*1.25;
+      const v=size.y/(2*Math.tan(THREE.MathUtils.degToRad(thumbCamera.fov)/2))*1.37;
+      const h=Math.max(size.x,size.z)/(2*Math.tan(THREE.MathUtils.degToRad(thumbCamera.fov)/2)*(thumbWidth/thumbHeight))*1.32;
       const dist=Math.max(v,h);
-      thumbCamera.position.set(center.x+dist*.22,center.y+dist*.08,center.z+dist*.975);
+      thumbCamera.position.set(center.x+dist*.13,center.y+dist*.07,center.z+dist*.99);
     }
     thumbCamera.lookAt(center);
     thumbCamera.updateProjectionMatrix();
