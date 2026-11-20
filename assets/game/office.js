@@ -628,7 +628,36 @@ export function buildOffice(count=12){
     petal.castShadow=false;
   }
   colliders.push({x:-4.85,z:partyStart+1.15,hx:.49,hz:.49});
-    // A friendly festive snowman, stocking displays and present table.
+    // The party wall uses warm ribbed timber and built-in display niches,
+  // confined to the far southern boundary: no camera-blocking ceiling bars.
+  const wood=getInteriorFinishes().walnut;
+  for(const cx of [-6.65,1.45,2.25,6.85]){
+    softBlock(party,cx,2.25,7.02,.77,3.25,.18,
+      getInteriorFinishes().divider,.12,false);
+    for(let j=0;j<7;j++){
+      const stripe=block(party,cx-.29+j*.096,2.25,6.88,
+        .045,3.13,.055,wood,false);
+      stripe.castShadow=false;
+    }
+    block(party,cx,3.91,6.81,.70,.09,.13,
+      getInteriorFinishes().trim,false);
+    block(party,cx,.64,6.81,.70,.08,.13,
+      getInteriorFinishes().trim,false);
+  }
+  // A festive framed board beside the stage, visible when approaching the
+  // reveal zone, with discreet warm sconces rather than roof lights.
+  for(const x of [1.75,6.65]){
+    const plaque=softBlock(party,x,2.45,6.82,.73,1.02,.075,
+      getInteriorFinishes().cabinet,.11,false);
+    block(party,x,2.46,6.76,.59,.87,.045,0x3b705c,false);
+    for(const yy of [2.72,2.45,2.18]){
+      const lamp=ball(party,x,yy,6.704,.078,
+        mat(yy>2.6?0xffe9a8:yy>2.3?0xd1636d:0xf4dba5,
+          {emissive:yy>2.6?0xbe854a:0}),1);
+      lamp.castShadow=false;
+    }
+  }
+  // A friendly festive snowman, stocking displays and present table.
   const snowman=new THREE.Group();snowman.position.set(6.67,0,5.37);party.add(snowman);
   ball(snowman,0,.55,0,.56,0xf4f1ec,1);
   ball(snowman,0,1.31,0,.40,0xffffff,1);
