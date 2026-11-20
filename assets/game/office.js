@@ -90,6 +90,60 @@ function garland(parent,z,x0,x1,y=3.5,twinkle=[]){
     block(parent,x-.10,y-.25*Math.sin(t*Math.PI)-.08,z,.27,.09,.12,0xba4550);
   }
 }
+/**
+ * Real breaks in the west perimeter wall: a door after every fourth
+ * single-sided workstation, including after the last bay of a full group.
+ * Openings have frames, lintels and a shallow lit room glimpse beyond.
+ * The hall remains the playable footprint until adjacent rooms are built.
+ */
+function westWallWithDoors(parent,left,front,back,doorCenters){
+  const doorWidth=1.7,half=doorWidth/2,wallX=left-.14;
+  let cursor=front;
+  for(let n=0;n<doorCenters.length;n++){
+    const center=doorCenters[n],from=center-half,to=center+half;
+    if(from>cursor+.01){
+      block(parent,wallX,2.15,(cursor+from)/2,.23,4.3,from-cursor,0xf6eee7,false);
+    }
+    // The actual opening is empty from floor to 2.75 m; lintel closes only overhead.
+    block(parent,wallX,3.56,center,.27,1.48,doorWidth,0xf6eee7,false);
+    for(const edge of [from,to]){
+      block(parent,wallX,1.38,edge,.29,2.76,.15,0xe0bfa3,false);
+      block(parent,wallX+.09,1.40,edge,.045,2.69,.055,0x9b7863,false);
+    }
+    block(parent,wallX+.05,2.77,center,.08,.10,doorWidth+.12,0xc5a17c,false);
+    // Doorway threshold and shallow side-room beyond the west wall.
+    block(parent,left-.46,.016,center,.93,.03,doorWidth,0xcbbcae,false);
+    block(parent,left-1.33,.025,center,1.36,.05,doorWidth,0xd5bdb0,false);
+    block(parent,left-2.02,1.41,center,.12,2.82,doorWidth+.15,0xcab5a8,false);
+    block(parent,left-1.35,1.41,from-.04,1.45,2.82,.10,0xf0e9e1,false);
+    block(parent,left-1.35,1.41,to+.04,1.45,2.82,.10,0xf0e9e1,false);
+    // An open glass-and-wood door leaf, swung into the adjoining room.
+    const door=new THREE.Group();
+    door.position.set(wallX-.07,0,from+.05);door.rotation.y=-.92;parent.add(door);
+    block(door,-.04,1.26,.69,.09,2.48,1.37,0xb48361,false);
+    block(door,-.096,1.60,.72,.03,1.40,.93,mat(0x9dbfc4,{roughness:.18}),false);
+    ball(door,-.15,1.17,1.22,.055,0xf0d5a2,1);
+    // Small wall-mounted plaque, greenery and warm illumination.
+    block(parent,wallX+.18,2.91,center,.05,.22,.70,0x678778,false);
+    block(parent,wallX+.21,2.91,center,.02,.035,.54,0xf3dbc0,false);
+    const glow=new THREE.PointLight(0xffd4a0,.68,3.6);
+    glow.position.set(left-.62,2.48,center);parent.add(glow);
+    cursor=to;
+  }
+  if(back>cursor+.01)block(parent,wallX,2.15,(cursor+back)/2,.23,4.3,back-cursor,0xf6eee7,false);
+}
+function wallGarland(parent,x,from,to,y=3.75,twinkle=[]){
+  const n=Math.max(8,Math.ceil((to-from)/.55));
+  for(let i=0;i<=n;i++){
+    const t=i/n,z=from+t*(to-from),yy=y-.14*Math.sin(t*Math.PI*3);
+    const leaf=ball(parent,x,yy,z,.095,i%3?0x32754e:0x478a5a);
+    leaf.scale.set(.7,.75,1.35);
+    if(i%4===0){
+      const light=ball(parent,x+.06,yy-.08,z,.05,mat(i%2?0xffd981:0xffa6a0,{emissive:0xe8a74d}),1);
+      twinkle.push(light);
+    }
+  }
+}
 function chair(parent,x,z,face=1,variant=0){
   const g=new THREE.Group();g.position.set(x,0,z);g.rotation.y=face;parent.add(g);
   const dark=variant%2?0x354351:0x405267;
@@ -167,10 +221,20 @@ function sign(parent,x,y,z,text){
 }
 export function buildOffice(count=12){
   const bays=Math.max(4,Math.ceil(Math.min(150,Math.max(1,count))/3));
-  const rowStart=1.45,step=1.86,rowEnd=rowStart+(bays-1)*step;
-  const partyStart=rowEnd+4,back=partyStart+7;
+  // 2.42 m workstation pitch leaves ~0.90 m free between 1.52 m desk tops.
+  // Every fourth wall-facing desk gets an extra 1.65 m cross-passage gap.
+  const rowStart=1.45,step=2.42,doorGap=1.65;
+  const rowZ=i=>rowStart+i*step+Math.floor(i/4)*doorGap;
+  const rowEnd=rowZ(bays-1);
+  const doorCenters=[];
+  for(let group=1;group<=Math.floor(bays/4);group++){
+    const last=rowZ(group*4-1);
+    const next=group*4<bays?rowZ(group*4):last+step+doorGap;
+    doorCenters.push((last+next)/2);
+  }
+  const partyStart=rowEnd+5.7,back=partyStart+7;
   const width=16,left=-8,right=8,front=-3.65;
-  const root=new THREE.Group(),colliders=[],seats=[],twinkle=[];
+  const root=new THREE.Group(),colliders=[],seats=[],twinkle=[],overhead=[];
   // Subtle PBR flooring, tile grid lines and wall baseboards.
   block(root,0,-.13,(front+back)/2,width,.24,back-front,mat(0xe6d9d1,.25),false);
   const floor=new THREE.Mesh(new THREE.PlaneGeometry(width,back-front),mat(0xe3d7d1,{roughness:.32}));
@@ -179,7 +243,7 @@ export function buildOffice(count=12){
   for(let x=left;x<=right+.001;x+=1.1)block(glines,x,.012,(front+back)/2,.012,.008,back-front,0xcfc2bf,false);
   for(let z=front;z<=back+.001;z+=1.1)block(glines,0,.012,z,width,.008,.012,0xcfc2bf,false);
   // Perimeter walls; window on north starts flush with west wall and ends just beyond island.
-  block(root,left-.14,2.15,(front+back)/2,.23,4.3,back-front,0xf6eee7,false);
+  westWallWithDoors(root,left,front,back,doorCenters);
   block(root,right+.14,2.15,(front+back)/2,.23,4.3,back-front,0xf6eee7,false);
   block(root,0,2.15,back+.12,width,4.3,.26,0xf7f0e9,false);
   block(root,5.24,2.15,front-.10,5.52,4.3,.18,0xf4ede8,false);
@@ -196,14 +260,17 @@ export function buildOffice(count=12){
   for(let x=-7.95;x<2.5;x+=1.72)block(root,x,2.28,front-.04,.075,3.25,.11,0x686d7a,false);
   block(root,-2.65,3.55,front-.025,10.7,.10,.15,0x656a73,false);
   block(root,-2.65,.79,front-.025,10.7,.10,.15,0x656a73,false);
-  // Ceiling beams and long rectangular white/yellow lamp panels.
-  for(let z=1;z<back-2;z+=7.3){
-    block(root,0,4.05,z,width,.15,.22,0xe9e1d8,false);
-    lamp(root,-4,z);lamp(root,1,z);lamp(root,6,z);
+  // No full-width roof decorations above walking aisles: lamps stay near
+  // workstation edges and dynamically cut away if they obstruct the camera.
+  for(let z=1;z<back-2;z+=8){
+    for(const x of [-4.55,1.9]){
+      const light=lamp(root,x,z);
+      overhead.push({object:light,x,y:3.73,z,radius:1.7});
+    }
   }
   // Workstation bay repeated perpendicular to the north window.
   for(let i=0;i<bays;i++){
-    const z=rowStart+i*step;
+    const z=rowZ(i);
     seats.push(workstation(root,-7.1,z,i,"W",colliders));
     seats.push(workstation(root,-1.6,z,i,"L",colliders));
     seats.push(workstation(root,-.3,z,i,"R",colliders));
@@ -214,11 +281,11 @@ export function buildOffice(count=12){
     }
     if(i%5===0)wreath(root,-7.87,2.45,z,Math.PI/2);
   }
-  // Ceiling garlands travel the north window and the central aisle.
-  garland(root,front+.30,-7.6,2.6,3.45,twinkle);
-  for(let z=4;z<partyStart;z+=8){
-    garland(root,z,-7.2,7.2,3.58,twinkle);
-  }
+  // Decorate along perimeter walls only, rather than dangling a curtain of
+  // garlands across the character and hiding the scene in front of the camera.
+  garland(root,front+.30,-7.6,2.6,3.85,twinkle);
+  wallGarland(root,-7.74,front+1,partyStart+2,3.79,twinkle);
+  wallGarland(root,7.71,front+1,partyStart+2,3.78,twinkle);
   // Small decorated tree near spawn; no obstruction to circulation.
   tree(root,6.55,4.75,.38);
   colliders.push({x:6.55,z:4.75,hx:.8,hz:.8});
@@ -246,5 +313,6 @@ export function buildOffice(count=12){
   for(let k=0;k<3;k++)picture(root,7.94,3.06,front+5+k*5,[0xc6c6ad,0xb1c6cb,0xe3cdb2][k]);
   const spawn={x:4.2,z:Math.min(4.0,rowEnd-.3)};
   const rows=bays;
-  return {root,colliders,seats,spawn,bays,room:{left,right,front,back},partyStart,twinkle};
+  return {root,colliders,seats,spawn,bays,room:{left,right,front,back},
+    partyStart,twinkle,overhead,doorCenters,rowZ,deskPitch:step,doorGap};
 }
