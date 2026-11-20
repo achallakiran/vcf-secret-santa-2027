@@ -36,7 +36,7 @@ A holiday office Secret Santa experience, hosted as a static GitHub Pages fronte
 
 The participant-code flow now opens a new procedural Three.js 3D office scene instead of the former Christmas tree placeholder. The organizer console, invitation-code login, private wishlists and task API remain unchanged.
 
-**Public art preview without a participant account:** `https://achallakiran.github.io/vcf-secret-santa-2027/?preview=1`. This preview contains fictional coworkers and does not use or expose real event data. GitHub Pages must be enabled for the URL to work.
+**No generated demo participants:** The former `?preview=1` fake player and fictional coworker roster have been removed. Only authenticated event participants enter the office; the organizer manages people in `?admin=1`.
 
 **Player controls:** click/tap a free patch of floor to walk; click/tap a coworker to approach and greet. **One tap of the only action button performs a randomly selected Hi, Dance, Clap or Cheer**, immediately, without any action dropdown, cycling control or long-press gesture. It avoids repeating the immediately previous animation. Top-right Pause opens the Character / Personal tabs and three camera settings. There is no joystick, chat or online icon.
 
@@ -48,7 +48,7 @@ The participant-code flow now opens a new procedural Three.js 3D office scene in
 
 **Mobile viewport stability:** the game pins to the stable `100svh` viewport on touch devices, disables browser scroll and pinch-to-zoom only over the gameplay canvas, preserves scroll in Pause/Character/Personal panels, and uses 16px input fonts to prevent iOS Safari focus zoom. Rotating the phone still recalculates aspect ratio. The organizer console is unaffected.
 
-**Avatar atelier (visual creator v3):** Pause → Character now uses the reference-driven cream/rose/plum layout: category icon rail at left, **large draggable live 3D model** in the center, and **real 3D option thumbnails** at right. Gender, hairstyle, outfit, bottoms, spectacles and footwear use clickable image tiles—**no appearance dropdowns**. Height and build retain sliders. Skin, hair and clothing use **unnamed color swatches**, including pure black and pure white. Color indices previously saved remain compatible. Options are rendered using the **same full-quality procedural avatar**, not a reduced preview mesh. Thumbnails are cached and rendered through the existing studio's single WebGL renderer; updates preview live on the in-game character. Save/Reset continue using the signed player-scoped Supabase `ss-gateway` with optimistic avatar version checks. Public preview allows customization but cannot persist changes. Existing login-to-office flow is unchanged; an accidentally added pre-office wizard has been removed.
+**Avatar atelier (visual creator v3):** Pause → Character now uses the reference-driven cream/rose/plum layout: category icon rail at left, **large draggable live 3D model** in the center, and **real 3D option thumbnails** at right. Gender, hairstyle, outfit, bottoms, spectacles and footwear use clickable image tiles—**no appearance dropdowns**. Height and build retain sliders. Skin, hair and clothing use **unnamed color swatches**, including pure black and pure white. Color indices previously saved remain compatible. Options are rendered using the **same full-quality procedural avatar**, not a reduced preview mesh. Thumbnails are cached and rendered through the existing studio's single WebGL renderer; updates preview live on the in-game character. Save/Reset continue using the signed player-scoped Supabase `ss-gateway` with optimistic avatar version checks. The avatar studio remains accessible after real participant login, where customizations may be saved. The accidental pre-office wizard remains removed.
 
 **Hi and gesture animation:** The right-arm Hi previously used a large negative shoulder-Z rotation that moved the hand across/behind the face. This was replaced by an **outward raised arm, bent elbow and independently rotating wrist** with smooth raise/lower timing. Clap now brings hands inward instead of moving them apart; Dance/Cheer remain rigged. All coworkers use the same full-resolution character model.
 
@@ -111,7 +111,7 @@ Implemented on `main`:
 - Clap arm movement revised to converge inward; wardrobe fabrics now include reusable weave/embroidery patterns.
 - Indoor plants and wall garlands refined with layered leaves, ribbon bows and brighter wall lighting. No roof bars added.
 
-The public preview can be used to inspect these changes at `?preview=1`. Static syntax, data-flow and geometry checks do **not** prove the image-reference standard has been reached. Real browser screenshots, iPhone/desktop GPU tests and recorded animated poses still need to be inspected before claiming the complete art-quality milestone.
+Static syntax, data-flow and geometry checks do **not** prove the image-reference standard has been reached. Real browser screenshots, iPhone/desktop GPU tests and recorded animated poses still need to be inspected before claiming the complete art-quality milestone.
 
 ### Full-detail visual sculpture v3 — reference-led character and office art
 
@@ -141,6 +141,14 @@ This revision is **implemented in `main`**, rather than a future plan. It is the
 **Verified in this turn:** syntax of the updated modules and scripted construction/animation of six garment variants; office generation at 1, 12 and 45 participants. Actual fidelity to the supplied screenshots, iPhone Safari performance, live browser rendering and animation appeal remain **unverified** until testing.
 
 **Next milestone:** real-device visual QA of the new touch camera, wide-office cutaways, stable mobile viewport, celebration, wall passages, avatar studio and action animations; compare mobile Safari and desktop against the user's rich voxel reference, then refine body/head silhouettes, footwear, clothing accessories and office lighting/reflections. These visual enhancements are implemented but **the rendering has not yet been tested in a live browser in this session**, so do not treat the richness target as certified. Once accepted, continue to daily frozen office/hint logic and finale.
+
+### Organizer roster and invitation code visibility
+
+The `?admin=1` console automatically opens the most recently created event after successful organizer authentication. The roster shows complete participant names, including on narrow mobile screens with labeled responsive cards rather than clipping names in a wide table.
+
+Invitation codes remain visible as four digits **only to the signed-in organizer** after refresh. The server verifies the organizer token before returning codes. One-way event-specific fingerprints remain the participant-login verifier; separate AES-GCM encrypted envelopes in `ss_access_codes.code_vault` allow authorized repeat display. An organizer-only compatibility path restores old codes without changing those already shared. Codes must remain confidential and are never included in another participant's dashboard.
+
+The `?preview=1` fictional coworker mode has been removed. Without a real event-scoped invitation code, the home screen does not enter the office. The organizer must share the event link containing `?event=...` alongside each player's code.
 
 ## Deployment
 
