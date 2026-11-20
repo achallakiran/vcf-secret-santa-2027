@@ -1,9 +1,9 @@
 import * as THREE from "three";
-import {sculptHead,sculptFoot} from "./avatar-parts.js?v=braid-camera-v1";
-import {sculptWardrobe} from "./wardrobe.js?v=avatar-expanded-v1";
+import {sculptHead,sculptFoot} from "./avatar-parts.js?v=visual-qa-v1";
+import {sculptWardrobe} from "./wardrobe.js?v=visual-qa-v1";
 import {SKIN_COLORS as SKINS,HAIR_COLORS as HAIR,OUTFIT_COLORS as COLORS,FOOTWEAR_OPTIONS} from "./palette.js?v=visual-atelier-v3";
 import {clothMaterial} from "./visual-materials.js?v=visual-atelier-v3";
-import {sculptFaceVoxels,sculptHairVoxels,sculptGarmentVoxels,sculptSleeveVoxels,sculptShoeVoxels} from "./artisan-voxels.js?v=braid-camera-v1";
+import {sculptFaceVoxels,sculptHairVoxels,sculptGarmentVoxels,sculptSleeveVoxels,sculptShoeVoxels} from "./artisan-voxels.js?v=visual-qa-v1";
 /**
  * Hybrid voxel adults with modular, richly sculpted faces and contemporary Indian garments. No external or unverified character assets.
  * The body is rigged with real limb pivots and features layered face and hair meshes.
@@ -72,8 +72,8 @@ function resolve(opts={}){
     glassesColor:Number.isInteger(n.glassesColor)?Math.abs(n.glassesColor)%COLORS.length:0,
     footwear:FOOTWEAR_OPTIONS.includes(n.footwear)?n.footwear:"auto",
     glasses:!!n.glasses||n.glassesStyle&&n.glassesStyle!=="none",
-    height:Math.min(1.16,Math.max(.86,Number(n.height)||1)),
-    build:Math.min(1.2,Math.max(.83,Number(n.build)||1))
+    height:Math.min(1.30,Math.max(.80,Number(n.height)||1)),
+    build:Math.min(1.55,Math.max(.65,Number(n.build)||1))
   };
 }
 export function createAvatar(input={},mini=false){
@@ -94,6 +94,7 @@ export function createAvatar(input={},mini=false){
         cloth=clothMaterial(p.outfit,COLORS[p.color]),dark=mat(0x272b3a),white=mat(0xfff4df);
   const accent=mat(p.outfit==="salwar"?0xebbf87:0xe8d7b8);
   const width=p.build, feminine=p.gender==="female";
+  const depthBulk=Math.pow(width,.52);
   const isEthnic=p.outfit==="salwar";
   const top=cloth;
   const bottomColors={jeans:0x375476,trousers:0x394352,leggings:0x433c53,palazzo:0xe0c9af};
@@ -104,9 +105,9 @@ export function createAvatar(input={},mini=false){
   const hips=new THREE.Group();hips.position.y=1.04;body.add(hips);
   // Rebalanced to a cute miniature adult: broad, sculpted upper silhouette,
   // short torso and substantially larger head relative to shoulder width.
-  const pelvis=part(hips,.56*width,.36,.41,bottom,0,-.15,0,.13);
-  const torso=part(hips,(feminine?.69:.78)*width,.69,.46,top,0,.38,0,.15);
-  const waist=part(hips,(feminine?.56:.65)*width,.20,.46,top,0,.055,.01,.10);
+  const pelvis=part(hips,.56*width,.36,.41*depthBulk,bottom,0,-.15,0,.13);
+  const torso=part(hips,(feminine?.69:.78)*width,.69,.46*depthBulk,top,0,.38,0,.15);
+  const waist=part(hips,(feminine?.56:.65)*width,.20,.46*depthBulk,top,0,.055,.01,.10);
   if(feminine)part(hips,.60*width,.10,.47,top,0,.01,.01,.055);
   // Subtle neckline shadow gives garment depth from the overhead camera.
   part(hips,.23,.055,.20,mat(0xe0ad8b,.84),0,.754,.065,.018);
@@ -357,7 +358,21 @@ export function createAvatar(input={},mini=false){
     data.seated=false;
   };
   const scale=p.height*(mini?.9:1);
-  root.scale.setScalar(scale);
+  // Height stretches body along the vertical axis (not a uniform zoom).
+  // Body width has its own shape factor and never changes camera distance.
+  root.scale.set(1,scale,1);
+  data.setBodyShape=(height,build)=>{
+    const h=Math.min(1.30,Math.max(.80,Number(height)||1));
+    const b=Math.min(1.55,Math.max(.65,Number(build)||1));
+    const ratio=b/p.build;
+    root.scale.y=h*(mini?.9:1);
+    hips.scale.set(ratio,1,Math.pow(ratio,.52));
+    // Keep the face and hairstyle at their original proportions while body
+    // shape expands. This also removes exaggerated eyebrow distortion.
+    headPivot.scale.set(1.08/ratio,1.08,1.08/Math.pow(ratio,.52));
+    data.parameters.height=h;
+    data.parameters.build=b;
+  };
   root.userData.avatar=data;
   root.traverse(obj=>{obj.userData.avatarRoot=data;});
   return data;
