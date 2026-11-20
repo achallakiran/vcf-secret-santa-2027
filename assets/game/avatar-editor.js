@@ -144,7 +144,10 @@ export function createVisualAvatarEditor({read,choose,studio}){
     activeTab=Object.hasOwn(groups,tab)?tab:"look";generation++;pending=[];
     if(frame){cancelAnimationFrame(frame);frame=0;}
     const config=read();
+    const facialHairSection=document.getElementById("avatar-facialHair-section");
+    if(facialHairSection)facialHairSection.classList.toggle("hidden",config.gender!=="male");
     for(const group of groups[activeTab]){
+      if(group.field==="facialHair"&&config.gender!=="male")continue;
       const container=document.getElementById(group.id);if(!container)continue;
       container.replaceChildren();group.palette?swatches(container,group,config):cards(container,group,config);
     }
