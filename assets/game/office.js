@@ -331,7 +331,7 @@ function workstation(parent,x,z,i,row,colliders){
   block(g,0,.18,0,.69,.22,3.04,mat(0xeae5dc));
   // Full privacy partitions on BOTH desk ends plus a rear divider.
   // Ends sit beyond the new top, rather than slicing through the work area.
-  softBlock(g,0,1.11,0,.052,.65,3.31,finish.divider,.045,false);
+  softBlock(g,-chairSide*.485,1.11,0,.052,.65,3.31,finish.divider,.045,false);
   for(const side of [-1,1]){
     softBlock(g,0,1.10,side*1.69,1.02,.63,.07,finish.divider,.04,false);
     block(g,0,1.43,side*1.69,.99,.023,.086,finish.trim,false);
