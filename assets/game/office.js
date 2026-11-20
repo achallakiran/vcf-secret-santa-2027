@@ -216,18 +216,6 @@ function workstation(parent,x,z,i,row,colliders){
   colliders.push({x:chairX,z,hx:.33,hz:.37});
   return {position:{x:chairX,z:z-.08},facing,row,index:i};
 }
-function lamp(parent,x,z){
-  const g=new THREE.Group();g.position.set(x,0,z);parent.add(g);
-  block(g,0,3.76,0,.62,.19,1.6,0x343b41,false);
-  block(g,0,3.65,0,.55,.06,1.5,mat(0xffe7b5,{emissive:0xffdfb9}),false);
-  // Use emissive materials for distant fixtures. Dynamic lights are capped to
-  // the first few nearby bays so larger events remain playable on mobile GPUs.
-  if(z<24 && x>1.5){
-    const pt=new THREE.PointLight(0xffdebb,1.25,6);
-    pt.position.y=3.4;g.add(pt);
-  }
-  return g;
-}
 function sign(parent,x,y,z,text){
   // Labels identify office areas, never place giant logos over gameplay.
   const can=document.createElement("canvas");can.width=420;can.height=140;
@@ -246,11 +234,12 @@ function sign(parent,x,y,z,text){
  * their varied materials while dramatically reducing draw calls on phones.
  * Animated bulbs and camera-aware fixtures are deliberately excluded.
  */
-function batchOfficeStaticGeometry(root,overhead,twinkle){
+function batchOfficeStaticGeometry(root,twinkle,viewWalls){
   if(!root.updateMatrixWorld||!THREE.InstancedMesh)return 0;
   root.updateMatrixWorld(true);
   const protectedObjects=new Set(twinkle);
-  for(const fixture of overhead)fixture.object.traverse(o=>protectedObjects.add(o));
+  // Removable cutaway walls must stay separate from instanced static geometry.
+  for(const wall of Object.values(viewWalls))wall.traverse(o=>protectedObjects.add(o));
   const groups=new Map(),inv=root.matrixWorld.clone().invert();
   root.traverse(object=>{
     if(!object.isMesh||protectedObjects.has(object))return;
@@ -299,7 +288,17 @@ export function buildOffice(count=12){
   // A clearly visible but separate decorated zone starts after the last desks.
   const partyStart=rowEnd+3.35,back=partyStart+7.35;
   const width=16,left=-8,right=8,front=-3.65;
-  const root=new THREE.Group(),colliders=[],seats=[],twinkle=[],overhead=[];
+  const root=new THREE.Group(),colliders=[],seats=[],twinkle=[];
+  // Separate perimeter surfaces: cameras can create an architectural cutaway
+  // without hiding the office furniture or flickering individual ceiling bars.
+  const viewWalls={
+    north:new THREE.Group(),south:new THREE.Group(),
+    east:new THREE.Group(),west:new THREE.Group()
+  };
+  Object.entries(viewWalls).forEach(([side,wall])=>{
+    wall.name="Cutaway "+side+" wall";
+    root.add(wall);
+  });
   // Subtle PBR flooring, tile grid lines and wall baseboards.
   block(root,0,-.13,(front+back)/2,width,.24,back-front,mat(0xe6d9d1,.25),false);
   const floor=new THREE.Mesh(new THREE.PlaneGeometry(width,back-front),mat(0xe3d7d1,{roughness:.32}));
@@ -308,29 +307,37 @@ export function buildOffice(count=12){
   for(let x=left;x<=right+.001;x+=1.1)block(glines,x,.012,(front+back)/2,.012,.008,back-front,0xcfc2bf,false);
   for(let z=front;z<=back+.001;z+=1.1)block(glines,0,.012,z,width,.008,.012,0xcfc2bf,false);
   // Perimeter walls; window on north starts flush with west wall and ends just beyond island.
-  westWallPassages(root,left,front,back,passageCenters);
-  block(root,right+.14,2.15,(front+back)/2,.23,4.3,back-front,0xf6eee7,false);
-  block(root,0,2.15,back+.12,width,4.3,.26,0xf7f0e9,false);
-  block(root,5.24,2.15,front-.10,5.52,4.3,.18,0xf4ede8,false);
-  block(root,-2.6,3.87,front-.09,10.9,.64,.18,0xf4ede8,false);
-  block(root,-2.6,.38,front-.09,10.9,.76,.2,0xe6d6cb,false);
+  westWallPassages(viewWalls.west,left,front,back,passageCenters);
+  block(viewWalls.east,right+.14,2.15,(front+back)/2,.23,4.3,back-front,0xf6eee7,false);
+  block(viewWalls.south,0,2.15,back+.12,width,4.3,.26,0xf7f0e9,false);
+  block(viewWalls.north,5.24,2.15,front-.10,5.52,4.3,.18,0xf4ede8,false);
+  block(viewWalls.north,-2.6,3.87,front-.09,10.9,.64,.18,0xf4ede8,false);
+  block(viewWalls.north,-2.6,.38,front-.09,10.9,.76,.2,0xe6d6cb,false);
   const glass=new THREE.Mesh(new THREE.PlaneGeometry(10.55,2.75),new THREE.MeshPhysicalMaterial({color:0xc6e8f2,metalness:.05,roughness:.07,transmission:.24,transparent:true,opacity:.47,side:THREE.DoubleSide}));
-  glass.position.set(-2.72,2.24,front-.18);root.add(glass);
+  glass.position.set(-2.72,2.24,front-.18);viewWalls.north.add(glass);
   // Outdoor skyline and trees visible through the single north window.
   for(let j=0;j<24;j++){
     const x=-8.1+j*.45,hh=1.0+(j*31%12)*.17;
     block(root,x,hh/2+.75,front-3.3-(j%3),.44,hh,.46,[0x94b9ce,0x8fa9c9,0xb0bcd1,0x85aeb1][j%4],false);
     if(j%3===0)ball(root,x,.72,front-1.8,1.05,0x7eaf87);
   }
-  for(let x=-7.95;x<2.5;x+=1.72)block(root,x,2.28,front-.04,.075,3.25,.11,0x686d7a,false);
-  block(root,-2.65,3.55,front-.025,10.7,.10,.15,0x656a73,false);
-  block(root,-2.65,.79,front-.025,10.7,.10,.15,0x656a73,false);
-  // No full-width roof decorations above walking aisles: lamps stay near
-  // workstation edges and dynamically cut away if they obstruct the camera.
-  for(let z=1;z<back-2;z+=8){
-    for(const x of [-4.55,1.9]){
-      const light=lamp(root,x,z);
-      overhead.push({object:light,x,y:3.73,z,radius:1.7});
+  for(let x=-7.95;x<2.5;x+=1.72)block(viewWalls.north,x,2.28,front-.04,.075,3.25,.11,0x686d7a,false);
+  block(viewWalls.north,-2.65,3.55,front-.025,10.7,.10,.15,0x656a73,false);
+  block(viewWalls.north,-2.65,.79,front-.025,10.7,.10,.15,0x656a73,false);
+  // Absolutely no overhead bars, suspended strips or fixtures over gameplay.
+  // Small sconces remain on perimeter walls; never hide/show overhead objects.
+  for(let z=3.4;z<Math.min(back-3,48);z+=11){
+    for(const side of [-1,1]){
+      const wall=side>0?viewWalls.east:viewWalls.west;
+      const x=side>0?right-.05:left+.05;
+      const plate=block(wall,x,3.08,z,.07,.25,.21,0xc5ac85,false);
+      const lampBulb=ball(wall,x-side*.12,3.08,z,.105,
+        mat(0xffe6b5,{emissive:0xf0af51}),1);
+      lampBulb.castShadow=false;
+      if(z<26&&side>0){
+        const glow=new THREE.PointLight(0xffd4a2,.75,5);
+        glow.position.set(x-side*.5,2.85,z);root.add(glow);
+      }
     }
   }
   // Workstation bay repeated perpendicular to the north window.
@@ -436,9 +443,9 @@ export function buildOffice(count=12){
   for(let k=0;k<3;k++)picture(root,7.94,3.06,front+5+k*5,[0xc6c6ad,0xb1c6cb,0xe3cdb2][k]);
   const spawn={x:4.2,z:Math.min(4.0,rowEnd-.3)};
   const rows=bays;
-  const optimizedBatches=batchOfficeStaticGeometry(root,overhead,twinkle);
+  const optimizedBatches=batchOfficeStaticGeometry(root,twinkle,viewWalls);
   return {root,colliders,seats,spawn,bays,optimizedBatches,
     // Structural wall passages are not additional explorable rooms.
     room:{left,right,front,back},
-    partyStart,twinkle,overhead,passageCenters,rowZ,deskPitch:step,passageGap};
+    partyStart,twinkle,viewWalls,passageCenters,rowZ,deskPitch:step,passageGap};
 }
