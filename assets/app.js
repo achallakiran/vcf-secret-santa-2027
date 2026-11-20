@@ -301,7 +301,7 @@ async function enterOffice(info){
     setAvatarEditor(avatarBaseline);
     syncCameraButtons();
     $("office-loading").classList.add("hidden");
-    officeToast("Tap the floor to move. Tap 👋 to wave; hold it to select another action.");
+    officeToast("Tap the floor to move. Tap the hand to perform a random cheerful action.");
   })();
   try{await officeLoading;}
   catch(error){
@@ -642,7 +642,6 @@ $("assign-btn").addEventListener("click",run(async()=>{
   toast(res.assigned+" Secret Santa pairs created.");
 }));
 $("player-pause").addEventListener("click",()=>{
-  $("action-picker").classList.add("hidden");
   $("player-menu").classList.toggle("hidden");
   if(!$("player-menu").classList.contains("hidden")){
     showPlayerTab("character");
@@ -651,62 +650,17 @@ $("player-pause").addEventListener("click",()=>{
 });
 $("player-close").addEventListener("click",()=>$("player-menu").classList.add("hidden"));
 // One permanent action button: tap executes, long-press selects from four emotes.
-const ACTION_ICONS={hi:"👋",dance:"🕺",clap:"👏",cheer:"🎉"};
-let selectedOfficeAction="hi",actionHoldTimer=null,suppressActionClick=false;
-const actionControl=$("player-action");
-function updateSelectedAction(action,perform=false){
-  if(!ACTION_ICONS[action])return;
-  selectedOfficeAction=action;
-  $("player-action-symbol").textContent=ACTION_ICONS[action];
-  actionControl.title="Tap for "+action+". Hold to change.";
-  actionControl.setAttribute("aria-label","Perform "+action+". Hold to choose another action.");
-  document.querySelectorAll("[data-action]").forEach(b=>b.classList.toggle("selected",b.dataset.action===action));
-  if(perform){
-    const played=officeRuntime?.playAction(action);
-    if(!played)officeToast("The character is still loading.");
-  }
-}
-function toggleActionMenu(){
+// One tap, one random action. No dropdown or action selection UI.
+const OFFICE_ACTIONS=["hi","dance","clap","cheer"];
+let lastOfficeAction=-1;
+$("player-action").addEventListener("click",()=>{
   if(!$("player-menu").classList.contains("hidden"))return;
-  const picker=$("action-picker");
-  picker.classList.toggle("hidden");
-  if(!picker.classList.contains("hidden"))officeToast("Choose Hi, Dance, Clap or Cheer.");
-}
-function clearActionHold(){
-  if(actionHoldTimer!==null){clearTimeout(actionHoldTimer);actionHoldTimer=null;}
-}
-actionControl.addEventListener("pointerdown",e=>{
-  if(e.button!==undefined&&e.button!==0)return;
-  clearActionHold();
-  suppressActionClick=false;
-  actionHoldTimer=setTimeout(()=>{
-    actionHoldTimer=null;
-    suppressActionClick=true;
-    toggleActionMenu();
-  },470);
+  if(!officeRuntime){officeToast("Office is still loading.");return;}
+  // Avoid doing the same animation twice in a row.
+  const pick=(lastOfficeAction+1+Math.floor(Math.random()*(OFFICE_ACTIONS.length-1)))%OFFICE_ACTIONS.length;
+  lastOfficeAction=pick;
+  officeRuntime.playAction(OFFICE_ACTIONS[pick]);
 });
-for(const kind of ["pointerup","pointercancel","pointerleave"]){
-  actionControl.addEventListener(kind,clearActionHold);
-}
-actionControl.addEventListener("contextmenu",e=>e.preventDefault());
-actionControl.addEventListener("click",e=>{
-  if(suppressActionClick){suppressActionClick=false;return;}
-  if(!$("player-menu").classList.contains("hidden"))return;
-  // A tap on the tiny integrated chevron opens the selector without adding
-  // another permanently visible gameplay button.
-  const rect=actionControl.getBoundingClientRect();
-  if(e.detail!==0&&e.clientX>=rect.right-24&&e.clientY>=rect.bottom-24){
-    toggleActionMenu();return;
-  }
-  $("action-picker").classList.add("hidden");
-  updateSelectedAction(selectedOfficeAction,true);
-});
-document.querySelectorAll("[data-action]").forEach(b=>b.addEventListener("click",()=>{
-  updateSelectedAction(b.dataset.action,true);
-  $("action-picker").classList.add("hidden");
-}));
-// No separate joystick, chat, emote HUD bar, or online indicator.
-
 document.querySelectorAll("[data-camera]").forEach(b=>b.addEventListener("click",()=>{
   const cam=b.dataset.camera;
   if(!["three","close","wide"].includes(cam))return;
