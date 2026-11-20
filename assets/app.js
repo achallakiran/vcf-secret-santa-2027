@@ -287,7 +287,7 @@ async function enterOffice(info){
     officeKey=identity;
     syncCameraButtons();
     $("office-loading").classList.add("hidden");
-    officeToast("Tap the floor to walk. Choose an action with 👋.");
+    officeToast("Tap the floor to move. Tap 👋 to wave; hold it to select another action.");
   })();
   try{await officeLoading;}
   catch(error){
@@ -551,20 +551,64 @@ $("player-pause").addEventListener("click",()=>{
   }
 });
 $("player-close").addEventListener("click",()=>$("player-menu").classList.add("hidden"));
-$("player-action").addEventListener("click",()=>{
+// One permanent action button: tap executes, long-press selects from four emotes.
+const ACTION_ICONS={hi:"👋",dance:"🕺",clap:"👏",cheer:"🎉"};
+let selectedOfficeAction="hi",actionHoldTimer=null,suppressActionClick=false;
+const actionControl=$("player-action");
+function updateSelectedAction(action,perform=false){
+  if(!ACTION_ICONS[action])return;
+  selectedOfficeAction=action;
+  $("player-action-symbol").textContent=ACTION_ICONS[action];
+  actionControl.title="Tap for "+action+". Hold to change.";
+  actionControl.setAttribute("aria-label","Perform "+action+". Hold to choose another action.");
+  document.querySelectorAll("[data-action]").forEach(b=>b.classList.toggle("selected",b.dataset.action===action));
+  if(perform){
+    const played=officeRuntime?.playAction(action);
+    if(!played)officeToast("The character is still loading.");
+  }
+}
+function toggleActionMenu(){
   if(!$("player-menu").classList.contains("hidden"))return;
-  $("action-picker").classList.toggle("hidden");
+  const picker=$("action-picker");
+  picker.classList.toggle("hidden");
+  if(!picker.classList.contains("hidden"))officeToast("Choose Hi, Dance, Clap or Cheer.");
+}
+function clearActionHold(){
+  if(actionHoldTimer!==null){clearTimeout(actionHoldTimer);actionHoldTimer=null;}
+}
+actionControl.addEventListener("pointerdown",e=>{
+  if(e.button!==undefined&&e.button!==0)return;
+  clearActionHold();
+  suppressActionClick=false;
+  actionHoldTimer=setTimeout(()=>{
+    actionHoldTimer=null;
+    suppressActionClick=true;
+    toggleActionMenu();
+  },470);
+});
+for(const kind of ["pointerup","pointercancel","pointerleave"]){
+  actionControl.addEventListener(kind,clearActionHold);
+}
+actionControl.addEventListener("contextmenu",e=>e.preventDefault());
+actionControl.addEventListener("click",()=>{
+  if(suppressActionClick){suppressActionClick=false;return;}
+  if(!$("player-menu").classList.contains("hidden")){
+    return;
+  }
+  $("action-picker").classList.add("hidden");
+  updateSelectedAction(selectedOfficeAction,true);
 });
 document.querySelectorAll("[data-action]").forEach(b=>b.addEventListener("click",()=>{
-  const icons={hi:"👋",dance:"🕺",clap:"👏",cheer:"🎉"};
-  const chosen=b.dataset.action;
-  if(!icons[chosen])return;
-  document.querySelectorAll("[data-action]").forEach(x=>x.classList.toggle("selected",x===b));
-  $("player-action").textContent=icons[chosen];
-  $("player-action").title=chosen;
-  officeRuntime?.playAction(chosen);
+  updateSelectedAction(b.dataset.action,true);
   $("action-picker").classList.add("hidden");
 }));
+// The downward chevron is part of the same button. It is not a third HUD control.
+actionControl.addEventListener("dblclick",e=>{
+  e.preventDefault();
+  suppressActionClick=true;
+  toggleActionMenu();
+});
+
 document.querySelectorAll("[data-camera]").forEach(b=>b.addEventListener("click",()=>{
   const cam=b.dataset.camera;
   if(!["three","close","wide"].includes(cam))return;
