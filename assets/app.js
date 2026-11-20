@@ -116,7 +116,8 @@ async function openEvent(e){
   participants=result.participants||[];
   assignments=result.assignments||[];
   $("workspace-title").textContent=event.title;
-  $("workspace-slug").textContent="Invite link: "+eventUrl();
+  $("workspace-slug").textContent=eventUrl();
+  $("workspace-open-link").href=eventUrl();
   $("workspace-state").textContent=event.assignments_locked_at?"LOCKED":"OPEN";
   $("people-count").textContent=participants.length;
   $("assignment-count").textContent=assignments.length;
@@ -148,7 +149,11 @@ function renderPeople(){
       toast("Invitation copied.");
     }));
     copy.disabled=!codes.has(p.id);
-    shareCell.append(whatsapp,copy);tr.append(shareCell);
+    const openLink=node("a","small-outline link-action","Open player ↗");
+    openLink.href=eventUrl();
+    openLink.target="_blank";
+    openLink.rel="noopener noreferrer";
+    shareCell.append(whatsapp,copy,openLink);tr.append(shareCell);
     const controls=node("td");
     const edit=button("Edit",run(async()=>{
       const display_name=prompt("Employee name",p.display_name);
@@ -259,6 +264,7 @@ function openInvitation(person,number="",country="91"){
   $("invite-person-name").textContent="Invitation for "+person.display_name;
   $("invite-country").value=country;
   $("invite-phone").value=number;
+  updateWhatsAppLink();
   if(!dialog.open)dialog.showModal();
 }
 function closeInvitation(){
@@ -266,6 +272,7 @@ function closeInvitation(){
   $("invite-form").reset();
   $("invite-phone").value="";
   transientInvite.participantId=null;
+  clearWhatsAppLink();
   if(dialog.open)dialog.close();
 }
 function targetInvitation(){
@@ -280,11 +287,46 @@ function readTemporaryPhone(){
   if(!["91","1","44","971","65"].includes(country))throw Error("Select a country code.");
   return country+number;
 }
+
+function clearWhatsAppLink(){
+  const a=$("invite-open-link");
+  a.removeAttribute("href");a.classList.add("is-disabled");
+  a.setAttribute("aria-disabled","true");a.tabIndex=-1;
+  $("invite-link-status").textContent="Enter ten digits to enable WhatsApp.";
+}
+function updateWhatsAppLink(){
+  try{
+    const person=targetInvitation();
+    const number=readTemporaryPhone();
+    const href="https://wa.me/"+number+"?text="+encodeURIComponent(shareText(person));
+    const a=$("invite-open-link");
+    a.href=href;a.tabIndex=0;
+    a.classList.remove("is-disabled");a.setAttribute("aria-disabled","false");
+    $("invite-link-status").textContent="Ready — tap Open WhatsApp to open the invitation.";
+  }catch{clearWhatsAppLink();}
+}
+$("invite-country").addEventListener("change",updateWhatsAppLink);
+$("invite-open-link").addEventListener("click",e=>{
+  if(!$("invite-open-link").href||$("invite-open-link").classList.contains("is-disabled")){
+    e.preventDefault();toast("Enter a valid ten-digit number first.",true);return;
+  }
+  // Let native browser link navigation begin before the temporary number is cleared.
+  setTimeout(closeInvitation,250);
+});
+$("workspace-copy-link").addEventListener("click",run(async()=>{
+  if(!event)throw Error("Choose an event first.");
+  const link=eventUrl();
+  if(navigator.clipboard?.writeText)await navigator.clipboard.writeText(link);
+  else window.prompt("Copy event URL:",link);
+  toast("Event URL copied. Send it to your colleagues.");
+}));
+
 $("participant-phone").addEventListener("input",e=>{
   e.target.value=e.target.value.replace(/\D/g,"").slice(0,10);
 });
 $("invite-phone").addEventListener("input",e=>{
   e.target.value=e.target.value.replace(/\D/g,"").slice(0,10);
+  updateWhatsAppLink();
 });
 $("invite-cancel").addEventListener("click",closeInvitation);
 $("invite-dialog").addEventListener("close",()=>{
@@ -293,14 +335,11 @@ $("invite-dialog").addEventListener("close",()=>{
 });
 $("invite-form").addEventListener("submit",e=>{
   e.preventDefault();
-  try{
-    const person=targetInvitation();
-    const number=readTemporaryPhone();
-    const link="https://wa.me/"+number+"?text="+encodeURIComponent(shareText(person));
-    // This is a direct user click; nothing goes to our server or storage.
-    window.open(link,"_blank","noopener,noreferrer");
-    closeInvitation();
-  }catch(error){toast(error.message,true);}
+  // WhatsApp opens through the native anchor, not window.open() popup.
+  updateWhatsAppLink();
+  if($("invite-open-link").classList.contains("is-disabled")){
+    toast("Enter a valid ten-digit number.",true);
+  }
 });
 $("invite-copy").addEventListener("click",run(async()=>{
   const person=targetInvitation();
