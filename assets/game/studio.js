@@ -267,6 +267,7 @@ export function mountAvatarStudio(host,appearance){
   draw();
   return {
     update:swap,
+    setBodyShape(height,build){model?.setBodyShape(height,build);},
     thumbnail,
     rotate(delta){targetAngle+=delta;lastActive=performance.now();},
     zoom(delta){setZoom(zoom*delta);lastActive=performance.now();},
