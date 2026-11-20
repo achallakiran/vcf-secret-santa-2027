@@ -108,6 +108,7 @@ function setSession(info){
   paintLogin();
 }
 function endSession(){
+  document.body.classList.remove("office-playing");
   if(avatarStudio){avatarStudio.dispose();avatarStudio=null;}
   avatarStudioLoading=null;
   if(officeRuntime){officeRuntime.dispose();officeRuntime=null;}
@@ -478,6 +479,7 @@ async function loadPlayer(){
   $("welcome").classList.add("hidden");
   $("admin").classList.add("hidden");
   $("player").classList.remove("hidden");
+  document.body.classList.add("office-playing");
   void enterOffice(player);
   $("player-greeting").textContent="✦ "+player.me.display_name;
   $("player-event-title").textContent=player.event.title;
@@ -764,6 +766,7 @@ async function init(){
     player=demoData();
     $("welcome").classList.add("hidden");
     $("player").classList.remove("hidden");
+    document.body.classList.add("office-playing");
     $("player-greeting").textContent="✦ Visual preview";
     $("player-event-title").textContent=player.event.title;
     $("personal-name").textContent=player.me.display_name;
