@@ -1,0 +1,8 @@
+# This repository reuses the existing Supabase project fwrievuhudjkeffmszqf.
+# The invitation/PIN gateway uses its own signed, short-lived session tokens.
+[functions.ss-gateway]
+verify_jwt = false
+
+# Retired legacy endpoint intentionally rejects all requests.
+[functions.ss-organizer]
+verify_jwt = true
