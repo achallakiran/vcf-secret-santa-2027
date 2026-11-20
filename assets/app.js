@@ -29,7 +29,7 @@ function syncChristmasMusic(){
   const button=$("player-music");
   if(!button)return;
   const muted=christmasMusic.muted;
-  button.textContent=muted?"♩":"♫";
+  button.textContent=muted?"🔇":"🔊";
   button.title=muted?"Play Jingle Bells":"Mute Jingle Bells";
   button.setAttribute("aria-label",button.title);
   button.setAttribute("aria-pressed",String(muted));
