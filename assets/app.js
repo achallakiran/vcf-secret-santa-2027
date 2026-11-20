@@ -1,6 +1,6 @@
 
 "use strict";
-import {createVisualAvatarEditor} from "./game/avatar-editor.js?v=visual-atelier-v3";
+import {createVisualAvatarEditor} from "./game/avatar-editor.js?v=avatar-expanded-v1";
 import {createChristmasMusic} from "./game/christmas-music.js?v=jingle-bells-v1";
 const GATEWAY="https://fwrievuhudjkeffmszqf.supabase.co/functions/v1/ss-gateway";
 const PUBLIC_KEY="sb_publishable_SJo2kgXdHNFZI65iAvQmxw_q56zuVLO";
@@ -435,22 +435,24 @@ async function enterOffice(info){
     console.error("VCF office error:",error);
   }finally{officeLoading=null;}
 }
-const AVATAR_FIELDS=["gender","outfit","bottom","hairstyle","skin","hair","height","build","footwear"];
+const AVATAR_FIELDS=["gender","outfit","bottom","hairstyle","skin","hair","height","build","footwear","bottomColor","shoeColor","facialHair","glassesStyle","glassesColor"];
 function readAvatarEditor(){
   const result={schema_version:2};
   for(const field of AVATAR_FIELDS){
     const input=$("avatar-"+field);
-    result[field]=["skin","hair","hairstyle"].includes(field)?Number(input.value):
+    result[field]=["skin","hair","hairstyle","bottomColor","shoeColor","glassesColor"].includes(field)?Number(input.value):
       ["height","build"].includes(field)?Number(input.value):input.value;
   }
   result.color=Number($("avatar-color").value);
-  result.glasses=$("avatar-glasses").checked;
+  result.glasses=result.glassesStyle!=="none";
   return result;
 }
 function setAvatarEditor(values){
   const avatar=values&&typeof values==="object"?values:{};
-  const defaults={gender:"female",outfit:"salwar",bottom:"leggings",hairstyle:2,skin:2,hair:0,color:1,height:1,build:1,footwear:"auto",glasses:false};
+  const defaults={gender:"female",outfit:"salwar",bottom:"leggings",hairstyle:2,skin:2,hair:0,color:1,height:1,build:1,footwear:"auto",bottomColor:-1,shoeColor:-1,facialHair:"none",glassesStyle:"none",glassesColor:0,glasses:false};
   const settings={...defaults,...avatar};
+  // Backward compatibility: pre-v3 stored profiles only had a glasses boolean.
+  if(!Object.hasOwn(avatar,"glassesStyle") && avatar.glasses)settings.glassesStyle="rectangle";
   for(const field of AVATAR_FIELDS){
     const el=$("avatar-"+field);
     el.value=String(settings[field]);
@@ -491,8 +493,7 @@ visualEditor=createVisualAvatarEditor({
   read:readAvatarEditor,
   studio:()=>avatarStudio,
   choose:(field,value)=>{
-    if(field==="glasses")$("avatar-glasses").checked=!!value;
-    else $("avatar-"+field).value=String(value);
+    $("avatar-"+field).value=String(value);
     visualEditor.refresh(activeStudioTab);
     previewAvatarSoon();
   }
@@ -562,8 +563,8 @@ function setStudioTab(name){
   document.querySelectorAll("[data-studio-panel]").forEach(panel=>{
     panel.classList.toggle("hidden",panel.dataset.studioPanel!==name);
   });
-  const titles={look:"Face & colors",hair:"Hairstyles",fashion:"Outfit & fashion",
-    accessories:"Accessories",footwear:"Footwear",shape:"Height & build"};
+  const titles={look:"Face & skin",hair:"Hair & parting",fashion:"Outfit & colors",
+    accessories:"Facial hair & spectacles",footwear:"Footwear & shoe color",shape:"Height & build"};
   $("atelier-category-title").textContent=titles[name];
   visualEditor?.refresh(name);
 }
