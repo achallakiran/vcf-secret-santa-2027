@@ -162,6 +162,91 @@ function shareText(p){
   return "🎄 VCF Secret Santa 🎁\n\nYou've been invited to our Christmas office mystery!\n\n🎮 "+eventUrl()+"\n🔐 Your private code: "+code+
     "\n\nKeep your code private. Share warm wishes and make your Secret Child feel special! 🎅";
 }
+
+// Recipient numbers exist only in this dialog; never in event/participant data.
+// A wa.me link pre-populates chat and text; WhatsApp requires the user to send.
+let whatsappRecipientId=null;
+function normalizeWhatsAppNumber(raw){
+  const trimmed=String(raw||"").trim();
+  if(!trimmed)return "";
+  // Allow conventional separators and optional international +, but no
+  // extensions, slashes, letters or additional + symbols.
+  if(!/^\\+?[0-9(). -]+$/.test(trimmed))return "";
+  let digits=trimmed.replace(/\\D/g,"");
+  if(digits.startsWith("00")&&digits.length>12)digits=digits.slice(2);
+  // This is a Bengaluru-based event. Bare 10-digit domestic numbers use +91.
+  // For international recipients the organizer must provide a country code.
+  if(digits.length===10&&/^[6-9]/.test(digits))digits="91"+digits;
+  if(digits.length<11||digits.length>15||digits.startsWith("0"))return "";
+  return digits;
+}
+function closeWhatsAppInvite(){
+  const dialog=$("whatsapp-invite-dialog");
+  if(dialog.open)dialog.close();
+  $("whatsapp-phone-number").value="";
+  $("whatsapp-message-preview").textContent="";
+  $("whatsapp-invite-person").textContent="";
+  $("whatsapp-phone-error").textContent="";
+  $("whatsapp-open-link").removeAttribute("href");
+  $("whatsapp-open-link").classList.add("is-disabled");
+  $("whatsapp-open-link").setAttribute("aria-disabled","true");
+  $("whatsapp-open-link").tabIndex=-1;
+  whatsappRecipientId=null;
+}
+function updateWhatsAppInvite(){
+  const participant=participants.find(p=>p.id===whatsappRecipientId);
+  const raw=$("whatsapp-phone-number").value;
+  const number=normalizeWhatsAppNumber(raw);
+  const link=$("whatsapp-open-link");
+  if(!participant||!codes.has(participant.id)||!number){
+    link.removeAttribute("href");
+    link.classList.add("is-disabled");
+    link.setAttribute("aria-disabled","true");
+    link.tabIndex=-1;
+    $("whatsapp-phone-error").textContent=raw.trim()&&!number?
+      "Enter a valid number with country code, or a 10-digit Indian mobile number.":"";
+    return;
+  }
+  // encodeURIComponent escapes the invitation URL and 4-digit code
+  // without placing the telephone number into our backend or storage.
+  link.href="https://wa.me/"+number+"?text="+encodeURIComponent(shareText(participant));
+  link.classList.remove("is-disabled");
+  link.setAttribute("aria-disabled","false");
+  link.tabIndex=0;
+  $("whatsapp-phone-error").textContent="";
+}
+function openWhatsAppInvite(participant){
+  if(!event||!codes.has(participant.id))throw Error("Generate a code before sharing.");
+  whatsappRecipientId=participant.id;
+  $("whatsapp-invite-person").textContent="To: "+participant.display_name;
+  $("whatsapp-message-preview").textContent=shareText(participant);
+  $("whatsapp-phone-number").value="";
+  updateWhatsAppInvite();
+  $("whatsapp-invite-dialog").showModal();
+  $("whatsapp-phone-number").focus();
+}
+$("whatsapp-invite-close").addEventListener("click",closeWhatsAppInvite);
+$("whatsapp-invite-dialog").addEventListener("close",()=>{
+  // Escape / native dialog close also destroys the temporary phone number.
+  $("whatsapp-phone-number").value="";
+  $("whatsapp-message-preview").textContent="";
+  whatsappRecipientId=null;
+  $("whatsapp-open-link").removeAttribute("href");
+  $("whatsapp-open-link").classList.add("is-disabled");
+  $("whatsapp-open-link").setAttribute("aria-disabled","true");
+  $("whatsapp-open-link").tabIndex=-1;
+});
+$("whatsapp-phone-number").addEventListener("input",updateWhatsAppInvite);
+$("whatsapp-open-link").addEventListener("click",e=>{
+  if(!$("whatsapp-open-link").href||$("whatsapp-open-link").classList.contains("is-disabled")){
+    e.preventDefault();
+    $("whatsapp-phone-error").textContent="Enter the recipient's phone number first.";
+    $("whatsapp-phone-number").focus();
+  }
+  // Valid links use the browser's native anchor action; do not call
+  // window.open asynchronously, which mobile popup blockers can suppress.
+});
+
 function namesById(id){return participants.find(p=>p.id===id)?.display_name||"Unknown";}
 async function loadEvents(){
   const result=await api("list_events");
@@ -226,15 +311,10 @@ function renderPeople(){
     else codeCell.append(node("small","code-not-recoverable","Reissue to view"));
     tr.append(codeCell);
     const inviteCell=node("td","participant-invite-cell");inviteCell.dataset.label="Share";
-    const wa=node("a","small-outline roster-whatsapp","◉ WhatsApp");
-    wa.title="Share invitation for "+p.display_name+" using WhatsApp";
+    const wa=button("◉ WhatsApp",()=>openWhatsAppInvite(p),"small-outline roster-whatsapp");
+    wa.title="Enter a phone number and share the invitation for "+p.display_name;
     wa.setAttribute("aria-label",wa.title);
-    if(code){
-      wa.href="https://api.whatsapp.com/send?text="+encodeURIComponent(shareText(p));
-      wa.target="_blank";wa.rel="noopener noreferrer";
-    }else{
-      wa.classList.add("is-disabled");wa.setAttribute("aria-disabled","true");wa.tabIndex=-1;
-    }
+    wa.disabled=!code;
     inviteCell.append(wa);tr.append(inviteCell);
     const control=node("td","participant-manage-cell");control.dataset.label="Actions";
     const edit=button("✎",()=>{void openAdminCharacterEditor(p);},"small-outline roster-icon-button");
