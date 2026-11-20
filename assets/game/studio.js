@@ -83,7 +83,7 @@ export function mountAvatarStudio(host,appearance){
     camera.updateProjectionMatrix();
   }
   function setZoom(next){
-    zoom=THREE.MathUtils.clamp(next,1,2.65);
+    zoom=THREE.MathUtils.clamp(next,.80,3.25);
     updateCameraPosition();
   }
   const swap=(props)=>{
