@@ -1068,3 +1068,63 @@ body.office-playing #player-menu textarea{
   .whatsapp-invite-actions{display:block}
   .whatsapp-send-note{text-align:left}
 }
+
+/* Festive soundtrack controls — no text clutter on the playing field. */
+.office-music{
+  position:absolute;
+  z-index:15;
+  right:calc(84px + env(safe-area-inset-right,0px));
+  top:calc(22px + env(safe-area-inset-top,0px));
+  width:45px;height:45px;padding:0;
+  border:1.5px solid #f2d9b0;border-radius:13px;
+  background:linear-gradient(145deg,#51344de9,#2a2336e9);
+  color:#fcebc5;box-shadow:0 4px 14px #30233977;
+  display:grid;place-items:center;font-size:26px;
+  line-height:1;touch-action:manipulation;
+}
+.office-music[aria-pressed="true"]{
+  opacity:.72;color:#d8b9ae;border-color:#bd9da0;
+}
+.office-music:focus-visible{outline:3px solid #f2c76c;outline-offset:3px}
+@media(max-width:700px){
+  .office-music{
+    right:calc(76px + env(safe-area-inset-right,0px));
+    top:calc(20px + env(safe-area-inset-top,0px));
+    width:43px;height:43px;font-size:24px;
+  }
+}
+/* Stable mobile admin *viewport*, with vertical scroll for long rosters.
+   Avoid horizontal scroll and iOS 16px focus zoom/resizing the page. */
+@media(max-width:1024px),(pointer:coarse){
+  html{max-width:100%;overflow-x:clip}
+  body:has(#admin:not(.hidden)){
+    box-sizing:border-box;width:100%;max-width:100vw;
+    min-height:100svh;overflow-x:clip;
+    overscroll-behavior-x:none;
+  }
+  #admin.page{
+    box-sizing:border-box;width:100%;max-width:100vw;
+    min-height:100svh;max-height:none;overflow-x:clip;
+    padding-left:max(10px,env(safe-area-inset-left,0px));
+    padding-right:max(10px,env(safe-area-inset-right,0px));
+  }
+  #admin .panel,#admin .form-row,
+  #admin .table-wrap,#admin .event-card,#admin .workspace-heading{
+    box-sizing:border-box;max-width:100%;min-width:0;
+  }
+  #admin input,#admin select,#admin textarea,
+  .admin-avatar-dialog input,#whatsapp-phone-number{
+    font-size:16px;
+  }
+  #event-workspace .workspace-url-row{
+    display:flex;max-width:100%;overflow:hidden;
+  }
+  #event-workspace .workspace-url-row #workspace-slug{
+    max-width:100%;overflow-wrap:anywhere;
+  }
+  #player-menu:not(.hidden){
+    box-sizing:border-box;max-height:calc(100svh - 14px);
+    overflow-y:auto;overscroll-behavior:contain;
+    -webkit-overflow-scrolling:touch;
+  }
+}
