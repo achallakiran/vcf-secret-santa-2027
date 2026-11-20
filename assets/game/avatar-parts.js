@@ -12,6 +12,14 @@ import * as THREE from "three";
  *
  * Every character, near and far, is generated with this same geometry.
  */
+// Reuse eyeglass rim and lens geometry for all participants and option previews.
+const eyewearGeometry=new Map();
+function frameGeometry(kind,r){
+  const key=kind+":"+r;
+  if(!eyewearGeometry.has(key))eyewearGeometry.set(key,
+    kind==="rim"?new THREE.TorusGeometry(r,.018,5,20):new THREE.CircleGeometry(r,20));
+  return eyewearGeometry.get(key);
+}
 const shade=(hex,l)=>{
   const c=new THREE.Color(hex);c.offsetHSL(0,0,l);return c;
 };
@@ -214,10 +222,10 @@ export function sculptHead(head,p,kit){
     for(const x of [-.225,.225]){
       if(kind==="round"||kind==="aviator"){
         const radius=kind==="round"?.145:.161;
-        const ring=new THREE.Mesh(new THREE.TorusGeometry(radius,.018,5,20),frame);
+        const ring=new THREE.Mesh(frameGeometry("rim",radius),frame);
         ring.position.set(x,.415,.492);ring.scale.y=kind==="aviator"?1.14:1;
         head.add(ring);
-        const glass=new THREE.Mesh(new THREE.CircleGeometry(radius-.019,20),lens);
+        const glass=new THREE.Mesh(frameGeometry("lens",radius-.019),lens);
         glass.position.set(x,.415,.488);glass.scale.y=kind==="aviator"?1.14:1;
         head.add(glass);
       }else{
