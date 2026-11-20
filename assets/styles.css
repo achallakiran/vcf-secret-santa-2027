@@ -417,3 +417,51 @@ body.processing{cursor:progress}
   .studio-tab-bar button{min-height:42px}
   .studio-workbench-heading h4{font-size:17px!important}
 }
+
+/* Fixed mobile game viewport: only the 3D surface consumes touch gestures.
+   The admin console and scrollable pause/editor panels retain normal scrolling. */
+html:has(body.office-playing){height:100%;overflow:hidden;overscroll-behavior:none}
+body.office-playing{
+  position:fixed;inset:0;width:100%;height:100dvh;
+  min-height:0;overflow:hidden;overscroll-behavior:none;
+  touch-action:pan-x pan-y;-webkit-text-size-adjust:100%;
+}
+body.office-playing .player.page{
+  position:fixed;left:0;right:0;top:0;bottom:0;
+  width:100vw;height:100dvh;min-height:0;max-height:100dvh;
+  overflow:hidden;overscroll-behavior:none;
+  margin:0;padding:0;transform:none;
+}
+body.office-playing .office-view,
+body.office-playing .office-canvas,
+body.office-playing .office-canvas>canvas{
+  position:absolute;inset:0;width:100%;height:100%;
+  max-width:100%;max-height:100%;overflow:hidden;
+  touch-action:none;overscroll-behavior:none;
+}
+body.office-playing #player-menu.player-menu{
+  touch-action:pan-y;overflow-y:auto;overscroll-behavior:contain;
+  -webkit-overflow-scrolling:touch;
+}
+body.office-playing #player-menu input,
+body.office-playing #player-menu select,
+body.office-playing #player-menu textarea{
+  font-size:16px; /* prevents iOS Safari auto-zoom when editing the avatar */
+}
+.camera-gesture-help{
+  font-size:11px;line-height:1.5;color:#bed0c1;
+  text-align:center;margin:8px 0 2px;
+}
+@media(max-width:740px){
+  body.office-playing .office-action-dock{
+    right:calc(16px + env(safe-area-inset-right,0px));
+    bottom:calc(19px + env(safe-area-inset-bottom,0px));
+  }
+  body.office-playing .office-pause{
+    top:calc(13px + env(safe-area-inset-top,0px));
+    right:calc(13px + env(safe-area-inset-right,0px));
+  }
+  body.office-playing #player-menu.player-menu{
+    max-height:calc(100dvh - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px));
+  }
+}
