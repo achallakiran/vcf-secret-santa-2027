@@ -1,6 +1,6 @@
 import * as THREE from "three";
-import {sculptHead,sculptFoot} from "./avatar-parts.js";
-import {sculptWardrobe} from "./wardrobe.js";
+import {sculptHead,sculptFoot} from "./avatar-parts.js?v=visual-sculpt-v3";
+import {sculptWardrobe} from "./wardrobe.js?v=visual-sculpt-v3";
 /**
  * Hybrid voxel adults with modular, richly sculpted faces and contemporary Indian garments. No external or unverified character assets.
  * The body is rigged with real limb pivots and features layered face and hair meshes.
