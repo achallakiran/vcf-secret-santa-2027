@@ -163,7 +163,7 @@ export function mountOffice(host,profile,notice=()=>{}){
   const camera=makeCamera(scene,renderer);
   const ray=new THREE.Raycaster(),pointer=new THREE.Vector2(),ground=new THREE.Plane(new THREE.Vector3(0,1,0),0);
   let office,nav,hero,markers,currentProfile,people=[],mode="three",path=[],clock=new THREE.Clock(),
-      running=true,lastRefresh=0,requestId=0,selectedAction="hi",interactTarget=null;
+      running=true,paused=false,lastRefresh=0,requestId=0,selectedAction="hi",interactTarget=null;
   const clickMarker=spot(scene);
   function applyProfile(next){
     const oldPos=hero?hero.group.position.clone():null;
@@ -281,6 +281,8 @@ export function mountOffice(host,profile,notice=()=>{}){
     if(!running)return;
     requestId=requestAnimationFrame(render);
     const dt=Math.min(clock.getDelta(),.06),elapsed=clock.elapsedTime;
+    // Character studio has its own renderer; avoid double WebGL work behind Pause.
+    if(paused)return;
     if(hero){
       let moving=false;
       while(path.length){
@@ -350,6 +352,7 @@ export function mountOffice(host,profile,notice=()=>{}){
   return {
     get mode(){return mode;},
     setCamera,
+    setPaused(value){paused=!!value;},
     setProfile:applyProfile,
     getAvatar(){return hero?{...hero.parameters}:null;},
     previewAvatar(appearance){
