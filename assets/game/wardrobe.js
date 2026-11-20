@@ -60,6 +60,21 @@ export function sculptWardrobe(hips,p,kit){
     }
     part(hips,.255,.053,.029,gold,-.351,-.169,.374,.018);
     shoulderDetail(gold);
+  }else if(["jacket","bomber","blazer"].includes(p.outfit)){
+    const bomber=p.outfit==="bomber",blazer=p.outfit==="blazer";
+    // Layered jackets: raised collar, offset lapels, pockets and metal hardware.
+    for(const side of [-1,1]){
+      const flap=part(hips,.27,blazer?.50:bomber?.42:.48,.076,top,side*.172,.38,.302,.038);
+      flap.rotation.z=side*(blazer?.08:.03);
+      const lapel=part(hips,.13,blazer?.34:.24,.079,mat(blazer?0xf2e4d5:0xc9d7e2),side*.12,.55,.373,.028);
+      lapel.rotation.z=side*(blazer?.31:.16);
+      part(hips,.15,.14,.04,mat(bomber?0xe8be7d:0x9dc5d9),side*.225,.24,.367,.013);
+      if(p.outfit==="jacket")for(let j=0;j<3;j++)orb(hips,.010,0xbdbdc1,side*.213,.54-j*.11,.373);
+    }
+    const closure=part(hips,.020,.46,.028,mat(0xdac7a2),0,.38,.386,.010);
+    closure.rotation.z=bomber?.03:0;
+    if(bomber)part(hips,.73,.065,.060,mat(0x414049),0,.045,.0,.028);
+    if(blazer)for(const y of [.22,.32])orb(hips,.022,gold,0,y,.377);
   }else if(p.outfit==="suit"){
     // Tailored blazer: proper overlapping panels, angled lapels, pockets.
     const blazer=top,blazerLight=mat(new THREE.Color(p.colorHex).offsetHSL(0,0,.085));
@@ -162,6 +177,14 @@ export function sculptWardrobe(hips,p,kit){
     part(hips,.206,.06,.136,gold,-.30,-.13,-.35,.023);
     for(let j=0;j<4;j++)
       part(hips,.022,.77,.027,j%2?gold:backDetail,-.31+j*.045,.20,-.417,.01);
+  }else if(["jacket","bomber","blazer"].includes(p.outfit)){
+    const bomber=p.outfit==="bomber",blazer=p.outfit==="blazer";
+    part(hips,.69*w,.57,.095,top,0,.325,-.276,.073);
+    part(hips,.66*w,.09,.107,mat(bomber?0x2d3a4b:blazer?0xcdbeb4:0x8eafbe),0,.052,-.28,.029);
+    for(const side of [-1,1]){
+      part(hips,.16,.06,.045,mat(0xd0c4b7),side*.25,.628,-.29,.016);
+      if(!blazer)part(hips,.09,.18,.05,mat(0xa7bdc8),side*.20,.27,-.33,.023);
+    }
   }else if(p.outfit==="suit"){
     // Proper jacket yoke, vents and shoulder pads distinguish suit from shirt.
     part(hips,.70*w,.34,.085,mat(0x40536b),0,.40,-.248,.07);
