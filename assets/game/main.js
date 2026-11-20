@@ -1,6 +1,7 @@
 import * as THREE from "three";
 import {buildOffice} from "./office.js?v=environment-polish-v1";
 import {createAvatar,avatarFromPerson} from "./avatar.js?v=voxel-art-v5";
+import {createOfficeLife} from "./office-life.js?v=office-life-v1";
 
 /* A responsive office runtime. 3D art and camera are independent from the existing Supabase UI. */
 const UP=new THREE.Vector3(0,1,0);
@@ -123,6 +124,40 @@ class Navigation{
     return reverse;
   }
 }
+function makeGreetingBubble(scene){
+  // One reusable camera-facing speech sprite for greetings. It does not
+  // allocate a texture for each coworker in a 150-person event.
+  const canvas=document.createElement("canvas");canvas.width=240;canvas.height=96;
+  const context=canvas.getContext("2d");
+  context.fillStyle="#fff8e9";context.fillRect(12,10,216,67);
+  context.lineWidth=5;context.strokeStyle="#ba7d91";
+  context.strokeRect(12,10,216,67);
+  context.font="bold 35px sans-serif";context.fillStyle="#65425d";
+  context.textAlign="center";context.textBaseline="middle";
+  context.fillText("Hello! 👋",120,43);
+  const texture=new THREE.CanvasTexture(canvas);
+  texture.colorSpace=THREE.SRGBColorSpace;
+  const material=new THREE.SpriteMaterial({map:texture,transparent:true,
+    depthTest:false,depthWrite:false});
+  const sprite=new THREE.Sprite(material);
+  sprite.scale.set(1.55,.62,1);sprite.renderOrder=15;sprite.visible=false;
+  scene.add(sprite);
+  return {sprite,material,texture,target:null,until:0,
+    say(person,text,time){
+      this.target=person?.detailed?.group||person?.group||null;
+      this.until=time+2.35;
+      sprite.visible=!!this.target;
+    },
+    update(time){
+      sprite.visible=!!this.target&&time<this.until;
+      if(sprite.visible){
+        sprite.position.copy(this.target.position);
+        sprite.position.y+=3.16;
+      }
+    },
+    dispose(){scene.remove(sprite);texture.dispose();material.dispose();}
+  };
+}
 function spot(scene){
   const group=new THREE.Group();
   const ring=new THREE.Mesh(new THREE.TorusGeometry(.29,.028,6,28),new THREE.MeshBasicMaterial({color:0xf8c874,transparent:true,opacity:.92}));
@@ -171,7 +206,10 @@ export function mountOffice(host,profile,notice=()=>{}){
   const touchPointers=new Map();
   let pointerDownPoint=null,pointerDragged=false,pointerHadMultiTouch=false,pinchDistance=0;
   const clickMarker=spot(scene);
+  const speech=makeGreetingBubble(scene);
+  let officeLife=null;
   function applyProfile(next){
+    officeLife?.dispose();officeLife=null;
     const oldPos=hero?hero.group.position.clone():null;
     currentProfile=next;
     const roster=(next?.colleagues||[]).filter(p=>p.id!==next?.me?.id).slice(0,149);
@@ -213,6 +251,10 @@ export function mountOffice(host,profile,notice=()=>{}){
       detailed.seated=true;
       scene.add(detailed.group);
       people.push({id:p.id,name:p.name||"Colleague",seat,appearance,detailed});
+    });
+    officeLife=createOfficeLife(people,hero,nav,(person,text,time)=>{
+      speech.say(person,text,time);
+      if(text)notice("👋 "+(person.name||"Colleague")+": "+text);
     });
   }
   function setCamera(id){
