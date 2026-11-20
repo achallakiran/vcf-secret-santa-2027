@@ -578,10 +578,11 @@ export function mountOffice(host,profile,notice=()=>{}){
       interactTarget=null;
       clickMarker.group.visible=false;
       hero.play(name,clock.elapsedTime);
-      officeLife?.mimicNearby(name,clock.elapsedTime,5.4);
+      const responder=officeLife?.mimicNearby(name,clock.elapsedTime,5.4);
       selectedAction=name;
       const messages={hi:"👋 Hello!",dance:"🕺 Time for a little dance!",clap:"👏 A round of applause!",cheer:"🎉 Merry Christmas!"};
-      notice(messages[name]);
+      notice(responder?messages[name]+" "+responder.name+" and coworkers respond!":
+        messages[name]+" Move closer to a coworker to get a response.");
       return true;
     },
     goHome(){
