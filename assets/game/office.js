@@ -142,14 +142,30 @@ function tree(parent,x,z,scale=1){
   return g;
 }
 function plant(parent,x,z,scale=1){
+  // Sculpted broad-leaf indoor greenery with varied angles, ceramic planter,
+  // real soil surface and multiple stems. No distant image impostors.
   const g=new THREE.Group();g.position.set(x,0,z);g.scale.setScalar(scale);parent.add(g);
-  cyl(g,0,.27,0,.24,.17,.52,0xf4eddf);
-  cyl(g,0,.49,0,.22,.24,.05,0xe0ccad);
-  cyl(g,0,.76,0,.04,.06,.5,0x568363);
-  for(let i=0;i<6;i++){
-    const a=i*6.283/6;
-    const leaf=ball(g,Math.sin(a)*.24,.87+(i%3)*.12,Math.cos(a)*.24,.22,0x4c9361);
-    leaf.scale.set(1.05,.58,.75);
+  cyl(g,0,.23,0,.25,.20,.46,0xe8dfd5,16);
+  cyl(g,0,.48,0,.275,.246,.065,0xf7ecdb,16);
+  cyl(g,0,.50,0,.222,.218,.021,0x51453b,16);
+  for(let i=0;i<11;i++){
+    const a=i*Math.PI*2/11,ring=i%3,reach=.33+ring*.12;
+    const yy=.73+((i*7)%5)*.10;
+    const sx=Math.sin(a),sz=Math.cos(a);
+    const stem=cyl(g,sx*.10,.70,sz*.10,.018,.025,.41,0x597c57,6);
+    stem.rotation.z=sx*.30;stem.rotation.x=sz*-.28;
+    const leaf=softBlock(g,sx*reach,yy,sz*reach,.17,.41,.28,
+      [0x4e906b,0x327e62,0x64a37b,0x407459,0x78ad81][i%5],.11);
+    leaf.rotation.y=a;leaf.rotation.z=sx*.34;leaf.rotation.x=sz*.27;
+    const ridge=softBlock(g,sx*(reach+.025),yy,sz*(reach+.025),.029,.33,.033,
+      i%2?0xa9c9a1:0x9aba88,.02,false);
+    ridge.rotation.y=a;ridge.rotation.z=sx*.34;ridge.rotation.x=sz*.27;
+  }
+  for(let j=0;j<4;j++){
+    const a=j*Math.PI/2+.35;
+    const small=softBlock(g,Math.cos(a)*.16,.83,Math.sin(a)*.16,.11,.29,.17,
+      0x5fa27a,.065);
+    small.rotation.y=a;small.rotation.z=Math.sin(a)*.25;
   }
   return g;
 }
@@ -209,14 +225,27 @@ function westWallPassages(parent,left,front,back,passageCenters){
   if(back>start)block(parent,wallX,2.15,(start+back)/2,.23,4.3,back-start,0xf7eee9,false);
 }
 function wallGarland(parent,x,from,to,y=3.75,twinkle=[]){
-  const n=Math.max(8,Math.ceil((to-from)/.55));
+  // Sculpted greenery, bows and warm lights *against the side walls only*.
+  // None hangs over the main walking aisle or camera.
+  const n=Math.max(8,Math.ceil((to-from)/.48));
   for(let i=0;i<=n;i++){
-    const t=i/n,z=from+t*(to-from),yy=y-.14*Math.sin(t*Math.PI*3);
-    const leaf=ball(parent,x,yy,z,.095,i%3?0x32754e:0x478a5a);
-    leaf.scale.set(.7,.75,1.35);
-    if(i%4===0){
-      const light=ball(parent,x+.06,yy-.08,z,.05,mat(i%2?0xffd981:0xffa6a0,{emissive:0xe8a74d}),1);
-      twinkle.push(light);
+    const t=i/n,z=from+t*(to-from),yy=y-.16*Math.sin(t*Math.PI*3);
+    const leaf=softBlock(parent,x,yy,z,.22,.14,.43,
+      i%4===0?0x28694a:i%4===1?0x46885c:i%4===2?0x337e55:0x397653,.10,false);
+    leaf.rotation.y=Math.sin(i*.55)*.25;
+    if(i%3===0){
+      const light=ball(parent,x+.055,yy-.085,z,.054,
+        mat(i%2?0xffe59c:0xffc6a9,{emissive:i%2?0xdd9950:0x9e553f,roughness:.30}),1);
+      light.castShadow=false;twinkle.push(light);
+    }
+    if(i>0&&i%13===0){
+      const bowCenter=ball(parent,x+.095,yy-.13,z,.09,0xb74959);
+      const wingA=softBlock(parent,x+.102,yy-.11,z-.19,.075,.19,.30,0xd6606b,.055);
+      const wingB=softBlock(parent,x+.102,yy-.11,z+.19,.075,.19,.30,0xc34e60,.055);
+      wingA.rotation.x=-.28;wingB.rotation.x=.28;
+      const ribbonA=softBlock(parent,x+.102,yy-.27,z-.11,.050,.26,.12,0xd26771,.03);
+      const ribbonB=softBlock(parent,x+.102,yy-.27,z+.11,.050,.27,.12,0xc84e62,.03);
+      ribbonA.rotation.x=-.15;ribbonB.rotation.x=.15;
     }
   }
 }
