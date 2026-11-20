@@ -57,13 +57,23 @@ assets/game/
   avatar.js          # authored articulated procedural character geometry and shared rig
   avatar-parts.js    # expressive face, layered hair, modeled footwear
   wardrobe.js        # actual contemporary Indian garment sculptures and detailing
+  crowd.js           # colorful expressive low-detail instanced voxel coworkers
   office.js          # scalable workstations, walls, window, decorations and celebration area
   environment-art.js # original screens, workstations, posters and wall details
+  art-surfaces.js    # warm tile materials and furnished collaboration nooks
   main.js            # rendering, camera, A* navigation, actions and nearby NPC details
   studio.js          # high-detail rotatable character stage, lighting and orbit controls
 ```
 
 The Three.js module is loaded at a pinned CDN version via an import map. This new game scene requires network access and WebGL; the previous static login/backend screens remain as before. We have checked module syntax, DOM references, a mocked run of scalable office generation, avatar animation-rig calls, and representative navigation routes. **Full browser rendering, visual fidelity relative to the reference image, performance on real mobile phones, and end-to-end GitHub Pages gameplay still require live verification.**
+
+### Art LOD v2 — expressive coworkers and reference-driven room dressing
+
+This update replaces the old six-cuboid distant-worker placeholders. Every coworker now retains a recognisable sculpted **face, eyes and catchlights, brows, hairstyle (including long hair and ponytail), outfit silhouette, glasses and skin tone** at a reduced level of detail. `crowd.js` builds authored voxel dolls from the same saved avatar parameters used by the full-detail models; nearby colleagues still switch to fully articulated rigs. Farthest employees are rendered through Three.js `InstancedMesh`, grouped in 11-meter spatial batches so the GPU can skip invisible office rows. No external models are involved.
+
+Reference-driven art improvements include warm, subtly varied tile-floor materials (`art-surfaces.js`), softer sofa and cushion silhouettes, low wooden side tables, books, mugs, leafy plants and decorated gathering nooks along the **east side of the room**, while the workstations and circulation aisle remain in their approved layout. `office.js` now calls these modules without changing the camera system, mobile viewport controls, participant event rules, invitation codes or personal data. Each new furnishing has basic pathfinding collision where needed.
+
+**Implementation tests:** mocked voxel crowd construction for 2, 18 and 150 coworkers; output has about 60–65 distinct modeled component instances per distant coworker, grouped into 3, 6 and 33 draw batches respectively. Also checked room generation and navigable routes to the Christmas celebration for event sizes from 1 to 150. These are geometry/navigation checks, **not visual browser QA or measured device FPS**. The scene's color grading, proportions and lighting may still need refinement against the two approved reference images.
 
 ### Art Hero v1 — first implemented character & environment overhaul
 
