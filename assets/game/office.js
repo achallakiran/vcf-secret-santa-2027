@@ -299,28 +299,80 @@ export function buildOffice(count=12){
   wallGarland(root,-7.74,front+1,partyStart+2,3.79,twinkle);
   wallGarland(root,7.71,front+1,partyStart+2,3.78,twinkle);
   // Small decorated tree near spawn; no obstruction to circulation.
-  tree(root,6.55,4.75,.38);
-  colliders.push({x:6.55,z:4.75,hx:.8,hz:.8});
-  // South celebration area, moved naturally as seat count grows.
+  tree(root,6.45,4.75,.64);
+  colliders.push({x:6.45,z:4.75,hx:1.00,hz:1.05});
+  for(let i=0;i<5;i++)present(root,5.55+(i%2)*.45,4.1+Math.floor(i/2)*.41,.17+(i%3)*.07,i+70);
+  // CHRISTMAS CELEBRATION — visible from the camera down the central aisle.
+  // Southern end remains a distinct destination while the hall extends with bays.
+  // A warm rug and many 3D gifts make it unmistakable even from a distance.
   const party=new THREE.Group();party.position.z=partyStart;root.add(party);
-  block(party,0,.025,2.2,13,.025,7,0xe7d6c8,false);
-  block(party,-2.9,.30,4.7,6,.55,1.9,0x9d5b52);
-  block(party,-2.9,2.04,5.65,6,3.4,.14,0x9a4c4d,false);
-  for(let i=0;i<5;i++){
-    cyl(party,-5.6+i*1.34,1.45,5.3,.075,.075,2.35,0xe1b56b);
-    ball(party,-5.6+i*1.34,2.75,5.3,.13,mat(0xffcb68,{emissive:0xf4c158}),1);
+  block(party,0,.022,3.2,14.4,.04,7.1,0xbba38e,false);
+  block(party,0,.054,3.15,13.5,.024,6.6,0x923f52,false);
+  block(party,0,.07,3.15,12.9,.02,6.12,0xc87072,false);
+  for(let i=0;i<8;i++){
+    const zz=.66+i*.78;
+    block(party,-6.25,.079,zz,.055,.008,.35,0xf1d99a,false);
+    block(party,6.25,.079,zz,.055,.008,.35,0xf1d99a,false);
   }
-  sign(party,-2.9,2.65,5.51,"SECRET SANTA");
-  tree(party,4.55,3.35,1.03);
-  colliders.push({x:4.55,z:partyStart+3.35,hx:1.5,hz:1.5});
-  const rec=plant(party,6.9,6.0,1);plant(party,-6.7,6.0,1);
-  for(let k=0;k<8;k++)present(party,2.7+(k%3)*.7,2.0+Math.floor(k/3)*.55,.25+(k%3)*.1,k);
-  const lounge= new THREE.Group();party.add(lounge);
-  for(let i=0;i<4;i++){
-    const x=-5.2+i*2.1;
-    block(lounge,x,.48,.8,1.3,.78,.46,[0xb68b7b,0x7e9a8f][i%2]);
-    block(lounge,x,.8,1.1,1.3,.55,.15,[0xb68b7b,0x7e9a8f][i%2]);
+  // Reveal stage and premium Christmas red/green/cream backdrop.
+  block(party,-3.23,.34,4.85,6.65,.58,2.12,0x98545a);
+  block(party,-3.23,.65,4.85,6.7,.11,2.16,0xf2c886);
+  block(party,-3.23,2.11,6.03,6.9,3.46,.18,0x2e614d,false);
+  block(party,-3.23,2.2,5.91,6.25,2.98,.12,0x874751,false);
+  block(party,-3.23,3.66,5.83,6.8,.18,.16,0xe8c37b,false);
+  block(party,-3.23,.81,5.83,6.75,.10,.16,0xe8c37b,false);
+  // Soft backdrop pleats and oversized red bows.
+  for(let i=0;i<11;i++){
+    const x=-6.23+i*.60;
+    block(party,x,2.2,5.76,.045,2.69,.034,i%2?0x9d5262:0xb05e6d,false);
+    if(i%2===0){
+      const l=ball(party,x,3.41,5.69,.065,mat(0xffe2a1,{emissive:0x9a611b}),1);
+      l.castShadow=false;twinkle.push(l);
+    }
   }
+  sign(party,-3.23,2.68,5.64,"SECRET SANTA");
+  for(const x of [-6.14,-.26]){
+    cyl(party,x,1.26,5.15,.08,.1,2.45,0xe2c282);
+    const star=ball(party,x,2.63,5.15,.18,mat(0xffe8aa,{emissive:0xc18d37}),1);
+    star.scale.set(1.1,1.25,.35);
+  }
+  // Low stepped podium with an intentional interaction space in front.
+  block(party,-3.2,.17,3.48,4.5,.31,.67,0xb97b68);
+  block(party,-3.2,.37,3.82,3.65,.38,.60,0xdeac7e);
+  block(party,-3.2,.65,4.18,2.6,.26,.58,0xefc995);
+  // Large star-topped tree and a generous mound of wrapped presents.
+  tree(party,4.45,3.22,1.07);
+  colliders.push({x:4.45,z:partyStart+3.22,hx:1.62,hz:1.55});
+  for(let k=0;k<24;k++){
+    const layer=Math.floor(k/8),arc=(k%8)/8*Math.PI*2;
+    const radius=1.45+layer*.33;
+    const x=4.45+Math.cos(arc)*radius,z=3.22+Math.sin(arc)*radius;
+    const scale=.20+((k*7)%5)*.075;
+    present(party,x,z,scale,k+9);
+  }
+  // A friendly festive snowman, stocking displays and present table.
+  const snowman=new THREE.Group();snowman.position.set(6.67,0,5.37);party.add(snowman);
+  ball(snowman,0,.55,0,.56,0xf4f1ec,1);
+  ball(snowman,0,1.31,0,.40,0xffffff,1);
+  ball(snowman,0,1.72,0,.32,0xfffaf2,1);
+  for(const x of [-.13,.13])ball(snowman,x,1.81,.27,.037,0x253443);
+  block(snowman,0,1.98,0,.44,.13,.49,0x2e3644);
+  cyl(snowman,0,2.19,0,.20,.17,.33,0x28313f);
+  ball(snowman,0,1.64,.33,.074,0xef9959);
+  for(const y of [.63,1.05,1.31])ball(snowman,0,y,.4,.045,0x3b4450);
+  block(snowman,0,1.37,.27,.62,.1,.30,0xb74f56);
+  const giftTable=new THREE.Group();giftTable.position.set(.15,0,4.75);party.add(giftTable);
+  block(giftTable,0,.76,0,2.25,.14,.83,0xcb9a73);
+  for(const x of [-.91,.91])for(const z of [-.29,.29])block(giftTable,x,.39,z,.12,.72,.1,0xe5d7c4);
+  for(let i=0;i<5;i++)present(giftTable,-.78+i*.39,0,.21+(i%2)*.09,i+40);
+  // Real 3D celebration lighting, wreaths and potted holiday greenery.
+  for(const x of [-5.62,-.85,2.2,6.7]){
+    const glow=new THREE.PointLight(0xffbe77,.9,4.1);
+    glow.position.set(x,3.45,partyStart+4.7);root.add(glow);
+  }
+  plant(party,6.75,.9,.75);plant(party,-6.85,5.35,.92);
+  for(const x of [-6.7,6.7])wreath(party,x,2.30,6.15,x<0?Math.PI/2:-Math.PI/2);
+  // The near-spawn tree is a visual teaser, without replacing the main tree.
   plant(root,7.1,front+1,1.3);
   for(let k=0;k<3;k++)picture(root,7.94,3.06,front+5+k*5,[0xc6c6ad,0xb1c6cb,0xe3cdb2][k]);
   const spawn={x:4.2,z:Math.min(4.0,rowEnd-.3)};
