@@ -125,9 +125,16 @@ export function createAvatar(input={},mini=false){
     dupatta.rotation.z=-.11;
     part(hips,.23,.06,.07,mat(0xe1a66c),-.29,-.17,.34,.018);
   }else if(["jacket","bomber","blazer"].includes(p.outfit)){
-    // Coat geometry layered over the rigged torso. Each outerwear piece has an
-    // independent color and distinct collar/front silhouette.
+    // These are actual outer garments with a contrasting inner shirt, padded
+    // shoulders and independent jacket silhouettes, not recolored shirts.
     const bomber=p.outfit==="bomber",blazer=p.outfit==="blazer";
+    const under=mat(bomber?0x27364a:blazer?0xeedfd4:0xf7eee7,.86);
+    part(hips,.37*width,.56,.068,under,0,.38,.286,.033);
+    part(hips,.19*width,.11,.083,mat(0xfff7ee),0,.685,.298,.038);
+    for(const side of [-1,1]){
+      // Enlarged shoulder cap reads clearly even from the overhead camera.
+      part(hips,.32*width,.24,.55,top,side*.35*width,.625,-.012,.091);
+    }
     for(const side of [-1,1]){
       const panel=part(hips,.33,blazer?.61:bomber?.56:.62,.125,top,side*.17,.36,.248,.065);
       panel.rotation.z=side*(blazer?.055:.015);
@@ -173,7 +180,12 @@ export function createAvatar(input={},mini=false){
   // Premium garment overlays preserve the known animation skeleton and save schema.
   const sculptParams={...p,skinHex:SKINS[p.skin],hairHex:HAIR[p.hair],colorHex:COLORS[p.color],shoeHex:p.shoeColor>=0?COLORS[p.shoeColor]:null,bottomHex:p.bottomColor>=0?COLORS[p.bottomColor]:null,glassesHex:COLORS[p.glassesColor]};
   const kit={part,orb,mat};
-  sculptWardrobe(hips,sculptParams,kit);
+  // Each outfit detail follows torso width and depth. Previously fixed-size
+  // overlays looked identical and hid the changes made with the build slider.
+  const wardrobeRig=new THREE.Group();
+  wardrobeRig.scale.set(width,1,Math.pow(width,.52));
+  hips.add(wardrobeRig);
+  sculptWardrobe(wardrobeRig,{...sculptParams,build:1},kit);
   // Dense 3D microvoxel stitchwork on the complete garment, front AND back.
   sculptGarmentVoxels(hips,sculptParams);
   // The original rig is kept; only visible face/hair/eyes are resculpted.
@@ -195,8 +207,16 @@ export function createAvatar(input={},mini=false){
   function arm(side){
     const pivot=new THREE.Group();pivot.position.set(side*.39*width,.64,0);hips.add(pivot);
     const sleeveLong=["suit","shirt","salwar","sweater","jacket","bomber","blazer"].includes(p.outfit);
-    const sleeve=part(pivot,(sleeveLong?.256:.245)*width,sleeveLong?.365:.245,
-      .32,top,side*.018,-.17,0,.11);
+    const outer=["jacket","bomber","blazer"].includes(p.outfit);
+    const sleeve=part(pivot,(outer?.315:sleeveLong?.256:.245)*width,
+      outer?.40:sleeveLong?.365:.245,outer?.42:.32,top,side*.018,-.17,0,.11);
+    if(outer){
+      // Distinct wide rolled shoulder and contrasting rib cuff.
+      part(pivot,.36*width,.16,.45,top,0,-.12,0,.068);
+      part(pivot,.28*width,.075,.36,
+        mat(p.outfit==="bomber"?0x383c47:p.outfit==="jacket"?0xc0c8c8:0xd5c3b4),
+        0,-.355,0,.028);
+    }
     const seam=part(pivot,.254*width,.055,.335,
       sleeveLong?accent:mat(0xe7d4c4),side*.018,sleeveLong?-.348:-.27,0,.02);
     const lower=new THREE.Group();lower.position.y=-.36;pivot.add(lower);
