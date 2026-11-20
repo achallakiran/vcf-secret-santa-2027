@@ -369,13 +369,21 @@ export function mountOffice(host,profile,notice=()=>{}){
   canvas.addEventListener("contextmenu",e=>e.preventDefault());
   canvas.style.touchAction="none";
   host.replaceChildren(renderer.domElement);
+  // Stable CSS-pixel viewport, independent of phone browser toolbar motion.
+  // Set DPR BEFORE setSize: doing it afterward leaves the framebuffer sized
+  // for the previous DPR until a second layout and can shift gameplay.
+  let lastWidth=0,lastHeight=0,lastDpr=0;
   const resize=()=>{
     const {w,h}=size();
-    renderer.setSize(w,h,false);
-    camera.aspect=w/h;
+    const width=Math.max(1,Math.round(w)),height=Math.max(1,Math.round(h));
+    const mobile=window.matchMedia("(pointer:coarse)").matches||width<700;
+    const dpr=Math.min(window.devicePixelRatio||1,mobile?1.25:1.5);
+    if(width===lastWidth&&height===lastHeight&&dpr===lastDpr)return;
+    lastWidth=width;lastHeight=height;lastDpr=dpr;
+    renderer.setPixelRatio(dpr);
+    renderer.setSize(width,height,false);
+    camera.aspect=width/height;
     camera.updateProjectionMatrix();
-    const mobile=w<680;
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,mobile?1.25:1.5));
   };
   const observer=typeof ResizeObserver!=="undefined"?new ResizeObserver(resize):null;
   observer?.observe(host);
