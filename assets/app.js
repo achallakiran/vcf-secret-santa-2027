@@ -590,10 +590,14 @@ for(const kind of ["pointerup","pointercancel","pointerleave"]){
   actionControl.addEventListener(kind,clearActionHold);
 }
 actionControl.addEventListener("contextmenu",e=>e.preventDefault());
-actionControl.addEventListener("click",()=>{
+actionControl.addEventListener("click",e=>{
   if(suppressActionClick){suppressActionClick=false;return;}
-  if(!$("player-menu").classList.contains("hidden")){
-    return;
+  if(!$("player-menu").classList.contains("hidden"))return;
+  // A tap on the tiny integrated chevron opens the selector without adding
+  // another permanently visible gameplay button.
+  const rect=actionControl.getBoundingClientRect();
+  if(e.detail!==0&&e.clientX>=rect.right-24&&e.clientY>=rect.bottom-24){
+    toggleActionMenu();return;
   }
   $("action-picker").classList.add("hidden");
   updateSelectedAction(selectedOfficeAction,true);
@@ -602,12 +606,7 @@ document.querySelectorAll("[data-action]").forEach(b=>b.addEventListener("click"
   updateSelectedAction(b.dataset.action,true);
   $("action-picker").classList.add("hidden");
 }));
-// The downward chevron is part of the same button. It is not a third HUD control.
-actionControl.addEventListener("dblclick",e=>{
-  e.preventDefault();
-  suppressActionClick=true;
-  toggleActionMenu();
-});
+// No separate joystick, chat, emote HUD bar, or online indicator.
 
 document.querySelectorAll("[data-camera]").forEach(b=>b.addEventListener("click",()=>{
   const cam=b.dataset.camera;
