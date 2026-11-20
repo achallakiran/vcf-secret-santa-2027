@@ -140,12 +140,9 @@ function renderPeople(){
     const codeCell=node("td");codeCell.append(node("code","",codes.get(p.id)||"••••"));tr.append(codeCell);
     const shareCell=node("td");
     const whatsapp=button("WhatsApp ↗",()=>{
-      try{
-        if(!p.phone_e164)throw Error("Add a WhatsApp phone number first.");
-        window.open("https://wa.me/"+p.phone_e164.replace(/\D/g,"")+"?text="+encodeURIComponent(shareText(p)),"_blank","noopener,noreferrer");
-      }catch(error){toast(error.message,true);}
+      try{openInvitation(p);}catch(error){toast(error.message,true);}
     });
-    whatsapp.disabled=!codes.has(p.id)||!p.phone_e164;
+    whatsapp.disabled=!codes.has(p.id);
     const copy=button("Copy",run(async()=>{
       await navigator.clipboard.writeText(shareText(p));
       toast("Invitation copied.");
@@ -156,11 +153,9 @@ function renderPeople(){
     const edit=button("Edit",run(async()=>{
       const display_name=prompt("Employee name",p.display_name);
       if(display_name===null)return;
-      const phone_e164=prompt("WhatsApp (+91...) or blank",p.phone_e164||"");
-      if(phone_e164===null)return;
       const desk_key=prompt("Desk code or blank",p.desk_key||"");
       if(desk_key===null)return;
-      await api("edit_participant",{event_id:event.id,participant_id:p.id,display_name,phone_e164,desk_key,is_active:p.is_active});
+      await api("edit_participant",{event_id:event.id,participant_id:p.id,display_name,desk_key,is_active:p.is_active});
       await openEvent(event);toast("Participant updated.");
     }));
     edit.disabled=!!event.assignments_locked_at;
@@ -255,6 +250,65 @@ async function saveWishlist(wishes){
   await loadPlayer();
   toast("Wishlist saved.");
 }
+
+const transientInvite={participantId:null};
+function openInvitation(person,number="",country="91"){
+  if(!codes.has(person.id))throw Error("Generate a new invitation code before sharing.");
+  const dialog=$("invite-dialog");
+  transientInvite.participantId=person.id; // Only the participant ID is kept; never the phone number.
+  $("invite-person-name").textContent="Invitation for "+person.display_name;
+  $("invite-country").value=country;
+  $("invite-phone").value=number;
+  if(!dialog.open)dialog.showModal();
+}
+function closeInvitation(){
+  const dialog=$("invite-dialog");
+  $("invite-form").reset();
+  $("invite-phone").value="";
+  transientInvite.participantId=null;
+  if(dialog.open)dialog.close();
+}
+function targetInvitation(){
+  const person=participants.find(p=>p.id===transientInvite.participantId);
+  if(!person)throw Error("This invitation is no longer available. Open it again.");
+  return person;
+}
+function readTemporaryPhone(){
+  const number=$("invite-phone").value.replace(/\D/g,"");
+  const country=$("invite-country").value;
+  if(!/^[0-9]{10}$/.test(number))throw Error("Enter a 10-digit phone number without the country code.");
+  if(!["91","1","44","971","65"].includes(country))throw Error("Select a country code.");
+  return country+number;
+}
+$("participant-phone").addEventListener("input",e=>{
+  e.target.value=e.target.value.replace(/\D/g,"").slice(0,10);
+});
+$("invite-phone").addEventListener("input",e=>{
+  e.target.value=e.target.value.replace(/\D/g,"").slice(0,10);
+});
+$("invite-cancel").addEventListener("click",closeInvitation);
+$("invite-dialog").addEventListener("close",()=>{
+  $("invite-phone").value="";
+  transientInvite.participantId=null;
+});
+$("invite-form").addEventListener("submit",e=>{
+  e.preventDefault();
+  try{
+    const person=targetInvitation();
+    const number=readTemporaryPhone();
+    const link="https://wa.me/"+number+"?text="+encodeURIComponent(shareText(person));
+    // This is a direct user click; nothing goes to our server or storage.
+    window.open(link,"_blank","noopener,noreferrer");
+    closeInvitation();
+  }catch(error){toast(error.message,true);}
+});
+$("invite-copy").addEventListener("click",run(async()=>{
+  const person=targetInvitation();
+  await navigator.clipboard.writeText(shareText(person));
+  toast("Invitation copied; no number was saved.");
+  closeInvitation();
+}));
+
 $("entry-code").addEventListener("input",e=>{
   e.target.value=e.target.value.replace(/\D/g,"").slice(0,4);
 });
@@ -292,13 +346,22 @@ $("event-form").addEventListener("submit",run(async e=>{
 }));
 $("participant-form").addEventListener("submit",run(async e=>{
   e.preventDefault();
+  // Collect a local, optional contact only for sharing. Never send it to Supabase.
+  const phone=$("participant-phone").value.replace(/\D/g,"");
+  const country=$("participant-country").value;
+  if(phone && !/^[0-9]{10}$/.test(phone))throw Error("Please enter a 10-digit phone number, without the country code.");
   const result=await api("add_participant",{
     event_id:event.id,display_name:$("participant-name").value,
-    phone_e164:$("participant-phone").value.trim(),desk_key:$("participant-desk").value.trim()
+    desk_key:$("participant-desk").value.trim()
   });
   codes.set(result.id,result.code);
-  $("participant-form").reset();await openEvent(event);
+  const personName=$("participant-name").value.trim();
+  $("participant-form").reset();
+  await openEvent(event);
   toast("Participant registered. Share their code privately.");
+  if(phone){
+    openInvitation({id:result.id,display_name:personName},phone,country);
+  }
 }));
 $("assign-btn").addEventListener("click",run(async()=>{
   if(!event||!confirm("Lock Santa–Child assignments? You cannot change the roster afterward."))return;
