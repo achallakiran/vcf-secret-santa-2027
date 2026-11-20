@@ -211,7 +211,7 @@ export function sculptHead(head,p,kit){
     // three-strand braid behind the head. 21/22 are central, 23 is twin.
     part(head,.88,.32,.29,deep,0,.52,-.39,.083);
     const twin=cut===23;
-    const count=cut===22?23:twin?15:18;
+    const count=cut===22?17:twin?12:14;
     for(const center of (twin?[-.34,.34]:[0])){
       const startZ=twin?-.48:-.58;
       part(head,twin?.27:.36,.22,.24,deep,center,.41,startZ,.052);
