@@ -180,6 +180,32 @@ function safeWishlist(raw:unknown){
     ids.add(item.id);return {id:item.id,text:item.text.trim()};
   });
 }
+function sanitizedAvatar(data:unknown){
+  if(!data||typeof data!=="object"||Array.isArray(data))fail("Invalid avatar details.");
+  const r=data as Record<string,unknown>;
+  const strVal=(key:string,allowed:string[],fallback:string)=>{
+    const v=r[key];return typeof v==="string"&&allowed.includes(v)?v:fallback;
+  };
+  const intVal=(key:string,max:number,fallback=0)=>{
+    const v=Number(r[key]);return Number.isInteger(v)&&v>=0&&v<=max?v:fallback;
+  };
+  const numVal=(key:string,min:number,max:number,fallback:number)=>{
+    const v=Number(r[key]);return Number.isFinite(v)&&v>=min&&v<=max?Math.round(v*100)/100:fallback;
+  };
+  return {
+    schema_version:2,
+    gender:strVal("gender",["male","female"],"male"),
+    outfit:strVal("outfit",["shirt","tshirt","suit","salwar","dress","sweater"],"shirt"),
+    bottom:strVal("bottom",["jeans","trousers","leggings","palazzo"],"jeans"),
+    skin:intVal("skin",4),
+    hair:intVal("hair",4),
+    hairstyle:intVal("hairstyle",3),
+    color:intVal("color",5),
+    glasses:r.glasses===true,
+    height:numVal("height",.86,1.16,1),
+    build:numVal("build",.83,1.2,1)
+  };
+}
 function today(tz:string){
   try{return new Intl.DateTimeFormat("sv-SE",{timeZone:tz||"Asia/Kolkata",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date());}
   catch{return new Date().toISOString().slice(0,10);}
@@ -188,7 +214,7 @@ async function dashboard(claims:any){
   const eventId=claims.event_id,pid=claims.participant_id;
   const [event,roster,priv,asSanta,asChild]=await Promise.all([
     db("ss_events?select=id,slug,title,status,timezone,gift_budget_recommendation_inr&"+"id=eq."+eventId+"&limit=1"),
-    db("ss_participants?select=id,display_name,desk_key,avatar&event_id=eq."+eventId+"&is_active=eq.true&order=created_at.asc"),
+    db("ss_participants?select=id,display_name,desk_key,avatar,avatar_version&event_id=eq."+eventId+"&is_active=eq.true&order=created_at.asc"),
     db("ss_participant_private?select=wishlist,wishlist_version&participant_id=eq."+pid+"&event_id=eq."+eventId+"&limit=1"),
     db("ss_assignments?select=id,child_id,santa_message,gift_purchased&event_id=eq."+eventId+"&santa_id=eq."+pid+"&limit=1"),
     db("ss_assignments?select=id&event_id=eq."+eventId+"&child_id=eq."+pid+"&limit=1")
@@ -211,7 +237,7 @@ async function dashboard(claims:any){
   }
   return {
     event:{title:eventObj.title,slug:eventObj.slug,status:eventObj.status,timezone:eventObj.timezone,budget:eventObj.gift_budget_recommendation_inr},
-    me:{id:pid,display_name:isMine.display_name,avatar:isMine.avatar,wishlist:priv[0]?.wishlist||[],wishlist_version:priv[0]?.wishlist_version||1},
+    me:{id:pid,display_name:isMine.display_name,avatar:isMine.avatar,avatar_version:isMine.avatar_version||1,wishlist:priv[0]?.wishlist||[],wishlist_version:priv[0]?.wishlist_version||1},
     colleagues:roster.map((p:any)=>({id:p.id,name:p.display_name,desk_key:p.desk_key,avatar:p.avatar})),
     myChild:outgoing?{id:outgoing.child_id,name:roster.find((p:any)=>p.id===outgoing.child_id)?.display_name||"Secret Child",wishlist:ownChildWishlist?.[0]?.wishlist||[],gift_purchased:outgoing.gift_purchased,message:outgoing.santa_message||"",tasks:ownTasks}:null,
     receivedTasks,office:day?.[0]?.scene||null,hint,today:date
@@ -315,6 +341,16 @@ async function adminAction(action:string,data:any){
 async function playerAction(action:string,claims:any,data:any){
   const eventId=claims.event_id,pid=claims.participant_id;
   if(action==="player_dashboard")return dashboard(claims);
+  if(action==="save_avatar"){
+    const avatar=sanitizedAvatar(data.avatar);
+    const version=Number(data.version);
+    if(!Number.isInteger(version)||version<1)fail("Please reload your avatar before saving.");
+    const result=await db("ss_participants?id=eq."+pid+"&event_id=eq."+eventId+"&is_active=eq.true&avatar_version=eq."+version,"PATCH",{
+      avatar,avatar_version:version+1,updated_at:stamp()
+    },true);
+    if(!result?.length)fail("Your avatar changed on another device. Refresh and try again.",409);
+    return {avatar,version:version+1};
+  }
   if(action==="save_wishlist"){
     const items=safeWishlist(data.items);
     const version=Number(data.version);
