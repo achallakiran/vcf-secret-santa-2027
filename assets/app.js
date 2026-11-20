@@ -27,25 +27,71 @@ function toast(message,error=false){
   clearTimeout(toast.timer);
   toast.timer=setTimeout(()=>el.classList.add("hidden"),4600);
 }
+let progressTimer=null;
+const ACTION_STEPS={
+  admin_login:"Unlocking organizer console",
+  player_login:"Verifying your invitation code",
+  list_events:"Loading events",
+  create_event:"Creating Christmas event",
+  list_participants:"Loading participants",
+  add_participant:"Registering participant and generating code",
+  edit_participant:"Saving participant changes",
+  rotate_code:"Generating a replacement invitation code",
+  lock_assignments:"Assigning each Santa to a Child",
+  change_admin_pin:"Updating administrator PIN",
+  player_dashboard:"Loading personal dashboard",
+  save_wishlist:"Saving wishlist",
+  add_task:"Assigning a dated task",
+  complete_task:"Updating task completion",
+  gift_status:"Updating gift-purchase status",
+  save_message:"Saving Santa's private message"
+};
+function showProgress(title,detail,state="loading"){
+  clearTimeout(progressTimer);
+  const el=$("action-progress");
+  if(!el)return;
+  $("progress-title").textContent=title;
+  $("progress-detail").textContent=detail;
+  el.dataset.state=state;
+  el.classList.remove("hidden");
+}
+function hideProgressLater(ms=1400){
+  progressTimer=setTimeout(()=>$("action-progress")?.classList.add("hidden"),ms);
+}
 const run=task=>async(...args)=>{
   if(busy)return;
-  busy=true;document.body.classList.add("processing");
-  try{await task(...args);}
-  catch(error){
+  busy=true;
+  document.body.classList.add("processing");
+  showProgress("Working on your request","Checking your Christmas event…");
+  try{
+    await task(...args);
+    showProgress("Completed","Your action finished successfully.","success");
+  }catch(error){
     if(/session expired|invalid session|invitation has changed|sign in again/i.test(error?.message||""))endSession();
+    showProgress("Could not finish",error?.message||"Please try again.","error");
     toast(error?.message||"Something went wrong.",true);
-  }finally{busy=false;document.body.classList.remove("processing");}
+  }finally{
+    busy=false;
+    document.body.classList.remove("processing");
+    hideProgressLater();
+  }
 };
 async function api(action,values={}){
-  const reply=await fetch(GATEWAY,{
-    method:"POST",
-    headers:{
-      "Content-Type":"application/json",
-      "apikey":PUBLIC_KEY,
-      ...(session?.token?{"Authorization":"Bearer "+session.token}:{})
-    },
-    body:JSON.stringify({action,...values})
-  });
+  if(busy&&ACTION_STEPS[action])showProgress(ACTION_STEPS[action],"Working with Supabase securely…");
+  let reply;
+  try{
+    reply=await fetch(GATEWAY,{
+      method:"POST",
+      headers:{
+        "Content-Type":"application/json",
+        "apikey":PUBLIC_KEY,
+        ...(session?.token?{"Authorization":"Bearer "+session.token}:{})
+      },
+      body:JSON.stringify({action,...values})
+    });
+  }catch{
+    throw Error("Connection failed. Check your internet connection and try again.");
+  }
   const data=await reply.json().catch(()=>({}));
   if(!reply.ok)throw Error(data.error||"The server returned "+reply.status);
   return data;
