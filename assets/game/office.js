@@ -203,7 +203,7 @@ function lamp(parent,x,z){
   block(g,0,3.65,0,.55,.06,1.5,mat(0xffe7b5,{emissive:0xffdfb9}),false);
   // Use emissive materials for distant fixtures. Dynamic lights are capped to
   // the first few nearby bays so larger events remain playable on mobile GPUs.
-  if(z<24 && x===1){
+  if(z<24 && x>1.5){
     const pt=new THREE.PointLight(0xffdebb,1.25,6);
     pt.position.y=3.4;g.add(pt);
   }
