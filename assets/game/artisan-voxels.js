@@ -97,14 +97,46 @@ export function sculptFaceVoxels(head,p){
     .045-.004*k,.035,.024,k%2?skin:light);
   for(let k=-2;k<=2;k++)b.voxel(k*.036,.095+Math.abs(k)*.009,.452,
     .036,.018,.024,colorHex(lip,k===0?.07:0));
-  // An adult beard is modeled as fine voxel clumps around the lower jaw,
-  // never pasted over the mouth.
-  if(p.gender==="male"&&(p.facialHair||"none").includes("beard")||p.gender==="male"&&(p.facialHair||"none").startsWith("combo")){
-    for(let row=0;row<4;row++)for(let col=-5;col<=5;col++){
-      if(Math.abs(col)<3&&row>1)continue;
-      const x=col*.067, y=.048-row*.035;
-      b.voxel(x,y,.36+(.03-Math.abs(col)*.02),
-        .065,.046,.042,colorHex(hair,seeded(row,col)+.04-.08));
+  // Sculpted beard clumps and finely stippled stubble share the same
+  // instanced voxel brush as the face, avoiding hundreds of separate draw calls.
+  if(p.gender==="male"){
+    const facial=p.facialHair||"none",hasBeard=facial.startsWith("beard")||facial.startsWith("combo");
+    const stubble=facial.startsWith("stubble"),ear=facial.endsWith("-ear");
+    if(hasBeard){
+      const full=facial.endsWith("full")||ear;
+      for(let row=0;row<(full?6:4);row++)for(let col=-5;col<=5;col++){
+        if(Math.abs(col)<3&&row>1)continue;
+        const x=col*.067,y=.052-row*.035;
+        b.voxel(x,y,.36+(.03-Math.abs(col)*.02),
+          .065,.046,.042,colorHex(hair,seeded(row,col)*.10-.08));
+      }
+      if(ear)for(const sign of [-1,1])for(let row=0;row<10;row++){
+        const y=.43-row*.050;
+        for(let col=0;col<3;col++){
+          const x=sign*(.47-col*.046);
+          b.voxel(x,y,.27+col*.020,.044,.06,.043,
+            colorHex(hair,seeded(row,col)*.10-.09));
+        }
+      }
+    }
+    if(stubble){
+      const heavy=facial==="stubble-heavy",full=facial!=="stubble-light";
+      const total=heavy?11:full?8:5;
+      const tint=colorHex(hair,heavy?.15:.28);
+      // Sparse irregular pixels read as growth rather than a solid beard.
+      for(const sign of [-1,1])for(let row=0;row<total;row++)
+        for(let col=0;col<9;col++){
+          if((row*5+col*7)%4===(heavy?3:0))continue;
+          const x=sign*(.155+col*.033),y=.265-row*.035,
+                z=.414-Math.abs(x)*.12;
+          if(y>.15&&col<3)continue; // keep the upper lip clear
+          b.voxel(x,y,z,.014+(col%3)*.003,.015,.008,tint);
+        }
+      for(let row=0;row<(heavy?6:4);row++)for(let col=-8;col<=8;col++){
+        if((row+col*3)%3===0)continue;
+        b.voxel(col*.039,.054-row*.023,.391-Math.abs(col)*.007,
+          .015,.016,.010,tint);
+      }
     }
   }
   return b.finish();
@@ -114,7 +146,8 @@ export function sculptFaceVoxels(head,p){
 export function sculptHairVoxels(head,p){
   const b=voxelBrush(head,"Hundreds of layered hair voxels");
   const cut=Number(p.hairstyle)||0;
-  const style=cut<4?cut:cut<=6?0:cut<=9?1:cut<=12?2:0;
+  if(cut===20)return null; // genuinely bald: no crown, fringe or hair pixels
+  const style=cut<4?cut:cut<=6?0:cut<=9?1:cut<=12?2:cut>=21?3:0;
   const parting=cut>=4&&cut<=12?(cut-4)%3:-1,base=p.hairHex;
   const shades=[colorHex(base,-.10),colorHex(base,-.052),colorHex(base,0),
     colorHex(base,.055),colorHex(base,.095)];
@@ -198,13 +231,13 @@ export function sculptHairVoxels(head,p){
       b.voxel(x,y,-.58,.092,.105,.121,pigment(23,col));
     }
   }
-  if(style===3){
+  if(cut===3){
     // A dimensional gathered ponytail: knotted tie, overlaid braid segments,
     // alternating strand thickness and an expressive tapered tip.
     for(let row=0;row<12;row++){
       const y=.47-row*.11;
       const wobble=Math.sin(row*.64)*.06;
-      const x=.35+wobble;
+      const x=wobble;
       const z=-.60-row*.016;
       const narrow=1-row/23;
       b.voxel(x,y,z,.23*narrow,.132,.23*narrow,pigment(row,4),0,0,.08);
@@ -214,8 +247,26 @@ export function sculptHairVoxels(head,p){
         pigment(row+4,2));
     }
     for(let k=0;k<7;k++)
-      b.voxel(.29+k*.022,.41,-.565-k*.012,.035,.075,.05,
+      b.voxel(-.07+k*.022,.41,-.565-k*.012,.035,.075,.05,
         k%2?0xd8ab69:0xf0d49c);
+  }
+  if(cut>=21){
+    // Micro-voxel plait highlights follow the articulated braid, with a
+    // left/right crossover that distinguishes a choti from a straight tail.
+    const twin=cut===23,count=cut===22?23:twin?15:18;
+    for(const center of (twin?[-.34,.34]:[0])){
+      const startZ=twin?-.48:-.58;
+      for(let j=0;j<count;j++){
+        const ratio=j/count,taper=Math.max(.40,1-ratio*.58);
+        const x=center+Math.sin(j*1.13)*(twin?.035:.046);
+        const y=.33-j*.104,z=startZ-.065-Math.sin(j*.45)*.014+.157*taper;
+        for(const side of [-1,1]){
+          b.voxel(x+side*.058*taper,y+(side===1?.024:-.024),
+            z,.058*taper,.032,.030*taper,
+            pigment(j+side+20,Math.abs(j+side)%9),0,0,side*(j%2?.22:-.22));
+        }
+      }
+    }
   }
   return b.finish();
 }
