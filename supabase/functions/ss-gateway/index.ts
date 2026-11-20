@@ -35,7 +35,7 @@ function equal(a:Uint8Array,b:Uint8Array):boolean {
   let diff=0;for(let i=0;i<a.length;i++)diff|=a[i]^b[i];return diff===0;
 }
 async function hmac(s:string):Promise<string>{
-  const key=await crypto.subtle.importKey("raw",encoder.encode(SERVICE),"HMAC",{name:"HMAC",hash:"SHA-256"},false,["sign"]);
+  const key=await crypto.subtle.importKey("raw",encoder.encode(SERVICE),{name:"HMAC",hash:"SHA-256"},false,["sign"]);
   return toHex(new Uint8Array(await crypto.subtle.sign("HMAC",key,encoder.encode(s))));
 }
 async function pinHash(pin:string,saltHex:string,iterations:number):Promise<string>{
