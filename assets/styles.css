@@ -248,3 +248,53 @@ body.processing{cursor:progress}
   #player-action-symbol{font-size:29px}
   .office-action-chevron{right:4px;bottom:1px;width:20px;height:19px;font-size:17px}
 }
+
+/* Phase 2B: integrated cute voxel avatar customization, clean on mobile. */
+.avatar-editor-heading{
+  display:flex;align-items:flex-start;justify-content:space-between;
+  flex-wrap:wrap;gap:12px;margin-bottom:18px
+}
+.avatar-editor-heading h4{margin:6px 0!important;color:#f5dca4!important;font-size:17px}
+.avatar-editor-heading p{margin:0;max-width:450px}
+.avatar-editor-heading .secondary{white-space:nowrap}
+.avatar-form{border:1px solid #4b6a5b;border-radius:14px;background:#1b3029a8;padding:17px;margin:0 0 22px}
+.avatar-controls{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:13px;margin-bottom:17px}
+.avatar-controls label,.avatar-slider-grid label{
+  display:flex;flex-direction:column;gap:8px;font-size:12px;color:#e2ede4;font-weight:650
+}
+.avatar-controls select{
+  width:100%;padding:12px 10px;border-radius:9px;border:1px solid #5b7666;
+  font:inherit;font-size:12px;color:#fff9e5;background:#1a2a28;
+  min-height:45px
+}
+.avatar-controls select:focus-visible{outline:2px solid #eaca8d;outline-offset:2px}
+.avatar-color-label{font-size:12px;color:#e3eee6;font-weight:700}
+.avatar-palette{display:flex;flex-wrap:wrap;gap:12px;margin:12px 0 20px}
+.avatar-swatch{
+  appearance:none;width:34px;height:34px;border-radius:50%;
+  background:var(--swatch);border:2px solid #e9e9d7;
+  box-shadow:0 0 0 2px #233d30;cursor:pointer;padding:0
+}
+.avatar-swatch.selected{box-shadow:0 0 0 3px #f7c970,0 0 0 6px #3f6849;transform:scale(1.06)}
+.avatar-slider-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px}
+.avatar-slider-grid label{gap:10px}
+.avatar-slider-grid output{color:#f3d8a2;font-variant-numeric:tabular-nums;font-size:12px}
+.avatar-slider-grid input[type=range]{width:100%;accent-color:#d2b275;margin:0;cursor:pointer}
+.avatar-check{display:flex;align-items:center;gap:10px;margin:20px 0;color:#f2f0e6;font-size:13px;font-weight:600}
+.avatar-check input{width:18px;height:18px;accent-color:#6ba27c}
+.avatar-footer{
+  display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;
+  gap:12px;padding-top:16px;border-top:1px solid #56716255
+}
+.avatar-footer p{color:#b2ccb8;font-size:11px;line-height:1.5;margin:0;max-width:260px}
+.avatar-footer .button-row{margin:0;align-items:center}
+.avatar-footer button:disabled{opacity:.5;cursor:not-allowed}
+@media(max-width:650px){
+  .avatar-editor-heading{gap:8px}
+  .avatar-form{padding:12px}
+  .avatar-controls{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+  .avatar-slider-grid{gap:10px}
+  .avatar-footer{align-items:stretch}
+  .avatar-footer p{max-width:none}
+  .avatar-footer .button-row{flex-wrap:wrap}
+}
