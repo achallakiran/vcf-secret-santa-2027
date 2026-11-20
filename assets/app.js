@@ -291,9 +291,10 @@ async function enterOffice(info){
   }
   $("office-loading").classList.remove("hidden");
   officeLoading=(async()=>{
-    const module=await import("./game/main.js");
+    const module=await import("./game/main.js?v=office-2b-doors-20261120");
     officeRuntime=module.mountOffice($("office-canvas"),info,officeToast);
-    const cam=localStorage.getItem("vcf-ss-office-camera");
+    let cam=null;
+    try{cam=localStorage.getItem("vcf-ss-office-camera");}catch{}
     officeRuntime.setCamera(["three","close","wide"].includes(cam)?cam:"three");
     officeKey=identity;
     avatarBaseline=officeRuntime.getAvatar();
