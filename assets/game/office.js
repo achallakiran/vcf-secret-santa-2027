@@ -51,7 +51,7 @@ function ball(parent,x,y,z,r,color,detail=0){
   m.position.set(x,y,z);m.castShadow=r>.2;parent.add(m);return m;
 }
 function cyl(parent,x,y,z,rTop,rBottom,height,color,segments=10){
-  const m=new THREE.Mesh(new THREE.CylinderGeometry(rTop,rBottom,height,segments),mat(color));
+  const m=new THREE.Mesh(new THREE.CylinderGeometry(rTop,rBottom,height,segments),typeof color==="number"?mat(color):color);
   m.position.set(x,y,z);m.castShadow=true;m.receiveShadow=true;parent.add(m);return m;
 }
 function picture(parent,side,z,color){
