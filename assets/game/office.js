@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import {decorateWorkstation,addWarmOfficeDetails} from "./environment-art.js";
 // Fully procedural office furniture, lights and festive scenery; no external models.
 const boxGeo=new THREE.BoxGeometry(1,1,1);
 boxGeo.userData.officeInstancing=true;
@@ -236,6 +237,7 @@ function workstation(parent,x,z,i,row,colliders){
     block(g,-.15,.84,.51,.25,.04,.23,0xc76161);
     ball(g,-.15,.91,.51,.08,0x93ad65);
   }
+  decorateWorkstation(g,{seatSide:chairSide,index:i*3+({W:0,L:1,R:2}[row]||0)}, {block,ball,cyl,mat});
   chair(parent,chairX,z,facing,i);
   colliders.push({x,z,hx:.58,hz:.85});
   colliders.push({x:chairX,z,hx:.33,hz:.37});
@@ -468,6 +470,9 @@ export function buildOffice(count=12){
   for(let k=0;k<3;k++)picture(root,7.94,3.06,front+5+k*5,[0xc6c6ad,0xb1c6cb,0xe3cdb2][k]);
   const spawn={x:4.2,z:Math.min(4.0,rowEnd-.3)};
   const rows=bays;
+  addWarmOfficeDetails(root,{
+    left,right,front,back,partyStart,viewWalls,twinkle
+  },{block,ball,cyl,mat});
   const optimizedBatches=batchOfficeStaticGeometry(root,twinkle,viewWalls);
   return {root,colliders,seats,spawn,bays,optimizedBatches,
     // Structural wall passages are not additional explorable rooms.
