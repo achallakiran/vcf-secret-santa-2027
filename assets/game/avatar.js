@@ -83,7 +83,8 @@ export function createAvatar(input={},mini=false){
     shadow.renderOrder=1;
     root.add(shadow);
   }
-  const skin=mat(SKINS[p.skin]),hair=mat(HAIR[p.hair]),cloth=mat(COLORS[p.color]),dark=mat(0x272b3a),white=mat(0xfff4df);
+  const skin=mat(SKINS[p.skin],.82),hair=mat(HAIR[p.hair],.80),
+        cloth=mat(COLORS[p.color],.90),dark=mat(0x272b3a),white=mat(0xfff4df);
   const accent=mat(p.outfit==="salwar"?0xebbf87:0xe8d7b8);
   const width=p.build, feminine=p.gender==="female";
   const isEthnic=p.outfit==="salwar";
@@ -93,9 +94,14 @@ export function createAvatar(input={},mini=false){
     p.outfit==="dress"?cloth:mat(p.outfit==="suit"?0x24324b:bottomColors[p.bottom]);
   // Lifts the whole avatar off its animation pivots.
   const hips=new THREE.Group();hips.position.y=1.04;body.add(hips);
-  const pelvis=part(hips,.55*width,.32,.38,bottom,0,-.12,0);
-  const torso=part(hips,.68*width,.72,.43,top,0,.37,0,.115);
-  if(feminine){part(hips,.54*width,.11,.43,top,0,.01,.01);}
+  // Rebalanced to a cute miniature adult: broad, sculpted upper silhouette,
+  // short torso and substantially larger head relative to shoulder width.
+  const pelvis=part(hips,.56*width,.36,.41,bottom,0,-.15,0,.13);
+  const torso=part(hips,(feminine?.69:.78)*width,.69,.46,top,0,.38,0,.15);
+  const waist=part(hips,(feminine?.56:.65)*width,.20,.46,top,0,.055,.01,.10);
+  if(feminine)part(hips,.60*width,.10,.47,top,0,.01,.01,.055);
+  // Subtle neckline shadow gives garment depth from the overhead camera.
+  part(hips,.23,.055,.20,mat(0xe0ad8b,.84),0,.754,.065,.018);
   if(isEthnic){
     // Sculpted salwar suit with a longer hem, embroidered placket and draped dupatta.
     part(hips,.77*width,.60,.55,top,0,-.07,0,.115);
@@ -144,7 +150,8 @@ export function createAvatar(input={},mini=false){
   sculptWardrobe(hips,sculptParams,kit);
   // The original rig is kept; only visible face/hair/eyes are resculpted.
   part(hips,.20,.17,.21,skin,0,.83,0,.056);
-  const headPivot=new THREE.Group();headPivot.position.set(0,.93,0);hips.add(headPivot);
+  const headPivot=new THREE.Group();headPivot.position.set(0,.96,.01);
+  headPivot.scale.setScalar(1.08);hips.add(headPivot);
   sculptHead(headPivot,sculptParams,kit);
   // Seams, embroidered cuffs and a miniature pocket create believable
   // contemporary garments when seen close-up in the 3D avatar studio.
@@ -156,10 +163,21 @@ export function createAvatar(input={},mini=false){
   // Animated shoulder and elbow joints. Both arms attach to torso.
   function arm(side){
     const pivot=new THREE.Group();pivot.position.set(side*.39*width,.64,0);hips.add(pivot);
-    const sleeve=part(pivot,.23*width,.32,.31,top,side*.018,-.17,0,.08);
+    const sleeveLong=p.outfit==="suit"||p.outfit==="shirt"||p.outfit==="salwar"||p.outfit==="sweater";
+    const sleeve=part(pivot,(sleeveLong?.256:.245)*width,sleeveLong?.365:.245,
+      .32,top,side*.018,-.17,0,.11);
+    const seam=part(pivot,.254*width,.055,.335,
+      sleeveLong?accent:mat(0xe7d4c4),side*.018,sleeveLong?-.348:-.27,0,.02);
     const lower=new THREE.Group();lower.position.y=-.36;pivot.add(lower);
-    part(lower,.18,.25,.24,skin,0,-.11,0,.055);
-    part(lower,.22,.13,.26,skin,0,-.29,.035,.055);
+    if(sleeveLong){
+      part(lower,.19,.19,.25,top,0,-.09,0,.06);
+      part(lower,.216,.055,.27,accent,0,-.21,0,.025);
+      part(lower,.21,.125,.27,skin,0,-.302,.02,.077);
+    }else part(lower,.18,.25,.24,skin,0,-.13,0,.085);
+    const palm=part(lower,.235,.18,.266,skin,0,-.308,.04,.088);
+    for(const finger of [-1,0,1])
+      part(lower,.065,.105,.085,skin,finger*.068,-.41,.115,.032);
+    part(lower,.077,.13,.11,skin,side*.126,-.309,.08,.036).rotation.z=side*.26;
     return {pivot,lower};
   }
   const left=arm(-1),right=arm(1);
@@ -168,7 +186,12 @@ export function createAvatar(input={},mini=false){
     const loose=p.bottom==="palazzo"||p.outfit==="salwar"&&p.bottom!=="leggings";
     const tight=p.bottom==="leggings";
     const legWidth=(loose?.31:tight?.205:.245)*width;
-    part(pivot,legWidth,.53,loose?.35:.31,bottom,0,-.255,0,.055);
+    part(pivot,legWidth,.54,loose?.37:.32,bottom,0,-.255,0,.10);
+    // Garment geometry extends right around the leg rather than acting as a
+    // front-only decal. Trouser break above the shoe is individually modeled.
+    const cuff=part(pivot,legWidth+.027,.083,loose?.385:.345,
+      p.outfit==="salwar"?accent:bottom,0,-.50,0,.034);
+    if(loose)part(pivot,legWidth+.06,.048,.40,accent,0,-.534,0,.02);
     // Jeans/trouser texture: slim vertical seam and fabric cuff.
     if(!loose){
       part(pivot,.014,.36,.02,mat(0x627589),side*.08,-.29,.163,.007);
