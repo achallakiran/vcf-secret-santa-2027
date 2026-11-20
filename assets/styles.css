@@ -1196,3 +1196,32 @@ body.office-playing #player-menu textarea{
   #player-menu .atelier-card-grid:not(.atelier-card-grid-small){grid-template-columns:repeat(3,minmax(0,1fr))}
   #player-menu .atelier-choice-label{overflow-wrap:anywhere}
 }
+
+
+/* Player's PERSONAL and CHARACTER tabs share exactly the same full menu surface.
+   Match specificity of .player #player-menu.player-menu (the previous dark rule). */
+.player #player-menu.player-menu{
+  width:min(1180px,calc(100vw - 22px));
+  background:linear-gradient(130deg,#fffaf6f9,#f9eae9fa 63%,#efe1e8f9);
+  color:#3e2941;border-color:#e8c8bb;
+  box-shadow:0 22px 85px #23132099;
+}
+#player-menu #player-personal{
+  background:transparent;border:0;border-radius:0;padding:5px 0 4px;
+  color:#452c3e;
+}
+#player-menu #player-personal .personal-layout>section{
+  background:#fffaf7;
+  border:1px solid #edcfcb;
+  box-shadow:0 11px 25px #9c6b7650;
+}
+#player-menu #player-personal .personal-field,
+#player-menu #player-personal .personal-layout label,
+#player-menu #player-personal .child-name{color:#66354f}
+#player-menu .section-head .small-outline{
+  color:#71445b;border-color:#dcb5be;background:#fff7f2;
+}
+@media(max-width:620px){
+  .player #player-menu.player-menu{width:100%;max-height:100dvh;border-radius:0}
+  #player-menu #player-personal{padding:5px 0}
+}
