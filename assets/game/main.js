@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import {buildOffice} from "./office.js?v=office-social-v1";
-import {createAvatar,avatarFromPerson} from "./avatar.js?v=avatar-expanded-v2";
+import {createAvatar,avatarFromPerson} from "./avatar.js?v=braid-camera-v1";
 import {createOfficeLife} from "./office-life.js?v=office-social-v1";
 
 /* A responsive office runtime. 3D art and camera are independent from the existing Supabase UI. */
@@ -8,9 +8,11 @@ const UP=new THREE.Vector3(0,1,0);
 // User-orbitable camera presets. A mode changes radius/pitch/framing, not the
 // direction a user is looking; rotating never unexpectedly snaps on preset change.
 const MODES={
-  three:{distance:10.4,pitch:.70,ahead:2.2,fov:49},
-  close:{distance:5.7,pitch:.44,ahead:.9,fov:52},
-  wide:{distance:19.2,pitch:.98,ahead:6.5,fov:54}
+  // Follow the player, not the distant workstations. The main camera is now
+  // an elevated three-quarter view with the full avatar near screen center.
+  three:{distance:10.1,pitch:1.04,ahead:.34,fov:47},
+  close:{distance:6.5,pitch:.88,ahead:.18,fov:50},
+  wide:{distance:17.5,pitch:1.17,ahead:.42,fov:50}
 };
 const TWO_PI=Math.PI*2;
 function v2(x,z){return {x,z};}
@@ -282,20 +284,20 @@ export function mountOffice(host,profile,notice=()=>{}){
   }
   function cameraGoal(){
     const cfg=MODES[mode],distanceBase=mode==="wide"?
-      Math.min(29,cfg.distance+Math.max(0,office.bays-4)*.42):cfg.distance;
-    const distance=distanceBase*zoom;
+      Math.min(25,cfg.distance+Math.max(0,office.bays-4)*.27):cfg.distance;
+    // Respect the mobile aspect ratio: don't zoom the avatar offscreen on a
+    // portrait phone, even if a prior session selected a wide preset.
+    const portraitScale=camera.aspect<.70?1.10:1;
+    const distance=distanceBase*zoom*portraitScale;
     const headingX=-Math.sin(cameraYaw),headingZ=-Math.cos(cameraYaw);
-    const ahead=mode==="wide"?
-      Math.min(13,Math.max(3.6,(office.partyStart-hero.group.position.z)*.5)):cfg.ahead;
     const focus=new THREE.Vector3(
-      hero.group.position.x+headingX*ahead,
-      mode==="wide"?.42:1.10,
-      hero.group.position.z+headingZ*ahead
+      hero.group.position.x+headingX*cfg.ahead,
+      1.08,
+      hero.group.position.z+headingZ*cfg.ahead
     );
-    // For expansive views keep the focal point inside the room rather than
-    // centering on exterior walls and letting them fill the viewport.
-    focus.x=clamp(focus.x,office.room.left+.8,office.room.right-.8);
-    focus.z=clamp(focus.z,office.room.front+.85,office.room.back-.85);
+    // Focus is intentionally anchored on the PLAYER. Clamping to the room
+    // walls used to shift the character out of frame near the entrance.
+    // Cutaway architecture handles cameras passing outside the office.
     const cos=Math.cos(cameraPitch);
     return {
       focus,
@@ -503,8 +505,8 @@ export function mountOffice(host,profile,notice=()=>{}){
       speech.update(elapsed);
       cameraPitch+=(targetCameraPitch-cameraPitch)*Math.min(1,dt*10);
       const goal=cameraGoal();
-      camera.position.lerp(goal.position,Math.min(1,dt*7));
-      lookAtPoint.lerp(goal.focus,Math.min(1,dt*9));
+      camera.position.lerp(goal.position,Math.min(1,dt*10));
+      lookAtPoint.lerp(goal.focus,Math.min(1,dt*12));
       camera.lookAt(lookAtPoint);
       updateCutawayWalls();
     }
