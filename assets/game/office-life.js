@@ -42,7 +42,8 @@ export function createOfficeLife(people,hero,nav,announce=()=>{}){
       if(dist({x,z},hero.group.position)<minDistance)return true;
     }
     for(const st of states){
-      if(st.person===except||st.person===target)continue;
+      if(st.person===except||st.person.detailed===except||
+        st.person===target||st.person.detailed===target)continue;
       if(dist({x,z},st.person.detailed.group.position)<minDistance)return true;
     }
     return false;
