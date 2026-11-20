@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import {createAvatar} from "./avatar.js?v=celebration-richness-v5";
+import {createAvatar} from "./avatar.js?v=office-orbit-camera-v6";
 
 /** Dedicated procedural character studio: a rotatable, fully rendered model. */
 export function mountAvatarStudio(host,appearance){
