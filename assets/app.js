@@ -1,5 +1,6 @@
 
 "use strict";
+import {createVisualAvatarEditor} from "./game/avatar-editor.js?v=visual-atelier-v1";
 const GATEWAY="https://fwrievuhudjkeffmszqf.supabase.co/functions/v1/ss-gateway";
 const PUBLIC_KEY="sb_publishable_SJo2kgXdHNFZI65iAvQmxw_q56zuVLO";
 const PARAMS=new URLSearchParams(location.search);
@@ -21,7 +22,7 @@ const button=(label,handler,style="small-outline")=>{
 let session=null, busy=false, events=[],event=null,participants=[],assignments=[],player=null,childVisible=false;
 let officeRuntime=null,officeLoading=null,officeKey=null,officeNoticeTimer=null;
 let avatarBaseline=null,avatarPreviewTimer=null;
-let avatarStudio=null,avatarStudioLoading=null,activeStudioTab="look";
+let avatarStudio=null,avatarStudioLoading=null,activeStudioTab="look",visualEditor=null;
 const codes=new Map();
 function toast(message,error=false){
   const el=$("toast");el.textContent=message;
@@ -335,7 +336,7 @@ function demoData(){
   };
 }
 
-const AVATAR_FIELDS=["gender","outfit","bottom","hairstyle","skin","hair","height","build"];
+const AVATAR_FIELDS=["gender","outfit","bottom","hairstyle","skin","hair","height","build","footwear"];
 function readAvatarEditor(){
   const result={schema_version:2};
   for(const field of AVATAR_FIELDS){
@@ -349,7 +350,7 @@ function readAvatarEditor(){
 }
 function setAvatarEditor(values){
   const avatar=values&&typeof values==="object"?values:{};
-  const defaults={gender:"female",outfit:"shirt",bottom:"jeans",hairstyle:0,skin:2,hair:0,color:0,height:1,build:1,glasses:false};
+  const defaults={gender:"female",outfit:"salwar",bottom:"leggings",hairstyle:2,skin:2,hair:0,color:1,height:1,build:1,footwear:"auto",glasses:false};
   const settings={...defaults,...avatar};
   for(const field of AVATAR_FIELDS){
     const el=$("avatar-"+field);
@@ -359,12 +360,12 @@ function setAvatarEditor(values){
   $("avatar-glasses").checked=!!settings.glasses;
   $("avatar-height-out").textContent=Math.round(Number(settings.height)*100)+"%";
   $("avatar-build-out").textContent=Math.round(Number(settings.build)*100)+"%";
-  document.querySelectorAll("[data-avatar-color]").forEach(b=>b.classList.toggle("selected",Number(b.dataset.avatarColor)===Number(settings.color)));
   $("avatar-preview-status").textContent=player?.preview?
     "Visual preview: customize freely. Saving is available after participant login.":
     "Your changes preview immediately. Save when you are happy with your look.";
   $("avatar-save").disabled=!!player?.preview;
   avatarStudio?.update(settings);
+  visualEditor?.refresh(activeStudioTab);
 }
 function previewAvatarNow(){
   if(!officeRuntime)return;
@@ -385,11 +386,19 @@ for(const field of AVATAR_FIELDS){
   $("avatar-"+field).addEventListener("input",previewAvatarSoon);
 }
 $("avatar-glasses").addEventListener("change",previewAvatarSoon);
-document.querySelectorAll("[data-avatar-color]").forEach(button=>button.addEventListener("click",()=>{
-  $("avatar-color").value=button.dataset.avatarColor;
-  document.querySelectorAll("[data-avatar-color]").forEach(b=>b.classList.toggle("selected",b===button));
-  previewAvatarSoon();
-}));
+// Actual 3D outfit/hair/accessory cards, swatches and two character portraits.
+// Hidden inputs keep the established save payload and version-check behavior.
+visualEditor=createVisualAvatarEditor({
+  read:readAvatarEditor,
+  studio:()=>avatarStudio,
+  choose:(field,value)=>{
+    if(field==="glasses")$("avatar-glasses").checked=!!value;
+    else $("avatar-"+field).value=String(value);
+    visualEditor.refresh(activeStudioTab);
+    previewAvatarSoon();
+  }
+});
+visualEditor.refresh(activeStudioTab);
 $("avatar-view").addEventListener("click",()=>{
   clearTimeout(avatarPreviewTimer);
   previewAvatarNow();
@@ -426,7 +435,7 @@ $("avatar-form").addEventListener("submit",run(async e=>{
 
 
 function setStudioTab(name){
-  if(!["look","hair","fashion","shape"].includes(name))return;
+  if(!["look","hair","fashion","accessories","footwear","shape"].includes(name))return;
   activeStudioTab=name;
   document.querySelectorAll("[data-studio-tab]").forEach(button=>{
     const selected=button.dataset.studioTab===name;
@@ -436,6 +445,10 @@ function setStudioTab(name){
   document.querySelectorAll("[data-studio-panel]").forEach(panel=>{
     panel.classList.toggle("hidden",panel.dataset.studioPanel!==name);
   });
+  const titles={look:"Face & colors",hair:"Hairstyles",fashion:"Outfit & fashion",
+    accessories:"Accessories",footwear:"Footwear",shape:"Height & build"};
+  $("atelier-category-title").textContent=titles[name];
+  visualEditor?.refresh(name);
 }
 document.querySelectorAll("[data-studio-tab]").forEach(button=>
   button.addEventListener("click",()=>setStudioTab(button.dataset.studioTab))
@@ -449,6 +462,7 @@ async function ensureAvatarStudio(){
     const module=await import("./game/studio.js?v=visual-sculpt-v3");
     if($("player-menu").classList.contains("hidden")||$("player-character").classList.contains("hidden"))return;
     avatarStudio=module.mountAvatarStudio($("avatar-studio-canvas"),readAvatarEditor());
+    visualEditor?.refresh(activeStudioTab);
   })();
   try{await avatarStudioLoading;}
   catch(err){officeToast("3D avatar preview unavailable. The office character can still be customized.");console.error(err);}
@@ -701,7 +715,6 @@ $("player-pause").addEventListener("click",()=>{
   syncCameraButtons();
 });
 $("player-close").addEventListener("click",closePlayerMenu);
-// One permanent action button: tap executes, long-press selects from four emotes.
 // One tap, one random action. No dropdown or action selection UI.
 const OFFICE_ACTIONS=["hi","dance","clap","cheer"];
 let lastOfficeAction=-1;
