@@ -313,6 +313,10 @@ export function buildOffice(count=12){
   for(let k=0;k<3;k++)picture(root,7.94,3.06,front+5+k*5,[0xc6c6ad,0xb1c6cb,0xe3cdb2][k]);
   const spawn={x:4.2,z:Math.min(4.0,rowEnd-.3)};
   const rows=bays;
-  return {root,colliders,seats,spawn,bays,room:{left,right,front,back},
+  return {root,colliders,seats,spawn,bays,
+    // Include shallow door alcoves inside the navigation footprint while keeping
+    // the visible main hall exactly 16 m wide. The west wall itself is collidable
+    // except at the correctly spaced door openings.
+    room:{left:left-2.20,mainLeft:left,right,front,back},
     partyStart,twinkle,overhead,doorCenters,rowZ,deskPitch:step,doorGap};
 }
