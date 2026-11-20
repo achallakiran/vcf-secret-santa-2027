@@ -34,9 +34,54 @@ function equal(a:Uint8Array,b:Uint8Array):boolean {
   if(a.length!==b.length)return false;
   let diff=0;for(let i=0;i<a.length;i++)diff|=a[i]^b[i];return diff===0;
 }
+let cachedHmacKey:Promise<CryptoKey>|null=null;
 async function hmac(s:string):Promise<string>{
-  const key=await crypto.subtle.importKey("raw",encoder.encode(SERVICE),{name:"HMAC",hash:"SHA-256"},false,["sign"]);
-  return toHex(new Uint8Array(await crypto.subtle.sign("HMAC",key,encoder.encode(s))));
+  // Cache the same server-held HMAC key. The algorithm and fingerprints do
+  // not change; this lets organizer-only legacy migration be bounded.
+  if(!cachedHmacKey)cachedHmacKey=crypto.subtle.importKey("raw",encoder.encode(SERVICE),
+    {name:"HMAC",hash:"SHA-256"},false,["sign"]);
+  return toHex(new Uint8Array(await crypto.subtle.sign("HMAC",
+    await cachedHmacKey,encoder.encode(s))));
+}
+/**
+ * The access verifier remains one-way. For organizer-only repeat display,
+ * store a separate AES-GCM envelope with a random nonce, authenticated to
+ * its event+participant identity. Encryption keys never leave this gateway.
+ * Legacy codes created before this feature cannot be reconstructed.
+ */
+let cachedVaultKey:Promise<CryptoKey>|null=null;
+function vaultKey():Promise<CryptoKey>{
+  if(!cachedVaultKey)cachedVaultKey=(async()=>{
+    const material=await crypto.subtle.digest("SHA-256",
+      encoder.encode("vcf-ss-organizer-vault-v1|"+SERVICE));
+    return crypto.subtle.importKey("raw",material,"AES-GCM",false,["encrypt","decrypt"]);
+  })();
+  return cachedVaultKey;
+}
+async function encryptOrganizerCode(eventId:string,participantId:string,code:string):Promise<string>{
+  const iv=crypto.getRandomValues(new Uint8Array(12));
+  const data=await crypto.subtle.encrypt({
+    name:"AES-GCM",iv,additionalData:encoder.encode("vcf-ss|"+eventId+"|"+participantId)
+  },await vaultKey(),encoder.encode(code));
+  return "v1:"+toHex(iv)+":"+toHex(new Uint8Array(data));
+}
+async function decryptOrganizerCode(eventId:string,participantId:string,vault:string):Promise<string>{
+  const parts=/^v1:([a-f0-9]{24}):([a-f0-9]{40})$/i.exec(vault);
+  if(!parts)fail("Unknown organizer code format.",500);
+  const data=await crypto.subtle.decrypt({
+    name:"AES-GCM",iv:fromHex(parts[1]),
+    additionalData:encoder.encode("vcf-ss|"+eventId+"|"+participantId)
+  },await vaultKey(),fromHex(parts[2]));
+  const code=new TextDecoder().decode(data);
+  if(!/^\d{4}$/.test(code))fail("Invalid organizer code.",500);
+  return code;
+}
+async function persistOrganizerCode(eventId:string,participantId:string,code:string){
+  const envelope=await encryptOrganizerCode(eventId,participantId,code);
+  const updated=await db("ss_access_codes?select=participant_id&event_id=eq."+eventId+
+    "&participant_id=eq."+participantId,"PATCH",{code_vault:envelope},true);
+  if(!Array.isArray(updated)||updated.length!==1)
+    fail("Invitation code was issued, but could not be retained for the organizer. Reissue it.",503);
 }
 async function pinHash(pin:string,saltHex:string,iterations:number):Promise<string>{
   const key=await crypto.subtle.importKey("raw",encoder.encode(pin),"PBKDF2",false,["deriveBits"]);
@@ -201,12 +246,13 @@ function sanitizedAvatar(data:unknown){
     hair:intVal("hair",8),
     hairstyle:intVal("hairstyle",19),
     color:intVal("color",11),
+    footwear:strVal("footwear",["auto","sneakers","formal","flats","sandals"],"auto"),
     bottomColor:intVal("bottomColor",11,-1),
     shoeColor:intVal("shoeColor",11,-1),
     facialHair:strVal("facialHair",["none","beard-short","beard-full","moustache-pencil","moustache-handlebar","combo-short","combo-full"],"none"),
     glassesStyle:strVal("glassesStyle",["none","round","rectangle","square","aviator","cat-eye"],r.glasses===true?"rectangle":"none"),
     glassesColor:intVal("glassesColor",11),
-    glasses:r.glassesStyle&&r.glassesStyle!=="none"||r.glasses===true,
+    glasses:r.glassesStyle!==undefined?r.glassesStyle!=="none":r.glasses===true,
     height:numVal("height",.86,1.16,1),
     build:numVal("build",.83,1.2,1)
   };
@@ -248,6 +294,43 @@ async function dashboard(claims:any){
     receivedTasks,office:day?.[0]?.scene||null,hint,today:date
   };
 }
+/**
+ * One-time compatibility for the first generation of issued codes.
+ * They were saved only as event-specific HMAC verifiers. The original
+ * generator uses a 4-digit range 1000..9999; an AUTHENTICATED ORGANIZER
+ * may reconstruct the 9000 possibilities inside the server, then encrypt
+ * recovered values in the new organizer-only vault. Previously shared
+ * participant codes stay valid; we never silently rotate them.
+ */
+async function recoverLegacyOrganizerCodes(eventId:string,issued:any[],
+  codes:Record<string,string>){
+  const legacy=new Map<string,string>();
+  for(const row of issued)
+    if(!row.code_vault && typeof row.code_fingerprint==="string")
+      legacy.set(row.code_fingerprint,row.participant_id);
+  if(!legacy.size)return;
+  const found:{id:string;code:string}[]=[];
+  const prefix="vcf-ss-code|"+eventId+"|";
+  for(let start=1000;start<10000 && legacy.size;start+=150){
+    const guesses=Array.from({length:Math.min(150,10000-start)},
+      (_,i)=>String(start+i));
+    const fingerprints=await Promise.all(guesses.map(code=>hmac(prefix+code)));
+    for(let i=0;i<guesses.length;i++){
+      const id=legacy.get(fingerprints[i]);
+      if(!id)continue;
+      codes[id]=guesses[i];
+      found.push({id,code:guesses[i]});
+      legacy.delete(fingerprints[i]);
+    }
+  }
+  // Persist recovered codes encrypted; never return/store the HMAC key.
+  for(let k=0;k<found.length;k+=12){
+    await Promise.all(found.slice(k,k+12).map(async({id,code})=>{
+      try{await persistOrganizerCode(eventId,id,code);}
+      catch{console.warn("An existing organizer code could not be vaulted.");}
+    }));
+  }
+}
 async function adminAction(action:string,data:any){
   if(action==="list_events"){
     const events=await db("ss_events?select=id,slug,title,status,starts_on,ends_on,reveal_at,assignments_locked_at,created_at&order=created_at.desc&limit=100");
@@ -284,11 +367,25 @@ async function adminAction(action:string,data:any){
   }
   const event=await ownerEvent(data.event_id);
   if(action==="list_participants"){
-    const [roster,pairs]=await Promise.all([
-      db("ss_participants?select=id,display_name,desk_key,is_active,created_at&event_id=eq."+event.id+"&order=created_at.asc"),
-      db("ss_assignments?select=id,santa_id,child_id&event_id=eq."+event.id)
+    const [roster,pairs,issued]=await Promise.all([
+      db("ss_participants?select=id,display_name,desk_key,is_active,avatar,avatar_version,created_at&event_id=eq."+event.id+"&order=created_at.asc"),
+      db("ss_assignments?select=id,santa_id,child_id&event_id=eq."+event.id),
+      db("ss_access_codes?select=participant_id,code_fingerprint,code_vault&event_id=eq."+event.id)
     ]);
-    return {event,participants:roster,assignments:pairs};
+    const codes:Record<string,string>={};
+    for(const row of issued){
+      if(!row.code_vault)continue; // Old codes are HMAC-only, not reversible.
+      try{
+        const code=await decryptOrganizerCode(event.id,row.participant_id,row.code_vault);
+        if(await fingerprint(event.id,code)===row.code_fingerprint)
+          codes[row.participant_id]=code;
+      }catch(e){console.warn("Unreadable organizer code envelope for one participant.");}
+    }
+    if(issued.some(row=>!row.code_vault)){
+      try{await recoverLegacyOrganizerCodes(event.id,issued,codes);}
+      catch{console.warn("Some legacy invitation codes could not be recovered.");}
+    }
+    return {event,participants:roster,assignments:pairs,codes};
   }
   if(action==="add_participant"){
     if(event.assignments_locked_at)fail("Assignments locked; participant registration is closed.");
@@ -303,6 +400,7 @@ async function adminAction(action:string,data:any){
           p_event_id:event.id,p_display_name:name,p_desk_key:desk||null,
           p_code_fingerprint:await fingerprint(event.id,code)
         });
+        await persistOrganizerCode(event.id,id,code);
         return {id,code};
       }catch(e){
         const msg=String(e);
@@ -310,6 +408,19 @@ async function adminAction(action:string,data:any){
       }
     }
     fail("No unique code could be generated.");
+  }
+  if(action==="admin_save_avatar"){
+    // Organizer identity was verified before adminAction. Updates are scoped
+    // to the current event and reject stale versions just like player saves.
+    if(!validId(data.participant_id))fail("Invalid participant.",400);
+    const version=Number(data.version);
+    if(!Number.isInteger(version)||version<1)fail("Reload this participant before saving.",400);
+    const avatar=sanitizedAvatar(data.avatar);
+    const updated=await db("ss_participants?id=eq."+data.participant_id+
+      "&event_id=eq."+event.id+"&avatar_version=eq."+version,
+      "PATCH",{avatar,avatar_version:version+1,updated_at:stamp()},true);
+    if(updated?.length!==1)fail("Avatar was changed elsewhere. Reload this participant.",409);
+    return {avatar,version:version+1};
   }
   if(action==="edit_participant"){
     if(event.assignments_locked_at)fail("The roster is locked.");
@@ -330,6 +441,7 @@ async function adminAction(action:string,data:any){
         await db("rpc/ss_rotate_access_code","POST",{
           p_event_id:event.id,p_participant_id:data.participant_id,p_new_fingerprint:await fingerprint(event.id,code)
         });
+        await persistOrganizerCode(event.id,data.participant_id,code);
         return {code};
       }catch(e){
         if(!String(e).includes("Duplicate value"))throw e;
