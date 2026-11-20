@@ -21,7 +21,7 @@ A holiday office Secret Santa experience, hosted as a static GitHub Pages fronte
 - Supabase database: 8 `ss_*` game tables, plus one restricted `ss_auth_guard` table for PIN verification/lockout, and three privileged transaction helpers.
 - Supabase functions: `ss-gateway` is the current API; `ss-organizer` is retired and returns HTTP 410.
 
-**Not implemented yet:** Detailed editable voxel avatar customizer and persistent wardrobe settings, published office/day scene generation, truthful daily hints, or organizer-controlled final reveal. The new 3D office is an initial playable procedural prototype, not yet confirmed to match the reference image's level of polish.
+**Not implemented yet:** Full production-quality facial morphs, all contemporary Indian wardrobe variations and footwear choices, published office/day scene generation, truthful daily hints, or organizer-controlled final reveal. Phase 2B now includes a working initial avatar editor and secure per-player save, but visual fidelity still needs real-browser review and further polishing.
 
 ## Optional WhatsApp sharing: no phone-number storage
 
@@ -38,13 +38,15 @@ The participant-code flow now opens a new procedural Three.js 3D office scene in
 
 **Public art preview without a participant account:** `https://achallakiran.github.io/vcf-secret-santa-2027/?preview=1`. This preview contains fictional coworkers and does not use or expose real event data. GitHub Pages must be enabled for the URL to work.
 
-**Player controls:** click/tap a free patch of floor to walk there; click/tap a coworker to approach and wave; the lower-right hand icon opens one selector with exactly four emotes (Hi, Dance, Clap, Cheer); the top-right pause icon opens Character / Personal and camera settings. There is no joystick, chat or online icon.
+**Player controls:** click/tap a free patch of floor to walk there; click/tap a coworker to approach and wave. Tapping the permanent lower-right hand button NOW **executes the selected animation** (Hi by default); holding the button or tapping its embedded chevron opens a circular picker of exactly four actions: Hi, Dance, Clap and Cheer. An action immediately stops movement and plays an animation with a brief confirmation. Top-right Pause opens Character / Personal and three camera settings. There is no joystick, chat or online icon.
 
 **Camera options:** elevated three-quarter follow (default), closer follow, and wide overview. Selected camera mode is saved locally in the browser. Personal data stays in Supabase, not in the camera preferences.
 
-**Geometry:** one single-sided wall-facing row and one double-sided benching island, both perpendicular to the north window; each desk’s long edge faces its employee. The north window starts at the west corner and stops shortly after the double-sided island. Office length grows with 3 workstations per north–south bay, with a minimum of four bays. Spawn is close to the first workstations, not at the celebration stage. The main Christmas tree and reveal zone are at the far end, with a smaller tree near spawn. Desks have ordinary office props—no monument pictures.
+**Geometry:** one single-sided wall-facing row and one double-sided benching island, both perpendicular to the north window; each desk’s long edge faces its employee. Workstation pitch is now **2.42 m**, with about **0.90 m space between adjacent 1.52 m desks**. A **1.65 m extra cross-passage** and a framed, open doorway interrupt the west wall after each fourth wall-facing desk. Doorways lead to small, navigable shallow alcoves; larger connected rooms are not built. The north window starts at the west corner and stops shortly after the double-sided island. Office length grows with 3 workstations per bay, with a minimum of four bays. Spawn remains near the first workstations. Main tree and celebration stage remain at the far end; smaller tree is by spawn. No monument artwork.
 
-**Visuals:** authored procedural voxel avatars with modeled faces, layered hair, body rigs, multiple outfit presets and movement/sitting/Hi/Dance/Clap/Cheer animations; festive interior furnishings, hanging lights, trees, plants, wrapped gifts, office furniture, tile flooring, shadows and windows. Near NPCs use articulated character meshes; distant NPCs use low-detail stand-ins to limit mobile GPU workload.
+**Visuals:** authored procedural voxel avatars with modeled faces, layered hair, body rigs, multiple outfit presets and movement/sitting/Hi/Dance/Clap/Cheer animations; festive interior furnishings, wall-mounted garlands and lights, trees, plants, wrapped gifts, furniture, tile flooring, shadows and windows. Crossing roof garlands have been removed from the walking aisles; overhead fixtures are hidden when blocking the camera-to-character view. Near NPCs use articulated meshes, while distant NPCs use low-detail stand-ins.
+
+**Avatar editor (first version):** in the Pause → Character tab, modify gender, outfit (shirts, T-shirts, formal suits, salwar suits, modern dresses, Christmas sweaters), bottoms (jeans, trousers, leggings, palazzo), hairstyle, hair color, complexion, clothing color, height, build and spectacles. Changes preview live on the 3D player. The Inspect button temporarily switches to closer follow; Reset restores the last saved appearance. **Save appearance** uses the signed, player-scoped `ss-gateway` Edge Function and an optimistic `avatar_version` check, with a validated JSONB payload. Saving is disabled in the fictional public preview; actual players must log in with event-specific four-digit invitation codes. No unrelated Supabase table is altered.
 
 **Code organization:**
 
@@ -57,7 +59,7 @@ assets/game/
 
 The Three.js module is loaded at a pinned CDN version via an import map. This new game scene requires network access and WebGL; the previous static login/backend screens remain as before. We have checked module syntax, DOM references, a mocked run of scalable office generation, avatar animation-rig calls, and representative navigation routes. **Full browser rendering, visual fidelity relative to the reference image, performance on real mobile phones, and end-to-end GitHub Pages gameplay still require live verification.**
 
-**Next milestone:** improve the actual 3D lighting, silhouettes, textures and animations based on in-browser feedback; then deliver full Indian wardrobe/face/body customization and secure avatar-save support. Existing menu text indicates which features are pending.
+**Next milestone:** verify the latest 3D appearance in mobile Safari and desktop Chrome, refine the characters and environment toward the approved reference image, expand face/footwear/Indian wardrobe geometry, and improve the live avatar preview. The current visual polish is not yet certified to match the image. Afterward, continue with deterministic daily office snapshots and finale.
 
 ## Deployment
 
