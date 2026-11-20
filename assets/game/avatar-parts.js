@@ -59,7 +59,7 @@ export function sculptHead(head,p,kit){
   // deep pupil and two sparkling rectangular reflections.
   for(const side of [-1,1]){
     const x=side*.225;
-    part(head,.246,.190,.027,mat(0x55403a,.8),x,.390,.379,.051);
+    part(head,.237,.170,.023,skinShade,x,.390,.379,.042);
     part(head,.226,.171,.028,white,x,.383,.403,.043);
     part(head,.142,.154,.027,iris,x+.014,.381,.425,.044);
     part(head,.107,.151,.027,ink,x+.015,.378,.445,.029);
@@ -67,9 +67,9 @@ export function sculptHead(head,p,kit){
     catchlight.castShadow=false;
     const glimmer=part(head,.022,.025,.013,white,x+.063,.347,.465,.009);
     glimmer.castShadow=false;
-    const lid=part(head,.260,.038,.028,brow,x,.491,.398,.018);
+    const lid=part(head,.222,.020,.022,brow,x,.480,.405,.009);
     lid.rotation.z=side*-.078;
-    const eyebrow=part(head,.235,.062,.06,brow,x,.558,.382,.023);
+    const eyebrow=part(head,.19,.027,.026,mat(shade(p.hairHex,.13)),x,.547,.394,.013);
     eyebrow.rotation.z=-side*.135;
     if(female){
       const lash=part(head,.070,.028,.029,brow,x+side*.137,.467,.409,.008);
@@ -143,7 +143,7 @@ export function sculptHead(head,p,kit){
   if(cut!==20){
   // Hair is now constructed as a stepped crown with overlapping voxel
   // locks and *different length/volume silhouettes* for all four styles.
-  const crown=part(head,1.12,.29,.82,deep,0,.779,-.042,.095);
+  const crown=part(head,cut>=13&&cut<20?1.08:1.12,cut>=13&&cut<20?.20:.29,.82,deep,0,.805,-.042,.082);
   part(head,1.045,.17,.74,hair,0,.907,-.025,.068);
   for(const side of [-1,1]){
     part(head,.23,.33,.69,hair,side*.480,.640,-.012,.070);
@@ -153,14 +153,14 @@ export function sculptHead(head,p,kit){
       lock.rotation.z=side*(.06+j*.055);
     }
   }
-  const fringeCount=style===0?6:style===3?4:5;
+  const fringeCount=parting>=0||cut>=13?0:style===0?5:style===3?4:5;
   for(let j=0;j<fringeCount;j++){
     const x=(j-(fringeCount-1)/2)*(.79/fringeCount);
     const offset=(j*3+style)%3;
     const height=.17+offset*.035;
     const sweep=parting===0?.12:parting===1?-.12:parting===2?((j-(fringeCount-1)/2)>0?.10:-.10):style===3?-.065:style===1?.064:.018;
-    const lock=part(head,.195,height,.205,j%3===0?high:j%3===1?middle:hair,
-      x+sweep,.777-offset*.022,.365,.038);
+    const lock=part(head,.164,height*.76,.144,j%3===0?high:j%3===1?middle:hair,
+      x+sweep,.810-offset*.018,.328,.034);
     lock.rotation.z=(j-(fringeCount-1)/2)*-.073+(parting===0?-.20:parting===1?.20:0);
   }
   if(style===0){
@@ -244,7 +244,7 @@ export function sculptHead(head,p,kit){
       lock.rotation.z=direction*.16;
     }
   }
-  if(faded){
+  if(faded&&cut!==20){
     const sides=cut===14||cut===16?0.73:0.43;
     for(const sign of [-1,1]){
       // A close crop overlays long side locks and creates a pronounced fade.
