@@ -6,8 +6,8 @@ export function mountAvatarStudio(host,appearance){
   if(!host)throw new Error("Avatar studio preview element is missing.");
   const scene=new THREE.Scene();
   const camera=new THREE.PerspectiveCamera(38,1,.1,45);
-  camera.position.set(2.5,2.42,4.95);
-  camera.lookAt(0,1.15,0);
+  camera.position.set(2.05,2.32,4.12);
+  camera.fov=35;camera.lookAt(0,1.27,0);
   const renderer=new THREE.WebGLRenderer({antialias:true,alpha:true,powerPreference:"high-performance"});
   renderer.outputColorSpace=THREE.SRGBColorSpace;
   renderer.toneMapping=THREE.ACESFilmicToneMapping;
@@ -100,6 +100,65 @@ export function mountAvatarStudio(host,appearance){
   if(typeof ResizeObserver!=="undefined"){
     ro=new ResizeObserver(resize);ro.observe(host);
   }else window.addEventListener("resize",resize);
+  // The SAME character factory powers option thumbnails. One reusable render
+  // target avoids creating a WebGL renderer/context for each visual card.
+  const thumbWidth=132,thumbHeight=164;
+  const thumbTarget=new THREE.WebGLRenderTarget(thumbWidth,thumbHeight,{
+    depthBuffer:true,samples:4
+  });
+  thumbTarget.texture.colorSpace=THREE.SRGBColorSpace;
+  const thumbScene=new THREE.Scene();
+  thumbScene.background=new THREE.Color(0xe8ddd5);
+  thumbScene.add(new THREE.HemisphereLight(0xfff6ea,0xb9c2bf,2.7));
+  const thumbKey=new THREE.DirectionalLight(0xffdfbe,3.3);
+  thumbKey.position.set(-3,5,6);thumbScene.add(thumbKey);
+  const thumbRim=new THREE.DirectionalLight(0xe9e3ee,1.15);
+  thumbRim.position.set(3,2,-3);thumbScene.add(thumbRim);
+  const thumbCamera=new THREE.PerspectiveCamera(35,thumbWidth/thumbHeight,.1,30);
+  const pixels=new Uint8Array(thumbWidth*thumbHeight*4);
+  const thumbCanvas=document.createElement("canvas");
+  thumbCanvas.width=thumbWidth;thumbCanvas.height=thumbHeight;
+  const thumbCtx=thumbCanvas.getContext("2d",{willReadFrequently:true});
+  function thumbnail(props,portrait=false){
+    if(!running||!thumbCtx)return "";
+    const sample=createAvatar(props);
+    thumbScene.add(sample.group);
+    sample.update(0,false);
+    if(portrait){
+      thumbCamera.fov=28;thumbCamera.position.set(1.6,2.88,3.2);
+      thumbCamera.lookAt(0,2.05,0);
+    }else{
+      thumbCamera.fov=38;thumbCamera.position.set(2.0,2.17,4.30);
+      thumbCamera.lookAt(0,1.23,0);
+    }
+    thumbCamera.updateProjectionMatrix();
+    const previous=renderer.getRenderTarget();
+    try{
+      renderer.setRenderTarget(thumbTarget);
+      renderer.setViewport(0,0,thumbWidth,thumbHeight);
+      renderer.render(thumbScene,thumbCamera);
+      renderer.readRenderTargetPixels(thumbTarget,0,0,thumbWidth,thumbHeight,pixels);
+      const image=thumbCtx.createImageData(thumbWidth,thumbHeight);
+      const length=thumbWidth*4;
+      for(let y=0;y<thumbHeight;y++){
+        const from=(thumbHeight-1-y)*length,to=y*length;
+        image.data.set(pixels.subarray(from,from+length),to);
+      }
+      thumbCtx.putImageData(image,0,0);
+      return thumbCanvas.toDataURL("image/webp",.83);
+    }finally{
+      renderer.setRenderTarget(previous);
+      renderer.setViewport(0,0,renderer.domElement.width,renderer.domElement.height);
+      thumbScene.remove(sample.group);
+      sample.group.traverse(obj=>{
+        if(obj.isMesh){
+          if(obj.geometry?.type==="TubeGeometry")obj.geometry.dispose();
+          const values=Array.isArray(obj.material)?obj.material:[obj.material];
+          values.forEach(m=>{if(m&&!m.userData?.sharedVoxelMaterial)m.dispose();});
+        }
+      });
+    }
+  }
   swap(appearance);
   resize();
   function draw(){
@@ -118,6 +177,7 @@ export function mountAvatarStudio(host,appearance){
   draw();
   return {
     update:swap,
+    thumbnail,
     rotate(delta){targetAngle+=delta;lastActive=performance.now();},
     dispose(){
       running=false;cancelAnimationFrame(raf);ro?.disconnect();
@@ -126,6 +186,7 @@ export function mountAvatarStudio(host,appearance){
       renderer.domElement.removeEventListener("pointermove",pointerMove);
       renderer.domElement.removeEventListener("pointerup",pointerUp);
       renderer.domElement.removeEventListener("pointercancel",pointerUp);
+      thumbTarget.dispose();
       renderer.dispose();
       host.replaceChildren();
     }
