@@ -462,7 +462,7 @@ async function ensureAvatarStudio(){
   if(avatarStudio||avatarStudioLoading||!officeRuntime||!player)return;
   if($("player-menu").classList.contains("hidden")||$("player-character").classList.contains("hidden"))return;
   avatarStudioLoading=(async()=>{
-    const module=await import("./game/studio.js?v=visual-atelier-v3");
+    const module=await import("./game/studio.js?v=avatar-fit-v4");
     if($("player-menu").classList.contains("hidden")||$("player-character").classList.contains("hidden"))return;
     avatarStudio=module.mountAvatarStudio($("avatar-studio-canvas"),readAvatarEditor());
     visualEditor?.refresh(activeStudioTab);
