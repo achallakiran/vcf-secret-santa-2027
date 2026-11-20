@@ -1,6 +1,7 @@
 import * as THREE from "three";
 import {decorateWorkstation,addWarmOfficeDetails} from "./environment-art.js?v=visual-sculpt-v3";
 import {officeTileMaterial,applyOfficeTileRepeat,addOfficeLounge} from "./art-surfaces.js?v=visual-sculpt-v3";
+import {getInteriorFinishes} from "./interior-finishes.js?v=interior-art-v1";
 // Fully procedural office furniture, lights and festive scenery; no external models.
 const boxGeo=new THREE.BoxGeometry(1,1,1);
 boxGeo.userData.officeInstancing=true;
@@ -251,17 +252,52 @@ function wallGarland(parent,x,from,to,y=3.75,twinkle=[]){
 }
 function chair(parent,x,z,face=1,variant=0){
   const g=new THREE.Group();g.position.set(x,0,z);g.rotation.y=face;parent.add(g);
-  const dark=variant%2?0x354351:0x405267;
+  const finish=getInteriorFinishes();
+  const dark=variant%2?finish.chairInk:finish.chairTeal;
   cyl(g,0,.30,0,.055,.05,.47,0x484c56);
   for(let i=0;i<5;i++){const a=i*Math.PI*2/5;block(g,Math.cos(a)*.34,.095,Math.sin(a)*.34,.12,.05,.12,0x444b54);}
   // Rounded padded seat, curved-looking double cushion and visible headrest.
   softBlock(g,0,.55,0,.53,.13,.47,dark,.19);
   softBlock(g,0,.97,-.21,.54,.75,.13,dark,.19);
   softBlock(g,0,1.27,-.23,.44,.20,.16,0x566377,.18);
-  softBlock(g,0,.97,-.125,.39,.49,.055,variant%2?0x475766:0x50667a,.11,false);
+  softBlock(g,0,.97,-.125,.39,.49,.055,
+    variant%2?finish.chairTeal:finish.chairInk,.11,false);
+  // Continuous piping, curved upholstered lumbar band and satin chair arms.
+  softBlock(g,0,.74,-.126,.35,.085,.064,finish.cushion,.07,false);
+  for(const side of [-1,1]){
+    block(g,side*.28,.724,-.09,.027,.025,.36,finish.trim,false);
+  }
   block(g,-.28,.72,-.02,.075,.13,.4,0x5e6471);
   block(g,.28,.72,-.02,.075,.13,.4,0x5e6471);
   for(const side of [-1,1])ball(g,side*.35,.095,.08,.063,0x353c45);
+  return g;
+}
+/**
+ * Upholstered celebration lounge seating has the same material finish as
+ * the workplace, but is kept off the central x=2..4 walking corridor.
+ * Group is a decorative static object; its collider is added by caller.
+ */
+function celebrationSofa(parent,x,z,mirror=false){
+  const finish=getInteriorFinishes(),g=new THREE.Group();
+  g.position.set(x,0,z);parent.add(g);
+  if(mirror)g.rotation.y=Math.PI;
+  // Sculpted 2-person seat with curved back, thick arms and loose pillows.
+  softBlock(g,0,.43,0,.77,.18,2.35,finish.chairTeal,.18);
+  softBlock(g,-.42,.82,0,.21,.85,2.48,finish.chairTeal,.18);
+  for(const zz of [-.57,.57]){
+    softBlock(g,.04,.54,zz,.66,.24,1.02,finish.chairTeal,.16);
+    const cushion=softBlock(g,-.28,.94,zz,.18,.42,.55,
+      zz>0?finish.cushion:finish.divider,.13);
+    cushion.rotation.z=-.21;
+  }
+  for(const zz of [-1.20,1.20]){
+    softBlock(g,-.02,.66,zz,.84,.40,.22,finish.chairInk,.13);
+    softBlock(g,-.02,.81,zz,.65,.07,.20,finish.chairTeal,.06);
+    block(g,-.21,.15,zz,.16,.28,.13,finish.walnut,false);
+  }
+  for(const zz of [-.86,.86]){
+    block(g,.19,.16,zz,.10,.28,.10,finish.walnut,false);
+  }
   return g;
 }
 function workstation(parent,x,z,i,row,colliders){
@@ -272,7 +308,8 @@ function workstation(parent,x,z,i,row,colliders){
   const left=-chairSide;
   const chairX=x+chairSide*.9;
   const g=new THREE.Group();g.position.set(x,0,z);parent.add(g);
-  const oak=mat(0xc69d73),white=mat(0xf4f0e9);
+  const finish=getInteriorFinishes();
+  const oak=finish.maple,white=finish.cabinet;
   softBlock(g,0,.76,0,.73,.075,1.52,oak,.12);
   // A walnut edge with a satin metallic inlay makes the desk read as
   // contemporary modular office furniture rather than stacked boxes.
@@ -280,8 +317,19 @@ function workstation(parent,x,z,i,row,colliders){
   block(g,-chairSide*.34,.737,0,.014,.028,1.49,0x9b775e,false);
   softBlock(g,0,.38,-.66,.62,.68,.08,white,.09);
   softBlock(g,0,.38,.66,.62,.68,.08,white,.09);
+  // Recessed cabinet drawers with real metallic handles and panel seams.
+  for(const z of [-.64,.64]){
+    for(let level=0;level<3;level++){
+      softBlock(g,chairSide*.317,.24+level*.21,z,.031,.165,.49,
+        finish.cabinet,.04,false);
+      block(g,chairSide*.34,.25+level*.21,z,.025,.024,.21,
+        finish.trim,false);
+    }
+  }
   block(g,0,.18,0,.52,.22,1.3,mat(0xeae5dc));
-  softBlock(g,0,1.1,0,.045,.52,1.42,row==="W"?0xefe5d7:0xe9d7bf,.12,false);
+  softBlock(g,0,1.1,0,.045,.52,1.42,finish.divider,.12,false);
+  // Warm desk-edge accent is an emissive trim, never a point light per desk.
+  block(g,chairSide*.335,.713,0,.016,.025,1.40,finish.deskGlow,false);
   // Monitors face the employee (west/east), with long edge of desk fronting the chair.
   const screenX=-left*.13;
   block(g,screenX,.98,-.22,.09,.45,.62,0x343d48);
@@ -503,7 +551,7 @@ export function buildOffice(count=12){
   const party=new THREE.Group();party.position.z=partyStart;root.add(party);
   block(party,0,.022,3.2,14.4,.04,7.1,0xbba38e,false);
   block(party,0,.054,3.15,13.5,.024,6.6,0x923f52,false);
-  block(party,0,.07,3.15,12.9,.02,6.12,0xc87072,false);
+  block(party,0,.07,3.15,12.9,.02,6.12,getInteriorFinishes().carpet,false);
   for(let i=0;i<8;i++){
     const zz=.66+i*.78;
     block(party,-6.25,.079,zz,.055,.008,.35,0xf1d99a,false);
@@ -562,7 +610,25 @@ export function buildOffice(count=12){
     const scale=.20+((k*7)%5)*.075;
     present(party,x,z,scale,k+9);
   }
-  // A friendly festive snowman, stocking displays and present table.
+  // Two upholstered visitor sofas, a coffee table and seasonal greenery.
+  // They face the celebration but never occupy the central access route.
+  celebrationSofa(party,-6.25,.96);
+  celebrationSofa(party,6.40,.80,true);
+  colliders.push({x:-6.25,z:partyStart+.96,hx:.60,hz:1.38});
+  colliders.push({x:6.40,z:partyStart+.80,hx:.60,hz:1.38});
+  const table=new THREE.Group();
+  table.position.set(-4.85,0,1.15);party.add(table);
+  cyl(table,0,.39,0,.42,.43,.085,getInteriorFinishes().walnut,20);
+  cyl(table,0,.22,0,.10,.13,.31,0x9b7969,12);
+  cyl(table,0,.066,0,.29,.29,.066,0x91765e,20);
+  cyl(table,.12,.48,.09,.07,.06,.13,0xf1e5d5,12);
+  for(let b=0;b<4;b++){
+    const a=b*Math.PI/2,petal=ball(table,-.10+Math.cos(a)*.08,.50,.02+Math.sin(a)*.08,
+      .055,b%2?0xd66e70:0xeabb87);
+    petal.castShadow=false;
+  }
+  colliders.push({x:-4.85,z:partyStart+1.15,hx:.49,hz:.49});
+    // A friendly festive snowman, stocking displays and present table.
   const snowman=new THREE.Group();snowman.position.set(6.67,0,5.37);party.add(snowman);
   ball(snowman,0,.55,0,.56,0xf4f1ec,1);
   ball(snowman,0,1.31,0,.40,0xffffff,1);
