@@ -13,7 +13,7 @@ A holiday office Secret Santa experience, hosted as a static GitHub Pages fronte
 ## Current implementation
 
 - Black Christmas entry screen with animated falling snow, festive title, rules including the suggested ₹500 gift budget and optional Santa tasks.
-- PIN-based organizer interface: create events, register participants with optional phone and desk, create or rotate four-digit codes, share WhatsApp invitations, generate/lock one-to-one Secret Santa pairings, and change the admin PIN.
+- PIN-based organizer interface: create events, register participants with an optional desk, create or rotate four-digit codes, open WhatsApp invitations, generate/lock one-to-one Secret Santa pairings, and change the admin PIN.
 - Participant code redemption: signed event-scoped sessions, personal dashboard, editable itemized wishlist.
 - Santa-side interface: see only your Secret Child, read the Child's wishlist, assign dated tasks, tick tasks complete, record gift purchase, write private ceremony message.
 - Child-side interface: read tasks assigned up to the current day, including completion status, without revealing their Santa's identity.
@@ -22,6 +22,14 @@ A holiday office Secret Santa experience, hosted as a static GitHub Pages fronte
 - Supabase functions: `ss-gateway` is the current API; `ss-organizer` is retired and returns HTTP 410.
 
 **Not implemented yet:** Detailed voxel avatar editor, playable office scene (currently a placeholder), persistent office/day scene generation, truthful daily hints, or organizer-controlled final reveal. Player hints correctly show a not-yet-available message until an office scene is published.
+
+## Optional WhatsApp sharing: no phone-number storage
+
+- Organizer entry asks for a **10-digit number** (optional) with a country-code dropdown defaulting to **India (+91)**. Do not enter +91 into the number field.
+- The field is strictly for WhatsApp sharing: after registering a person, a temporary sharing dialog displays the number locally. The number is never sent to the Supabase API and is cleared when the dialog closes.
+- If the number was omitted, the organizer can still generate a code and copy the invitation or use the WhatsApp button and enter a number in the temporary dialog.
+- The database table `ss_participant_private` has **no phone-number column**, and the `ss-gateway` Edge Function never accepts phone values. The legacy phone-capable registration function has been dropped.
+- The app does not store phone numbers in cookies, browser local/session storage, PostgreSQL or Supabase logs. Opening the WhatsApp link necessarily shares the destination number with WhatsApp/the browser, which have their own privacy practices.
 
 ## Deployment
 
