@@ -408,7 +408,7 @@ async function enterOffice(info){
   }
   $("office-loading").classList.remove("hidden");
   officeLoading=(async()=>{
-    const module=await import("./game/main.js?v=office-social-v1");
+    const module=await import("./game/main.js?v=avatar-expanded-v1");
     officeRuntime=module.mountOffice($("office-canvas"),info,officeToast);
     let cam=null;
     try{cam=localStorage.getItem("vcf-ss-office-camera");}catch{}
@@ -584,7 +584,7 @@ async function ensureAvatarStudio(){
       &&!$("player-character").classList.contains("hidden"));
   if(!isVisible())return;
   avatarStudioLoading=(async()=>{
-    const module=await import("./game/studio.js?v=office-social-v1");
+    const module=await import("./game/studio.js?v=avatar-expanded-v1");
     if(!isVisible())return;
     avatarStudio=module.mountAvatarStudio($("avatar-studio-canvas"),readAvatarEditor());
     visualEditor?.refresh(activeStudioTab);
