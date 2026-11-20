@@ -80,13 +80,16 @@
       </div>
       <button id="player-pause" class="office-pause" type="button" aria-label="Open pause menu" title="Pause">Ⅱ</button>
       <div class="office-action-dock">
-        <div id="action-picker" class="office-action-picker hidden" aria-label="Choose one of four animated actions">
+        <div id="action-picker" class="office-action-picker hidden" role="group" aria-label="Choose one of four animated actions">
           <button data-action="hi" type="button" aria-label="Hi" title="Hi">👋</button>
           <button data-action="dance" type="button" aria-label="Dance" title="Dance">🕺</button>
           <button data-action="clap" type="button" aria-label="Clap" title="Clap">👏</button>
           <button data-action="cheer" type="button" aria-label="Cheer" title="Cheer">🎉</button>
         </div>
-        <button id="player-action" class="office-action" type="button" aria-label="Choose an action" title="Choose an action">👋</button>
+        <button id="player-action" class="office-action" type="button" aria-label="Wave hello. Hold to change action" title="Tap to wave · hold to change">
+          <span id="player-action-symbol" aria-hidden="true">👋</span>
+          <span class="office-action-chevron" aria-hidden="true">⌄</span>
+        </button>
       </div>
       <div id="office-toast" class="office-toast hidden" role="status" aria-live="polite"></div>
     </div>
