@@ -306,32 +306,40 @@ function workstation(parent,x,z,i,row,colliders){
   const chairSide=row==="L"?-1:1;
   const facing=row==="L"?Math.PI/2:-Math.PI/2;
   const left=-chairSide;
-  const chairX=x+chairSide*.9;
+  const chairX=x+chairSide*1.13;
   const g=new THREE.Group();g.position.set(x,0,z);parent.add(g);
   const finish=getInteriorFinishes();
   const oak=finish.maple,white=finish.cabinet;
-  softBlock(g,0,.76,0,.73,.075,1.52,oak,.12);
+  // Three times the old tabletop AREA (0.73×1.52 -> 0.99×3.36).
+  // Long axis follows workstation row, leaving real personal work space.
+  softBlock(g,0,.76,0,.99,.075,3.36,oak,.12);
   // A walnut edge with a satin metallic inlay makes the desk read as
   // contemporary modular office furniture rather than stacked boxes.
-  block(g,chairSide*.34,.735,0,.017,.028,1.50,0xd6be9c,false);
-  block(g,-chairSide*.34,.737,0,.014,.028,1.49,0x9b775e,false);
-  softBlock(g,0,.38,-.66,.62,.68,.08,white,.09);
-  softBlock(g,0,.38,.66,.62,.68,.08,white,.09);
+  block(g,chairSide*.475,.735,0,.017,.028,3.32,0xd6be9c,false);
+  block(g,-chairSide*.475,.737,0,.014,.028,3.31,0x9b775e,false);
+  softBlock(g,0,.38,-1.42,.78,.68,.16,white,.09);
+  softBlock(g,0,.38,1.42,.78,.68,.16,white,.09);
   // Recessed cabinet drawers with real metallic handles and panel seams.
-  for(const z of [-.64,.64]){
+  for(const z of [-1.42,1.42]){
     for(let level=0;level<3;level++){
-      softBlock(g,chairSide*.317,.24+level*.21,z,.031,.165,.49,
+      softBlock(g,chairSide*.406,.24+level*.21,z,.031,.165,.49,
         finish.cabinet,.04,false);
-      block(g,chairSide*.34,.25+level*.21,z,.025,.024,.21,
+      block(g,chairSide*.44,.25+level*.21,z,.025,.024,.21,
         finish.trim,false);
     }
   }
-  block(g,0,.18,0,.52,.22,1.3,mat(0xeae5dc));
-  softBlock(g,0,1.1,0,.045,.52,1.42,finish.divider,.12,false);
+  block(g,0,.18,0,.69,.22,3.04,mat(0xeae5dc));
+  // Full privacy partitions on BOTH desk ends plus a rear divider.
+  // Ends sit beyond the new top, rather than slicing through the work area.
+  softBlock(g,0,1.11,0,.052,.65,3.31,finish.divider,.045,false);
+  for(const side of [-1,1]){
+    softBlock(g,0,1.10,side*1.69,1.02,.63,.07,finish.divider,.04,false);
+    block(g,0,1.43,side*1.69,.99,.023,.086,finish.trim,false);
+  }
   // Warm desk-edge accent is an emissive trim, never a point light per desk.
-  block(g,chairSide*.335,.713,0,.016,.025,1.40,finish.deskGlow,false);
+  block(g,chairSide*.485,.713,0,.016,.025,3.28,finish.deskGlow,false);
   // Monitors face the employee (west/east), with long edge of desk fronting the chair.
-  const screenX=-left*.13;
+  const screenX=-left*.19;
   block(g,screenX,.98,-.22,.09,.45,.62,0x343d48);
   block(g,screenX+left*.05,.99,-.22,.015,.37,.53,mat(i%3?0x6a9cae:0x568c88,{emissive:0x174459}),false);
   block(g,screenX,1.02,-.22,.03,.22,.23,0x1d5470,false);
@@ -370,10 +378,23 @@ function workstation(parent,x,z,i,row,colliders){
     block(g,-.15,.84,.51,.25,.04,.23,0xc76161);
     ball(g,-.15,.91,.51,.08,0x93ad65);
   }
+  // A second monitor, document tray and a small desk light occupy the
+  // expanded surface rather than leaving most of the 3x desk empty.
+  block(g,screenX,.99,.83,.09,.44,.64,0x343d48);
+  block(g,screenX+left*.051,1.0,.83,.015,.36,.53,
+    mat(i%2?0x648d9b:0x5f8b78,{emissive:0x173b39}),false);
+  block(g,screenX,.81,.83,.055,.08,.055,0x53606c);
+  block(g,chairSide*.16,.818,-1.12,.30,.032,.38,0xa1b4bf,false);
+  for(let sheet=0;sheet<3;sheet++)
+    block(g,chairSide*.16,.842+sheet*.014,-1.12,.23,.012,.31,0xf9f3e5,false);
+  cyl(g,-chairSide*.13,.84,1.28,.09,.10,.085,0xd6b77e,10);
+  const lampNeck=cyl(g,-chairSide*.13,1.01,1.28,.020,.020,.29,0x847c70,8);
+  lampNeck.rotation.z=.21;
+  ball(g,-chairSide*.08,1.18,1.26,.09,mat(0xffe6b8,{emissive:0xe0ac6b}),1);
   decorateWorkstation(g,{seatSide:chairSide,index:i*3+({W:0,L:1,R:2}[row]||0)}, {block,ball,cyl,mat});
   chair(parent,chairX,z,facing,i);
-  colliders.push({x,z,hx:.58,hz:.85});
-  colliders.push({x:chairX,z,hx:.33,hz:.37});
+  colliders.push({x,z,hx:.57,hz:1.79});
+  colliders.push({x:chairX,z,hx:.36,hz:.43});
   return {position:{x:chairX,z:z-.08},facing,row,index:i};
 }
 function sign(parent,x,y,z,text){
@@ -436,7 +457,7 @@ export function buildOffice(count=12){
   const bays=Math.max(4,Math.ceil(Math.min(150,Math.max(1,count))/3));
   // 2.42 m workstation pitch leaves ~0.90 m free between 1.52 m desk tops.
   // Every fourth wall-facing desk gets an extra cross-passage gap.
-  const rowStart=1.45,step=2.42,passageGap=2.15;
+  const rowStart=2.3,step=4.80,passageGap=2.8; // 1.44 m between 3.36 m desks
   const rowZ=i=>rowStart+i*step+Math.floor(i/4)*passageGap;
   const rowEnd=rowZ(bays-1);
   const passageCenters=[];
@@ -446,7 +467,7 @@ export function buildOffice(count=12){
     passageCenters.push((last+next)/2);
   }
   // A clearly visible but separate decorated zone starts after the last desks.
-  const partyStart=rowEnd+3.35,back=partyStart+7.35;
+  const partyStart=rowEnd+4.35,back=partyStart+7.35;
   const width=16,left=-8,right=8,front=-3.65;
   const root=new THREE.Group(),colliders=[],seats=[],twinkle=[];
   // Separate perimeter surfaces: cameras can create an architectural cutaway
@@ -527,12 +548,11 @@ export function buildOffice(count=12){
   for(let i=0;i<bays;i++){
     const z=rowZ(i);
     seats.push(workstation(root,-7.1,z,i,"W",colliders));
-    seats.push(workstation(root,-1.6,z,i,"L",colliders));
-    seats.push(workstation(root,-.3,z,i,"R",colliders));
-    // Low partitions along island spine.
-    block(root,-.96,1.08,z,.08,.56,1.70,0xd9dfd8,false);
+    seats.push(workstation(root,-1.65,z,i,"L",colliders));
+    seats.push(workstation(root,-.25,z,i,"R",colliders));
+    // Individual desks already carry rear and both side partitions.
     if(i%3===0){
-      plant(root,-4.6,z+.7,.48);plant(root,2.6,z+.6,.55);
+      plant(root,-4.6,z+2.1,.48);plant(root,2.6,z+2.1,.55);
     }
     if(i%5===0)wreath(root,-7.87,2.45,z,Math.PI/2);
   }
