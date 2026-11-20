@@ -4,12 +4,12 @@ import {createAvatar,avatarFromPerson} from "./avatar.js?v=celebration-richness-
 
 /* A responsive office runtime. 3D art and camera are independent from the existing Supabase UI. */
 const UP=new THREE.Vector3(0,1,0);
-// Camera stands near the window looking SOUTH toward the decorated stage.
-// Previous positive-z follow camera looked north, hiding the entire celebration.
+// User-orbitable camera presets. A mode changes radius/pitch/framing, not the
+// direction a user is looking; rotating never unexpectedly snaps on preset change.
 const MODES={
-  three:{offset:[3.2,7.0,-5.25],look:[-1.25,1.10,5.7],fov:47},
-  close:{offset:[1.70,3.65,-3.15],look:[-.50,1.25,2.4],fov:49},
-  wide:{offset:[1.5,13.6,-6.25],look:[-1.3,.6,8.1],fov:45}
+  three:{distance:10.4,pitch:.70,ahead:2.2,fov:49},
+  close:{distance:5.7,pitch:.44,ahead:.9,fov:52},
+  wide:{distance:19.2,pitch:.98,ahead:6.5,fov:54}
 };
 const TWO_PI=Math.PI*2;
 function v2(x,z){return {x,z};}
@@ -164,6 +164,11 @@ export function mountOffice(host,profile,notice=()=>{}){
   const ray=new THREE.Raycaster(),pointer=new THREE.Vector2(),ground=new THREE.Plane(new THREE.Vector3(0,1,0),0);
   let office,nav,hero,markers,currentProfile,people=[],mode="three",path=[],clock=new THREE.Clock(),
       running=true,paused=false,lastRefresh=0,requestId=0,selectedAction="hi",interactTarget=null;
+  let cameraYaw=2.65,cameraPitch=MODES.three.pitch,targetCameraPitch=MODES.three.pitch;
+  let zoom=1,manualOrbit=false;
+  const lookAtPoint=new THREE.Vector3(0,1,0);
+  const touchPointers=new Map();
+  let pointerDownPoint=null,pointerDragged=false,pointerHadMultiTouch=false,pinchDistance=0;
   const clickMarker=spot(scene);
   function applyProfile(next){
     const oldPos=hero?hero.group.position.clone():null;
@@ -224,7 +229,51 @@ export function mountOffice(host,profile,notice=()=>{}){
   function setCamera(id){
     if(!MODES[id])return;
     mode=id;
-    camera.fov=MODES[id].fov;camera.updateProjectionMatrix();
+    targetCameraPitch=MODES[id].pitch;
+    camera.fov=MODES[id].fov;
+    camera.updateProjectionMatrix();
+  }
+  function resetCameraOrbit(){
+    cameraYaw=2.65;
+    manualOrbit=false;
+    zoom=1;
+    targetCameraPitch=MODES[mode].pitch;
+  }
+  function updateCutawayWalls(){
+    if(!office?.viewWalls)return;
+    const {room,viewWalls}=office;
+    // A wall obscuring the active camera is cut away as a complete unit.
+    // There is no transparent/opaque bar switching and no flicker per fixture.
+    viewWalls.west.visible=camera.position.x>room.left+.35;
+    viewWalls.east.visible=camera.position.x<room.right-.35;
+    viewWalls.north.visible=camera.position.z>room.front+.35;
+    viewWalls.south.visible=camera.position.z<room.back-.35;
+  }
+  function cameraGoal(){
+    const cfg=MODES[mode],distanceBase=mode==="wide"?
+      Math.min(29,cfg.distance+Math.max(0,office.bays-4)*.42):cfg.distance;
+    const distance=distanceBase*zoom;
+    const headingX=-Math.sin(cameraYaw),headingZ=-Math.cos(cameraYaw);
+    const ahead=mode==="wide"?
+      Math.min(13,Math.max(3.6,(office.partyStart-hero.group.position.z)*.5)):cfg.ahead;
+    const focus=new THREE.Vector3(
+      hero.group.position.x+headingX*ahead,
+      mode==="wide"?.42:1.10,
+      hero.group.position.z+headingZ*ahead
+    );
+    // For expansive views keep the focal point inside the room rather than
+    // centering on exterior walls and letting them fill the viewport.
+    focus.x=clamp(focus.x,office.room.left+.8,office.room.right-.8);
+    focus.z=clamp(focus.z,office.room.front+.85,office.room.back-.85);
+    const cos=Math.cos(cameraPitch);
+    return {
+      focus,
+      position:new THREE.Vector3(
+        focus.x+Math.sin(cameraYaw)*distance*cos,
+        focus.y+Math.sin(cameraPitch)*distance,
+        focus.z+Math.cos(cameraYaw)*distance*cos
+      )
+    };
   }
   function moveTo(x,z){
     const target={x,z};
@@ -234,35 +283,102 @@ export function mountOffice(host,profile,notice=()=>{}){
     clickMarker.group.visible=true;clickMarker.group.position.set(next.at(-1).x,0,next.at(-1).z);
     interactTarget=null;
   }
-  function handlePointer(evt){
-    if(evt.button!==undefined&&evt.button!==0)return;
+  function handleTap(evt){
+    if(!hero||!office||paused)return;
     const rect=renderer.domElement.getBoundingClientRect();
     if(!rect.width||!rect.height)return;
-    const x=((evt.clientX-rect.left)/rect.width)*2-1,y=-((evt.clientY-rect.top)/rect.height)*2+1;
+    const x=((evt.clientX-rect.left)/rect.width)*2-1;
+    const y=-((evt.clientY-rect.top)/rect.height)*2+1;
     pointer.set(x,y);ray.setFromCamera(pointer,camera);
-    // Select workers via their approximate head location; no chat UI, just an animated greeting.
+    // Coworker hits use an avatar-sized selection radius.
     let hit=null,best=Infinity;
     for(const p of people){
-      const center=new THREE.Vector3(p.seat.position.x,1.5,p.seat.position.z);
-      const dist=ray.ray.distanceToPoint(center);
+      const center=new THREE.Vector3(p.seat.position.x,1.50,p.seat.position.z);
       const depth=ray.ray.origin.distanceTo(center);
-      if(dist<.53&&depth<best){best=depth;hit=p;}
+      if(ray.ray.distanceToPoint(center)<.56&&depth<best){hit=p;best=depth;}
     }
     if(hit){
-      const dest={x:hit.seat.position.x+(hit.seat.facing<0?.62:-.62),z:hit.seat.position.z+.62};
+      const dx=hit.seat.facing<0?.68:-.68;
+      const dest={x:hit.seat.position.x+dx,z:hit.seat.position.z+.62};
       const way=nav.find({x:hero.group.position.x,z:hero.group.position.z},dest);
       if(way.length)path=way;
-      interactTarget=hit;
-      notice("Going to greet "+hit.name);
+      interactTarget=hit;notice("Going to greet "+hit.name);
       return;
     }
-    const pos=new THREE.Vector3();
-    if(ray.ray.intersectPlane(ground,pos) && pos.x>=office.room.left&&pos.x<=office.room.right &&
-      pos.z>=office.room.front&&pos.z<=office.room.back)moveTo(pos.x,pos.z);
+    const point=new THREE.Vector3();
+    if(ray.ray.intersectPlane(ground,point)&&
+       point.x>=office.room.left&&point.x<=office.room.right&&
+       point.z>=office.room.front&&point.z<=office.room.back){
+      moveTo(point.x,point.z);
+    }
   }
-  renderer.domElement.addEventListener("pointerup",handlePointer);
-  renderer.domElement.addEventListener("contextmenu",e=>e.preventDefault());
-  renderer.domElement.style.touchAction="none";
+  // One finger/mouse drag rotates camera, vertical drag tilts it.
+  // A short undragged tap walks. Two fingers pinch to zoom. No joystick/HUD.
+  const canvas=renderer.domElement;
+  function down(evt){
+    if(paused||evt.button!==undefined&&evt.button!==0)return;
+    touchPointers.set(evt.pointerId,{x:evt.clientX,y:evt.clientY});
+    if(touchPointers.size===1){
+      pointerDownPoint={id:evt.pointerId,x:evt.clientX,y:evt.clientY,
+        when:performance.now()};
+      pointerDragged=false;pointerHadMultiTouch=false;
+    }else{
+      pointerHadMultiTouch=true;pointerDragged=true;pointerDownPoint=null;
+      const ps=[...touchPointers.values()];
+      pinchDistance=Math.hypot(ps[0].x-ps[1].x,ps[0].y-ps[1].y)||1;
+    }
+    try{canvas.setPointerCapture(evt.pointerId)}catch{}
+  }
+  function move(evt){
+    if(!touchPointers.has(evt.pointerId))return;
+    const prev=touchPointers.get(evt.pointerId);
+    const dx=evt.clientX-prev.x,dy=evt.clientY-prev.y;
+    touchPointers.set(evt.pointerId,{x:evt.clientX,y:evt.clientY});
+    if(touchPointers.size>=2){
+      const ps=[...touchPointers.values()];
+      const nextDistance=Math.hypot(ps[0].x-ps[1].x,ps[0].y-ps[1].y)||1;
+      zoom=clamp(zoom*pinchDistance/nextDistance,.60,1.75);
+      pinchDistance=nextDistance;
+      pointerHadMultiTouch=true;pointerDragged=true;return;
+    }
+    if(pointerDownPoint&&
+       Math.hypot(evt.clientX-pointerDownPoint.x,evt.clientY-pointerDownPoint.y)>7){
+      pointerDragged=true;
+    }
+    if(!pointerDragged)return;
+    cameraYaw-=dx*.0075;
+    targetCameraPitch=clamp(targetCameraPitch+dy*.0058,.34,1.31);
+    manualOrbit=true;
+  }
+  function up(evt){
+    const tracked=touchPointers.has(evt.pointerId);
+    touchPointers.delete(evt.pointerId);
+    if(!tracked)return;
+    const qualifies=pointerDownPoint?.id===evt.pointerId&&
+      !pointerDragged&&!pointerHadMultiTouch&&
+      Math.hypot(evt.clientX-pointerDownPoint.x,evt.clientY-pointerDownPoint.y)<9;
+    if(touchPointers.size===0){
+      if(qualifies)handleTap(evt);
+      pointerDownPoint=null;pinchDistance=0;
+      pointerDragged=false;pointerHadMultiTouch=false;
+    }else if(touchPointers.size===1){
+      pointerDownPoint=null;pointerDragged=true;pointerHadMultiTouch=true;
+    }
+  }
+  function cancel(evt){touchPointers.delete(evt.pointerId);pointerDownPoint=null;
+    pointerDragged=true;pointerHadMultiTouch=true;}
+  function wheel(evt){
+    if(paused)return;
+    evt.preventDefault();
+    zoom=clamp(zoom*Math.exp(evt.deltaY*.0011),.60,1.75);
+  }
+  canvas.addEventListener("pointerdown",down);
+  canvas.addEventListener("pointermove",move);
+  canvas.addEventListener("pointerup",up);
+  canvas.addEventListener("pointercancel",cancel);
+  canvas.addEventListener("wheel",wheel,{passive:false});
+  canvas.addEventListener("contextmenu",e=>e.preventDefault());
+  canvas.style.touchAction="none";
   host.replaceChildren(renderer.domElement);
   const resize=()=>{
     const {w,h}=size();
@@ -306,31 +422,12 @@ export function mountOffice(host,profile,notice=()=>{}){
       for(const p of people){
         if(p.detailed?.group.visible)p.detailed.update(elapsed,false);
       }
-      const cfg=MODES[mode],offset=new THREE.Vector3(...cfg.offset);
-      const target=hero.group.position.clone();
-      const aspectFactor=clamp(camera.aspect,.62,1.8);
-      if(camera.aspect<.75){offset.z+=.45;offset.y+=1.65;offset.x-=1.25;}
-      if(mode==="wide"&&office.bays>13)offset.y+=Math.min(7,office.bays*.17);
-      const desired=target.clone().add(offset);
-      camera.position.lerp(desired,Math.min(1,dt*4.3));
-      const look=target.clone().add(new THREE.Vector3(...cfg.look));
-      const lookPosition=new THREE.Vector3();
-      camera.getWorldDirection(lookPosition);
-      const goalView=new THREE.Vector3().subVectors(look,camera.position).normalize();
-      const newLook=lookPosition.lerp(goalView,Math.min(1,dt*3.3));
-      camera.lookAt(camera.position.clone().add(newLook));
-      // Camera-safe roof decorations: hide only fixtures directly between the
-      // active camera and the avatar. Restore them when the sightline clears.
-      const sight=target.clone().add(new THREE.Vector3(0,1.25,0)).sub(camera.position);
-      const lengthSquared=sight.lengthSq();
-      for(const fixture of office.overhead||[]){
-        const point=new THREE.Vector3(fixture.x,fixture.y,fixture.z);
-        const rel=point.sub(camera.position);
-        const t=lengthSquared>0?Math.max(0,Math.min(1,rel.dot(sight)/lengthSquared)):0;
-        const projection=sight.clone().multiplyScalar(t);
-        const distance=rel.sub(projection).length();
-        fixture.object.visible=!(t>.07&&t<.91&&distance<fixture.radius);
-      }
+      cameraPitch+=(targetCameraPitch-cameraPitch)*Math.min(1,dt*10);
+      const goal=cameraGoal();
+      camera.position.lerp(goal.position,Math.min(1,dt*7));
+      lookAtPoint.lerp(goal.focus,Math.min(1,dt*9));
+      camera.lookAt(lookAtPoint);
+      updateCutawayWalls();
     }
     if(clickMarker.group.visible){
       clickMarker.ring.rotation.z+=dt*.55;
@@ -342,16 +439,20 @@ export function mountOffice(host,profile,notice=()=>{}){
     }
     renderer.render(scene,camera);
   }
-  // Establish the correct first frame immediately, without an initial
-  // north-facing camera swing through the window and nearby walls.
+  // Start at the actual chosen camera preset, without a sudden swing.
   if(hero){
-    camera.position.copy(hero.group.position).add(new THREE.Vector3(...MODES.three.offset));
-    camera.lookAt(hero.group.position.clone().add(new THREE.Vector3(...MODES.three.look)));
+    cameraPitch=targetCameraPitch=MODES[mode].pitch;
+    const goal=cameraGoal();
+    camera.position.copy(goal.position);
+    lookAtPoint.copy(goal.focus);
+    camera.lookAt(lookAtPoint);
+    updateCutawayWalls();
   }
   const prevMode=mode;setCamera(prevMode);render();
   return {
     get mode(){return mode;},
     setCamera,
+    resetCameraOrbit,
     setPaused(value){paused=!!value;},
     setProfile:applyProfile,
     getAvatar(){return hero?{...hero.parameters}:null;},
@@ -406,7 +507,11 @@ export function mountOffice(host,profile,notice=()=>{}){
     dispose(){
       running=false;cancelAnimationFrame(requestId);observer?.disconnect();
       window.removeEventListener("resize",resize);
-      renderer.domElement.removeEventListener("pointerup",handlePointer);
+      canvas.removeEventListener("pointerdown",down);
+      canvas.removeEventListener("pointermove",move);
+      canvas.removeEventListener("pointerup",up);
+      canvas.removeEventListener("pointercancel",cancel);
+      canvas.removeEventListener("wheel",wheel);
       renderer.dispose();host.replaceChildren();
     }
   };
