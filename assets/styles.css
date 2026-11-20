@@ -1128,3 +1128,49 @@ body.office-playing #player-menu textarea{
     -webkit-overflow-scrolling:touch;
   }
 }
+
+
+/* Shared Christmas Atelier appearance for BOTH Character and Personal screens. */
+#player-menu.player-menu{
+  background:linear-gradient(130deg,#fffaf6f9,#f9eae9fa 63%,#efe1e8f9);
+  color:#3e2941;
+  border-color:#e8c8bb;
+  width:min(1180px,calc(100vw - 22px));
+}
+#player-menu .section-head h3,#player-menu .section-head p,
+#player-menu .menu-tabs{color:#492d43}
+#player-menu .menu-tabs button{
+  border:1px solid #dcb5be;background:#f9e9e7;color:#71445b;
+  border-radius:12px;font-weight:750;max-width:none;
+}
+#player-menu .menu-tabs button.active{
+  background:#aa526e;border-color:#a14e6a;color:white;
+  box-shadow:0 3px 12px #af799459;
+}
+#player-menu #player-personal{
+  background:#fffaf7;border:1px solid #edcfcb;border-radius:17px;
+  padding:clamp(14px,2.3vw,24px);color:#452c3e;
+}
+#player-menu #player-personal h3,#player-menu #player-personal h4{color:#66354f}
+#player-menu #player-personal .muted{color:#836977}
+#player-menu #player-personal .personal-layout>section{
+  background:#fff4ef;border:1px solid #edcfcb;
+  border-radius:14px;padding:15px;
+}
+#player-menu #player-personal .personal-item{
+  color:#523847;background:#fffaf7;border-color:#ead4d6;
+}
+#player-menu #player-personal input,
+#player-menu #player-personal textarea{
+  background:#fffdfa;color:#452c3e;border-color:#d9b6c2;
+}
+#player-menu #player-personal .small-outline{
+  color:#8f3658;border-color:#d9b6c2;background:#fff8f2;
+}
+#player-menu #player-personal .primary{
+  background:#a44b6b;border-color:#a44b6b;color:white;
+}
+@media(max-width:620px){
+  #player-menu.player-menu{width:100%;border-radius:0}
+  #player-menu #player-personal{padding:12px}
+}
