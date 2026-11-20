@@ -246,6 +246,11 @@
       <div><span class="eyebrow">ORGANIZER · CHARACTER STUDIO</span><h3 id="admin-avatar-name">Character</h3></div>
       <button type="button" id="admin-avatar-close" class="small-outline" aria-label="Close character styling and return to admin">✕</button>
     </header>
+    <form id="admin-character-details" class="admin-character-details">
+      <label>Name<input id="admin-character-name" maxlength="160" required placeholder="Name"/></label>
+      <label>Desk<input id="admin-character-desk" maxlength="30" placeholder="Desk (optional)"/></label>
+      <button id="admin-character-save-details" class="small-outline" type="submit">✓ Details</button>
+    </form>
     <div id="admin-avatar-editor-host"></div>
   </dialog>
   <div id="action-progress" class="action-progress hidden" role="status" aria-live="polite" aria-atomic="true">
