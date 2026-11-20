@@ -168,10 +168,14 @@ function chair(parent,x,z,face=1,variant=0){
   const dark=variant%2?0x354351:0x405267;
   cyl(g,0,.30,0,.055,.05,.47,0x484c56);
   for(let i=0;i<5;i++){const a=i*Math.PI*2/5;block(g,Math.cos(a)*.34,.095,Math.sin(a)*.34,.12,.05,.12,0x444b54);}
+  // Rounded padded seat, curved-looking double cushion and visible headrest.
   block(g,0,.55,0,.53,.13,.47,dark);
   block(g,0,.97,-.21,.54,.75,.13,dark);
+  block(g,0,1.27,-.23,.44,.20,.16,0x566377);
+  block(g,0,.97,-.125,.39,.49,.055,variant%2?0x475766:0x50667a,false);
   block(g,-.28,.72,-.02,.075,.13,.4,0x5e6471);
   block(g,.28,.72,-.02,.075,.13,.4,0x5e6471);
+  for(const side of [-1,1])ball(g,side*.35,.095,.08,.063,0x353c45);
   return g;
 }
 function workstation(parent,x,z,i,row,colliders){
@@ -184,6 +188,10 @@ function workstation(parent,x,z,i,row,colliders){
   const g=new THREE.Group();g.position.set(x,0,z);parent.add(g);
   const oak=mat(0xc69d73),white=mat(0xf4f0e9);
   block(g,0,.76,0,.73,.075,1.52,oak);
+  // A walnut edge with a satin metallic inlay makes the desk read as
+  // contemporary modular office furniture rather than stacked boxes.
+  block(g,chairSide*.34,.735,0,.017,.028,1.50,0xd6be9c,false);
+  block(g,-chairSide*.34,.737,0,.014,.028,1.49,0x9b775e,false);
   block(g,0,.38,-.66,.62,.68,.08,white);
   block(g,0,.38,.66,.62,.68,.08,white);
   block(g,0,.18,0,.52,.22,1.3,mat(0xeae5dc));
@@ -196,9 +204,26 @@ function workstation(parent,x,z,i,row,colliders){
   block(g,screenX,1.17,-.22,.035,.09,.12,0xb0c8d0,false);
   block(g,screenX,.83,-.22,.055,.10,.05,0x5b6674);
   block(g,left*.20,.81,-.27,.24,.018,.42,0xd0c8be,false);
+  // Tiny sculpted keyboard keys and mouse, all aligned with the long desk edge.
+  for(let key=0;key<7;key++){
+    block(g,left*.21,.832,-.44+key*.048,.13,.008,.030,
+      key%3?0xeeeae4:0xbec6c3,false);
+  }
+  const mouse=ball(g,left*.23,.827,.02,.045,0xe4e8e3);
+  mouse.scale.set(.55,.26,.83);mouse.castShadow=false;
+  block(g,left*.19,.828,.02,.07,.008,.14,0xf5eddf,false);
   // Rich workstation clutter but no unsolicited cultural landmark artwork.
   block(g,.04,.83,.42,.28,.05,.23,0xf4d8ab);
   block(g,.04,.865,.42,.11,.016,.08,0xc4b49b);
+  // Festive micro-accessory beside the everyday stationery.
+  if(i%4===0){
+    block(g,.13,.86,.52,.14,.14,.12,0xcf5c62);
+    block(g,.13,.95,.52,.15,.03,.14,0xf1cf85);
+    block(g,.13,.88,.52,.025,.16,.14,0xeed5ac);
+  }else if(i%4===2){
+    block(g,.13,.835,.53,.17,.04,.15,0x4d8870);
+    ball(g,.13,.88,.53,.06,mat(0xffd88a,{emissive:0xb68223}));
+  }
   cyl(g,.21,.84,.33,.08,.07,.13,0xffffff,10);
   cyl(g,.21,.89,.33,.065,.06,.012,0xc66e62,10);
   if(i%3===0){
