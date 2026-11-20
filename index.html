@@ -52,7 +52,7 @@
         <div id="event-list" class="event-list"></div>
       </section>
       <section id="event-workspace" class="panel hidden">
-        <div class="section-head"><div><p class="eyebrow">ACTIVE WORKSPACE</p><h3 id="workspace-title"></h3><p id="workspace-slug" class="muted"></p></div><span id="workspace-state" class="chip"></span></div>
+        <div class="section-head"><div><p class="eyebrow">ACTIVE WORKSPACE</p><h3 id="workspace-title"></h3><p id="workspace-slug" class="muted"></p><div class="workspace-links"><a id="workspace-open-link" class="small-outline link-action" href="#" target="_blank" rel="noopener noreferrer">Open participant page ↗</a><button id="workspace-copy-link" type="button" class="small-outline">Copy event URL</button></div></div><span id="workspace-state" class="chip"></span></div>
         <div class="metrics"><div><strong id="people-count">0</strong><span>Employees</span></div><div><strong id="assignment-count">0</strong><span>Pairs</span></div><div><strong id="invite-count">0</strong><span>Codes visible this session</span></div></div>
         <form id="participant-form" class="form-row">
           <label class="grow">Employee name<input id="participant-name" placeholder="First and last name" maxlength="160" required/></label>
@@ -108,9 +108,16 @@
         <label class="grow">Phone number<input id="invite-phone" type="tel" inputmode="numeric" autocomplete="off" maxlength="10" pattern="[0-9]{10}" placeholder="10 digits" required title="Enter 10 digits without country code"/></label>
       </div>
       <p class="muted small">Used once to open WhatsApp. The number isn't stored in the game or Supabase.</p>
-      <div class="button-row"><button type="submit" class="primary">Open WhatsApp ↗</button><button type="button" id="invite-copy" class="secondary">Copy invite</button></div>
+      <p id="invite-link-status" class="muted small" aria-live="polite">Enter ten digits to enable WhatsApp.</p>
+      <div class="button-row"><a id="invite-open-link" class="primary link-action is-disabled" href="#" target="_blank" rel="noopener noreferrer" aria-disabled="true" tabindex="-1">Open WhatsApp ↗</a><button type="button" id="invite-copy" class="secondary">Copy invite</button></div>
     </form>
   </dialog>
+  <div id="action-progress" class="action-progress hidden" role="status" aria-live="polite" aria-atomic="true">
+    <div class="progress-card">
+      <div class="progress-head"><span class="progress-spinner" aria-hidden="true"></span><div><strong id="progress-title">Working…</strong><p id="progress-detail">Saving your changes securely. Please keep this page open.</p></div></div>
+      <div class="indeterminate-track" aria-hidden="true"><div class="indeterminate-bar"></div></div>
+    </div>
+  </div>
   <div class="toast hidden" id="toast" role="status" aria-live="polite"></div>
   <script type="module" src="./assets/app.js"></script>
 </body>
