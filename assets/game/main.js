@@ -324,16 +324,32 @@ export function mountOffice(host,profile,notice=()=>{}){
     // Coworker hits use an avatar-sized selection radius.
     let hit=null,best=Infinity;
     for(const p of people){
-      const center=new THREE.Vector3(p.seat.position.x,1.50,p.seat.position.z);
+      const position=p.detailed.group.position;
+      const center=new THREE.Vector3(position.x,1.48,position.z);
       const depth=ray.ray.origin.distanceTo(center);
-      if(ray.ray.distanceToPoint(center)<.56&&depth<best){hit=p;best=depth;}
+      if(ray.ray.distanceToPoint(center)<.65&&depth<best){hit=p;best=depth;}
     }
     if(hit){
-      const dx=hit.seat.facing<0?.68:-.68;
-      const dest={x:hit.seat.position.x+dx,z:hit.seat.position.z+.62};
-      const way=nav.find({x:hero.group.position.x,z:hero.group.position.z},dest);
-      if(way.length)path=way;
-      interactTarget=hit;notice("Going to greet "+hit.name);
+      const time=clock.elapsedTime;
+      const target=hit.detailed.group.position,origin=hero.group.position;
+      officeLife?.reserveForPlayer(hit,time);
+      const distance=Math.hypot(target.x-origin.x,target.z-origin.z);
+      if(distance<2.0){
+        path=[];interactTarget=null;
+        hero.play("hi",time);
+        officeLife?.interruptForHero(hit,"hi",time);
+        return;
+      }
+      const approach=officeLife?.findApproach(origin,target,hero,1.65);
+      if(approach?.path?.length){
+        path=approach.path;interactTarget=hit;
+        clickMarker.group.visible=true;
+        clickMarker.group.position.set(approach.end.x,0,approach.end.z);
+        notice("Going to greet "+hit.name);
+      }else{
+        interactTarget=null;
+        notice("Can't approach "+hit.name+" safely from here.");
+      }
       return;
     }
     const point=new THREE.Vector3();
@@ -444,22 +460,47 @@ export function mountOffice(host,profile,notice=()=>{}){
         const goal=path[0];
         const dx=goal.x-hero.group.position.x,dz=goal.z-hero.group.position.z;
         const len=Math.hypot(dx,dz);
-        if(len<.11){path.shift();continue;}
+        if(len<.12){path.shift();continue;}
         const step=Math.min(len,dt*2.8);
-        hero.group.position.x+=dx/len*step;
-        hero.group.position.z+=dz/len*step;
+        const proposedX=hero.group.position.x+dx/len*step;
+        const proposedZ=hero.group.position.z+dz/len*step;
+        const tooClose=people.some(p=>{
+          const n=p.detailed.group.position;
+          return Math.hypot(n.x-proposedX,n.z-proposedZ)<.91;
+        });
+        if(tooClose){
+          // Never walk through a colleague. End within a safe social
+          // radius of a greeting target, or stop before a moving NPC.
+          path=[];clickMarker.group.visible=false;
+          if(!interactTarget)notice("A colleague is passing. Try another path.");
+          break;
+        }
+        hero.group.position.x=proposedX;
+        hero.group.position.z=proposedZ;
         const desired=Math.atan2(dx,dz);
-        hero.group.rotation.y+=Math.atan2(Math.sin(desired-hero.group.rotation.y),Math.cos(desired-hero.group.rotation.y))*Math.min(1,dt*10);
+        hero.group.rotation.y+=Math.atan2(
+          Math.sin(desired-hero.group.rotation.y),
+          Math.cos(desired-hero.group.rotation.y))*Math.min(1,dt*10);
         moving=true;break;
       }
-      if(!moving&&interactTarget){
-        hero.play("hi",elapsed);notice(greetObject(interactTarget.name));
-        interactTarget.detailed?.play("hi",elapsed);interactTarget=null;
+      if(interactTarget){
+        const other=interactTarget.detailed.group.position;
+        const distance=Math.hypot(
+          other.x-hero.group.position.x,other.z-hero.group.position.z);
+        // The social exchange happens only once everyone has stopped
+        // at least one full body width away from the other character.
+        if(distance<=2.05&&distance>=.91){
+          path=[];clickMarker.group.visible=false;
+          hero.play("hi",elapsed);
+          officeLife?.interruptForHero(interactTarget,"hi",elapsed);
+          interactTarget=null;moving=false;
+        }else if(!moving&&!path.length){
+          interactTarget=null;
+        }
       }
       hero.update(elapsed,moving);
-      for(const p of people){
-        if(p.detailed?.group.visible)p.detailed.update(elapsed,false);
-      }
+      officeLife?.update(elapsed,dt);
+      speech.update(elapsed);
       cameraPitch+=(targetCameraPitch-cameraPitch)*Math.min(1,dt*10);
       const goal=cameraGoal();
       camera.position.lerp(goal.position,Math.min(1,dt*7));
@@ -534,6 +575,7 @@ export function mountOffice(host,profile,notice=()=>{}){
       interactTarget=null;
       clickMarker.group.visible=false;
       hero.play(name,clock.elapsedTime);
+      officeLife?.mimicNearby(name,clock.elapsedTime,2.8);
       selectedAction=name;
       const messages={hi:"👋 Hello!",dance:"🕺 Time for a little dance!",clap:"👏 A round of applause!",cheer:"🎉 Merry Christmas!"};
       notice(messages[name]);
@@ -543,6 +585,8 @@ export function mountOffice(host,profile,notice=()=>{}){
       if(hero)moveTo(office.spawn.x,office.spawn.z);
     },
     dispose(){
+      officeLife?.dispose();officeLife=null;
+      speech.dispose();
       running=false;cancelAnimationFrame(requestId);observer?.disconnect();
       window.removeEventListener("resize",resize);
       canvas.removeEventListener("pointerdown",down);
