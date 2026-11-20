@@ -67,11 +67,24 @@ assets/game/
   office.js          # scalable workstations, walls, window, decorations and celebration area
   environment-art.js # original screens, workstations, posters and wall details
   art-surfaces.js    # warm tile materials and furnished collaboration nooks
+  interior-finishes.js # reusable wood, upholstery, cabinet, carpet and brass surfaces
   main.js            # rendering, camera, A* navigation, actions and nearby NPC details
   studio.js          # high-detail rotatable character stage, lighting and orbit controls
 ```
 
 The Three.js module is loaded at a pinned CDN version via an import map. This new game scene requires network access and WebGL; the previous static login/backend screens remain as before. We have checked module syntax, DOM references, a mocked run of scalable office generation, avatar animation-rig calls, and representative navigation routes. **Full browser rendering, visual fidelity relative to the reference image, performance on real mobile phones, and end-to-end GitHub Pages gameplay still require live verification.**
+
+### Environment polish v1 — implemented in the real 3D office
+
+The last concept image was **not** an actual gameplay screenshot or an implemented visual upgrade. This pass changes the live scene source, not concept art:
+
+- New `assets/game/interior-finishes.js`: reusable procedurally drawn wood-grain desk veneer, cream cabinetry, woven chair upholstery, fabric partition panels, warm brass, emissive desk-edge inlays, and patterned celebration carpet. Shared finishes avoid per-workstation texture duplication.
+- `assets/game/office.js` now applies those finishes to existing workstations, adds shaped drawer faces and real brass-colored handles, and refines lumbar cushions and armrests on office chairs. The long desk edge still faces each employee; no desk positions or aisles are changed.
+- The far Christmas zone now has two upholstered visitor sofas, cushions, a wooden low coffee table with decor, and ribbed timber feature panels with festive wall artwork and brass edging. These are modeled 3D objects, not a background screenshot.
+- Additional furniture has explicit collision boxes outside the main aisle, preserving tap-to-walk navigation to the ceremony.
+- `main.js` and `app.js` use versioned import URLs `environment-polish-v1` to bypass stale GitHub Pages module caching. Existing character full-quality meshes, camera modes, mobile controls, actions, participant login, and organizer console are unchanged.
+
+**Verification:** JavaScript syntax checks passed; scripted office geometry construction and pathfinding passed for 1, 12, 48 and 150 participants. **Not verified:** screenshots from a real WebGL browser or fidelity to the supplied concept image; no claim that the game currently looks identical to the generated reference.
 
 ### Visual atelier v3 — implementation status
 
