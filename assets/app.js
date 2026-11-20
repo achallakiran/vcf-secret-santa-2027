@@ -20,6 +20,7 @@ const button=(label,handler,style="small-outline")=>{
 };
 let session=null, busy=false, events=[],event=null,participants=[],assignments=[],player=null,childVisible=false;
 let officeRuntime=null,officeLoading=null,officeKey=null,officeNoticeTimer=null;
+let avatarBaseline=null,avatarPreviewTimer=null;
 const codes=new Map();
 function toast(message,error=false){
   const el=$("toast");el.textContent=message;
@@ -46,7 +47,8 @@ const ACTION_STEPS={
   add_task:"Assigning a dated task",
   complete_task:"Updating task completion",
   gift_status:"Updating gift-purchase status",
-  save_message:"Saving Santa's private message"
+  save_message:"Saving Santa's private message",
+  save_avatar:"Saving your voxel character"
 };
 function showProgress(title,detail,state="loading"){
   clearTimeout(progressTimer);
@@ -106,7 +108,8 @@ function setSession(info){
 }
 function endSession(){
   if(officeRuntime){officeRuntime.dispose();officeRuntime=null;}
-  officeLoading=null;officeKey=null;
+  clearTimeout(avatarPreviewTimer);
+  avatarBaseline=null;officeLoading=null;officeKey=null;
   setSession(null);player=null;event=null;participants=[];assignments=[];events=[];codes.clear();
   $("player").classList.add("hidden");
   $("welcome").classList.toggle("hidden",ADMIN);
@@ -270,12 +273,20 @@ async function enterOffice(info){
   if(ADMIN)return;
   const identity=avatarIdentity(info);
   if(officeRuntime){
-    if(identity!==officeKey){officeRuntime.setProfile(info);officeKey=identity;}
+    if(identity!==officeKey){
+      officeRuntime.setProfile(info);officeKey=identity;
+      avatarBaseline=officeRuntime.getAvatar();
+      setAvatarEditor(avatarBaseline);
+    }
     return;
   }
   if(officeLoading){
     await officeLoading;
-    if(officeRuntime&&identity!==officeKey){officeRuntime.setProfile(info);officeKey=identity;}
+    if(officeRuntime&&identity!==officeKey){
+      officeRuntime.setProfile(info);officeKey=identity;
+      avatarBaseline=officeRuntime.getAvatar();
+      setAvatarEditor(avatarBaseline);
+    }
     return;
   }
   $("office-loading").classList.remove("hidden");
@@ -285,6 +296,8 @@ async function enterOffice(info){
     const cam=localStorage.getItem("vcf-ss-office-camera");
     officeRuntime.setCamera(["three","close","wide"].includes(cam)?cam:"three");
     officeKey=identity;
+    avatarBaseline=officeRuntime.getAvatar();
+    setAvatarEditor(avatarBaseline);
     syncCameraButtons();
     $("office-loading").classList.add("hidden");
     officeToast("Tap the floor to move. Tap 👋 to wave; hold it to select another action.");
@@ -312,10 +325,95 @@ function demoData(){
   return {
     preview:true,
     event:{title:"VCF Christmas Office · Visual Preview",slug:"visual-preview",status:"demo",budget:500},
-    me:{id:"demo-player",display_name:"Guest explorer",avatar:{gender:"female",outfit:"salwar",skin:2,color:1,hairstyle:1},wishlist:[],wishlist_version:1},
+    me:{id:"demo-player",display_name:"Guest explorer",avatar:{gender:"female",outfit:"salwar",skin:2,color:1,hairstyle:1},avatar_version:1,wishlist:[],wishlist_version:1},
     colleagues,receivedTasks:[],myChild:null,hint:null,today:new Date().toLocaleDateString("en-CA")
   };
 }
+
+const AVATAR_FIELDS=["gender","outfit","bottom","hairstyle","skin","hair","height","build"];
+function readAvatarEditor(){
+  const result={schema_version:2};
+  for(const field of AVATAR_FIELDS){
+    const input=$("avatar-"+field);
+    result[field]=["skin","hair","hairstyle"].includes(field)?Number(input.value):
+      ["height","build"].includes(field)?Number(input.value):input.value;
+  }
+  result.color=Number($("avatar-color").value);
+  result.glasses=$("avatar-glasses").checked;
+  return result;
+}
+function setAvatarEditor(values){
+  const avatar=values&&typeof values==="object"?values:{};
+  const defaults={gender:"female",outfit:"shirt",bottom:"jeans",hairstyle:0,skin:2,hair:0,color:0,height:1,build:1,glasses:false};
+  const settings={...defaults,...avatar};
+  for(const field of AVATAR_FIELDS){
+    const el=$("avatar-"+field);
+    el.value=String(settings[field]);
+  }
+  $("avatar-color").value=String(settings.color);
+  $("avatar-glasses").checked=!!settings.glasses;
+  $("avatar-height-out").textContent=Math.round(Number(settings.height)*100)+"%";
+  $("avatar-build-out").textContent=Math.round(Number(settings.build)*100)+"%";
+  document.querySelectorAll("[data-avatar-color]").forEach(b=>b.classList.toggle("selected",Number(b.dataset.avatarColor)===Number(settings.color)));
+  $("avatar-preview-status").textContent=player?.preview?
+    "Visual preview: customize freely. Saving is available after participant login.":
+    "Your changes preview immediately. Save when you are happy with your look.";
+  $("avatar-save").disabled=!!player?.preview;
+}
+function previewAvatarNow(){
+  if(!officeRuntime)return;
+  const data=readAvatarEditor();
+  officeRuntime.previewAvatar(data);
+  $("avatar-height-out").textContent=Math.round(Number(data.height)*100)+"%";
+  $("avatar-build-out").textContent=Math.round(Number(data.build)*100)+"%";
+  $("avatar-preview-status").textContent="Unsaved changes are visible on your 3D character.";
+}
+function previewAvatarSoon(){
+  clearTimeout(avatarPreviewTimer);
+  $("avatar-height-out").textContent=Math.round(Number($("avatar-height").value)*100)+"%";
+  $("avatar-build-out").textContent=Math.round(Number($("avatar-build").value)*100)+"%";
+  avatarPreviewTimer=setTimeout(previewAvatarNow,95);
+}
+for(const field of AVATAR_FIELDS){
+  $("avatar-"+field).addEventListener("input",previewAvatarSoon);
+}
+$("avatar-glasses").addEventListener("change",previewAvatarSoon);
+document.querySelectorAll("[data-avatar-color]").forEach(button=>button.addEventListener("click",()=>{
+  $("avatar-color").value=button.dataset.avatarColor;
+  document.querySelectorAll("[data-avatar-color]").forEach(b=>b.classList.toggle("selected",b===button));
+  previewAvatarSoon();
+}));
+$("avatar-view").addEventListener("click",()=>{
+  clearTimeout(avatarPreviewTimer);
+  previewAvatarNow();
+  officeRuntime?.focusAvatar();
+  $("player-menu").classList.add("hidden");
+  syncCameraButtons();
+  officeToast("Inspect your avatar up close. Return to Pause to save this look.");
+});
+$("avatar-reset").addEventListener("click",()=>{
+  clearTimeout(avatarPreviewTimer);
+  if(!avatarBaseline)return;
+  setAvatarEditor(avatarBaseline);
+  officeRuntime?.previewAvatar(avatarBaseline);
+  officeToast("Restored the last saved appearance.");
+});
+$("avatar-form").addEventListener("submit",run(async e=>{
+  e.preventDefault();
+  clearTimeout(avatarPreviewTimer);
+  if(player?.preview)throw Error("Sign in as a participant to save your avatar.");
+  if(!player?.me?.id)throw Error("Please enter the office using your invitation code.");
+  const avatar=readAvatarEditor();
+  const result=await api("save_avatar",{avatar,version:player.me.avatar_version||1});
+  player.me.avatar=result.avatar;
+  player.me.avatar_version=result.version;
+  avatarBaseline=result.avatar;
+  officeKey=avatarIdentity(player);
+  officeRuntime?.previewAvatar(result.avatar);
+  setAvatarEditor(result.avatar);
+  $("avatar-preview-status").textContent="✓ Saved to your Secret Santa participant profile.";
+  officeToast("✓ Your appearance is saved.");
+}));
 
 function showPlayerTab(name){
   const personal=name==="personal";
