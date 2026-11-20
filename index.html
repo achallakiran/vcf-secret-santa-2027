@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#080d16"/>
   <meta name="description" content="Voxel Secret Santa — a thoughtful Christmas office mystery."/>
   <title>Voxel Secret Santa</title>
-  <link rel="stylesheet" href="./assets/styles.css?v=braid-camera-v1"/>
+  <link rel="stylesheet" href="./assets/styles.css?v=studio-qa-v1"/>
 </head>
 <body>
   <div class="snow" id="snow" aria-hidden="true"></div>
@@ -186,13 +186,15 @@
                 <div id="avatar-shoeColor-options" class="atelier-swatch-grid" role="group" aria-label="Shoe colors"></div>
               </section>
               <section data-studio-panel="shape" class="atelier-panel hidden">
-                <p class="atelier-description">Adjust proportions and see your character change in the live preview.</p>
+                <p class="atelier-description">Drag from 0 to 100. The middle is an average adult build. Your 3D character changes instantly.</p>
                 <div class="avatar-slider-grid">
-                  <label>Height <output id="avatar-height-out" for="avatar-height">100%</output>
-                    <input id="avatar-height" type="range" min=".86" max="1.16" step=".01" value="1"/>
+                  <label>Height <output id="avatar-height-out" for="avatar-height">50 / 100</output>
+                    <input id="avatar-height" type="range" min="0" max="100" step="1" value="50" aria-label="Height, 0 shorter, 50 average, 100 taller"/>
+                    <span class="avatar-range-labels"><span>Shorter</span><span>Average</span><span>Taller</span></span>
                   </label>
-                  <label>Body build <output id="avatar-build-out" for="avatar-build">100%</output>
-                    <input id="avatar-build" type="range" min=".83" max="1.20" step=".01" value="1"/>
+                  <label>Body build <output id="avatar-build-out" for="avatar-build">50 / 100</output>
+                    <input id="avatar-build" type="range" min="0" max="100" step="1" value="50" aria-label="Body build, 0 slim, 50 average, 100 broader"/>
+                    <span class="avatar-range-labels"><span>Slim</span><span>Average</span><span>Broader</span></span>
                   </label>
                 </div>
               </section>
@@ -296,6 +298,6 @@
   <script type="importmap">
     {"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js"}}
   </script>
-  <script type="module" src="./assets/app.js?v=braid-camera-v1"></script>
+  <script type="module" src="./assets/app.js?v=studio-qa-v1"></script>
 </body>
 </html>
