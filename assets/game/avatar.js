@@ -7,6 +7,11 @@ const SKINS=[0xf1c69e,0xddad84,0xbc805d,0x955d46,0x714331];
 const HAIR=[0x1a1419,0x2c201c,0x50342b,0x392323,0x171921];
 const COLORS=[0x4c816c,0xc75b65,0x385883,0xd19d49,0x765e8d,0xe1ddd4];
 const shared=new Map();
+const contactGeometry=new THREE.CircleGeometry(1,28);
+const shadowMaterials=[
+  new THREE.MeshBasicMaterial({color:0x33483e,opacity:.095,transparent:true,depthWrite:false}),
+  new THREE.MeshBasicMaterial({color:0x243e35,opacity:.10,transparent:true,depthWrite:false})
+];
 function mat(color,roughness=.76,metalness=0){return new THREE.MeshStandardMaterial({color,roughness,metalness});}
 function roundedBox(w,h,d,r=.075,steps=2){
   const key=[w,h,d,r,steps].join(":");
@@ -51,7 +56,19 @@ function resolve(opts={}){
   };
 }
 export function createAvatar(input={},mini=false){
-  const p=resolve(input),root=new THREE.Group(),body=new THREE.Group();root.add(body);
+  const p=resolve(input),root=new THREE.Group(),body=new THREE.Group();
+  root.add(body);
+  // Ground the procedural shoes on the floor rather than leaving a visible
+  // gap under the model. Small contact shadows add the toy-figurine weight.
+  body.position.y=-.17;
+  for(let i=0;i<2;i++){
+    const shadow=new THREE.Mesh(contactGeometry,shadowMaterials[i]);
+    shadow.rotation.x=-Math.PI/2;
+    shadow.position.set(0,.018+i*.003,.08);
+    shadow.scale.set(.62+i*.20,.40+i*.12,1);
+    shadow.renderOrder=1;
+    root.add(shadow);
+  }
   const skin=mat(SKINS[p.skin]),hair=mat(HAIR[p.hair]),cloth=mat(COLORS[p.color]),dark=mat(0x272b3a),white=mat(0xfff4df);
   const accent=mat(p.outfit==="salwar"?0xebbf87:0xe8d7b8);
   const width=p.build, feminine=p.gender==="female";
