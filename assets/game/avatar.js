@@ -1,9 +1,9 @@
 import * as THREE from "three";
-import {sculptHead,sculptFoot} from "./avatar-parts.js?v=avatar-expanded-v2";
+import {sculptHead,sculptFoot} from "./avatar-parts.js?v=braid-camera-v1";
 import {sculptWardrobe} from "./wardrobe.js?v=avatar-expanded-v1";
 import {SKIN_COLORS as SKINS,HAIR_COLORS as HAIR,OUTFIT_COLORS as COLORS,FOOTWEAR_OPTIONS} from "./palette.js?v=visual-atelier-v3";
 import {clothMaterial} from "./visual-materials.js?v=visual-atelier-v3";
-import {sculptFaceVoxels,sculptHairVoxels,sculptGarmentVoxels,sculptSleeveVoxels,sculptShoeVoxels} from "./artisan-voxels.js?v=avatar-expanded-v1";
+import {sculptFaceVoxels,sculptHairVoxels,sculptGarmentVoxels,sculptSleeveVoxels,sculptShoeVoxels} from "./artisan-voxels.js?v=braid-camera-v1";
 /**
  * Hybrid voxel adults with modular, richly sculpted faces and contemporary Indian garments. No external or unverified character assets.
  * The body is rigged with real limb pivots and features layered face and hair meshes.
@@ -60,13 +60,13 @@ function resolve(opts={}){
     gender:n.gender==="female"?"female":"male",
     skin:Math.abs(Number(n.skin)||0)%SKINS.length,
     hair:Math.abs(Number(n.hair)||0)%HAIR.length,
-    hairstyle:Math.abs(Number(n.hairstyle)||0)%20,
+    hairstyle:Math.abs(Number(n.hairstyle)||0)%24,
     outfit:["shirt","tshirt","suit","salwar","dress","sweater","jacket","bomber","blazer"].includes(n.outfit)?n.outfit:"shirt",
     bottom:["jeans","trousers","leggings","palazzo"].includes(n.bottom)?n.bottom:"jeans",
     color:Number.isInteger(n.color)?Math.abs(n.color)%COLORS.length:0,
     bottomColor:Number.isInteger(n.bottomColor)&&n.bottomColor>=0?n.bottomColor%COLORS.length:-1,
     shoeColor:Number.isInteger(n.shoeColor)&&n.shoeColor>=0?n.shoeColor%COLORS.length:-1,
-    facialHair:["none","beard-short","beard-full","moustache-pencil","moustache-handlebar","combo-short","combo-full"].includes(n.facialHair)?
+    facialHair:["none","stubble-light","stubble-full","stubble-heavy","beard-short","beard-full","beard-ear","moustache-pencil","moustache-handlebar","combo-short","combo-full","combo-ear"].includes(n.facialHair)?
       n.facialHair:(n.gender!=="female"&&[1,3].includes(n.hairstyle)?"combo-short":"none"),
     glassesStyle:["none","round","rectangle","square","aviator","cat-eye"].includes(n.glassesStyle)?n.glassesStyle:(n.glasses?"rectangle":"none"),
     glassesColor:Number.isInteger(n.glassesColor)?Math.abs(n.glassesColor)%COLORS.length:0,
