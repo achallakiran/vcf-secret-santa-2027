@@ -68,45 +68,76 @@ function present(parent,x,z,size,seed){
   const bow2=ball(g,.12,size+.09,0,.12,0xf4dba7);bow2.scale.set(1.3,.6,1);
 }
 function tree(parent,x,z,scale=1){
-  // Detailed stepped voxel evergreen rather than a single low-poly cone.
-  const g=new THREE.Group();g.position.set(x,0,z);g.scale.setScalar(scale);parent.add(g);
-  const leaf=[0x276a4c,0x2e7b53,0x34865d,0x245e45];
-  cyl(g,0,.27,0,.15,.19,.54,0x76533d);
-  for(let tier=0;tier<6;tier++){
-    const y=.69+tier*.44,reach=1.24-tier*.17;
-    const green=leaf[tier%leaf.length];
-    block(g,0,y,0,reach*1.63,.43,reach*1.63,green);
-    block(g,0,y-.10,0,reach*1.98,.20,reach*1.22,green);
-    block(g,0,y-.10,0,reach*1.22,.20,reach*1.98,green);
-    for(let i=0;i<8;i++){
-      const angle=i*Math.PI/4+tier*.24,rr=reach*.77;
-      const ornament=ball(g,Math.cos(angle)*rr,y-.10+((i%2)*.11),Math.sin(angle)*rr,.082+(i%3)*.01,
-        i%4===0?mat(0xf9cd73,{emissive:0x7e480d}):
-        i%4===1?0xdf666b:i%4===2?0x91b9c7:0xffebc6,1);
+  // A tall, full voxel STORYBOOK tree: volumetric branches, staggered
+  // needle clusters, spiral ornaments, warm light pearls and sculpted star.
+  // This intentionally changes the major silhouette, not only the decorations.
+  const g=new THREE.Group();
+  g.position.set(x,0,z);g.scale.setScalar(scale);parent.add(g);
+  const greens=[0x245f48,0x287452,0x3b8b62,0x2f7d57,0x3c9365,0x1d5946];
+  const glow=[0xffdb90,0xfff0bd,0xf6bd79,0xfce8b1];
+  const bauble=[0xc8545a,0xe9c17b,0xf0e3c3,0x94b9c0,0xc87583];
+  cyl(g,0,.43,0,.17,.22,.87,0x866344);
+  softBlock(g,0,.15,0,.62,.14,.62,0xe2cba9,.13);
+  // Ten layered branch fans give a lush tapered shape without a cone.
+  for(let tier=0;tier<9;tier++){
+    const y=.65+tier*.345,reach=1.45-tier*.135;
+    const r=Math.max(.33,reach),shade=greens[tier%greens.length];
+    softBlock(g,0,y,0,r*1.74,.29,r*1.74,shade,.16);
+    for(let j=0;j<8;j++){
+      const a=j*Math.PI/4+(tier%2)*.22;
+      const rx=Math.cos(a)*r*.80,rz=Math.sin(a)*r*.80;
+      const tuft=softBlock(g,rx,y-.045,rz,.51+(8-tier)*.032,.21,
+        .47+(8-tier)*.03,greens[(j+tier)%greens.length],.13);
+      tuft.rotation.y=a;
+      const outer=softBlock(g,Math.cos(a)*r*1.02,y-.09,Math.sin(a)*r*1.02,
+        .36,.17,.36,greens[(j+2*tier+2)%greens.length],.09);
+      outer.rotation.y=a;
+    }
+    // Real bright glass baubles, not dark circles merely painted on tree.
+    for(let j=0;j<10;j++){
+      const a=(j+tier*.28)*Math.PI*2/10;
+      const rr=r*(.79+(j%2)*.15);
+      const yy=y+.10+(j%3)*.035;
+      const ornament=ball(g,Math.cos(a)*rr,yy,Math.sin(a)*rr,
+        .08+(j%3)*.014,mat(bauble[(j+tier)%bauble.length],{roughness:.20,metalness:.18}),1);
       ornament.castShadow=false;
+      if(j%2===0){
+        const lamp=ball(g,Math.cos(a+.16)*rr,yy+.08,
+          Math.sin(a+.16)*rr,.055,
+          mat(glow[(j+tier)%glow.length],{emissive:0xf7bd65,roughness:.31}),1);
+        lamp.castShadow=false;
+      }
     }
-    // Gold ribbon crosses the foliage and is visible from every camera angle.
-    if(tier%2===0){
-      block(g,0,y+.09,reach*.72,reach*1.5,.034,.035,mat(0xf1c978,{metalness:.15}),false);
-      block(g,reach*.72,y+.09,0,.035,.034,reach*1.5,mat(0xf1c978,{metalness:.15}),false);
+    // Narrow gold zig-zag ribbon follows the stepped branches, visible on
+    // the front of the tree from the office aisle.
+    for(let j=0;j<5;j++){
+      const a=j*Math.PI*2/5+tier*.48;
+      const strut=softBlock(g,Math.cos(a)*r*.84,y+.145,Math.sin(a)*r*.84,
+        .18,.035,.30,0xf2c67c,.04,false);
+      strut.rotation.y=a;
     }
   }
-  // 5-point star in the front-facing plane, with a warm emissive center.
-  const outline=new THREE.Shape();
+  // Five-point luminous gold star, with three-dimensional double layers.
+  const starShape=new THREE.Shape();
   for(let i=0;i<10;i++){
-    const a=-Math.PI/2+i*Math.PI/5,r=i%2===0?.27:.12;
-    const px=Math.cos(a)*r,py=Math.sin(a)*r;
-    if(i===0)outline.moveTo(px,py);else outline.lineTo(px,py);
+    const a=-Math.PI/2+i*Math.PI/5,r=i%2===0?.31:.145;
+    if(!i)starShape.moveTo(Math.cos(a)*r,Math.sin(a)*r);
+    else starShape.lineTo(Math.cos(a)*r,Math.sin(a)*r);
   }
-  outline.closePath();
-  const star=new THREE.Mesh(new THREE.ExtrudeGeometry(outline,{
-    depth:.09,bevelEnabled:true,bevelThickness:.035,bevelSize:.025,bevelSegments:2,steps:1
-  }),mat(0xffdd83,{emissive:0xd39b46,metalness:.13}));
-  star.position.set(0,3.25,0);star.castShadow=false;g.add(star);
-  const light=new THREE.PointLight(0xffbc6d,1.7,6.5);light.position.set(0,2.2,.4);g.add(light);
-  for(let i=0;i<12;i++){
-    const angle=i*Math.PI*2/12,rad=1.0+(i%3)*.15;
-    present(g,Math.cos(angle)*rad,Math.sin(angle)*rad,.21+(i%3)*.10,i);
+  starShape.closePath();
+  for(const depth of [0,.09]){
+    const star=new THREE.Mesh(new THREE.ExtrudeGeometry(starShape,{
+      depth:.075,steps:1,bevelEnabled:true,bevelSize:.027,
+      bevelThickness:.03,bevelSegments:2
+    }),mat(depth?0xffedaa:0xf6d07c,{emissive:0xc99335,metalness:.12,roughness:.32}));
+    star.position.set(0,3.85,depth);star.castShadow=false;g.add(star);
+  }
+  const light=new THREE.PointLight(0xffc77b,1.55,5.5);
+  light.position.set(0,2.45,.7);g.add(light);
+  // The tree is a physical destination, grounded in a realistic gift pile.
+  for(let i=0;i<16;i++){
+    const a=i*Math.PI*2/16,rr=.92+(i%4)*.19;
+    present(g,Math.cos(a)*rr,Math.sin(a)*rr,.18+(i%5)*.06,i+51);
   }
   return g;
 }
@@ -370,11 +401,31 @@ export function buildOffice(count=12){
   block(viewWalls.north,-2.6,.38,front-.09,10.9,.76,.2,0xe6d6cb,false);
   const glass=new THREE.Mesh(new THREE.PlaneGeometry(10.55,2.75),new THREE.MeshPhysicalMaterial({color:0xc6e8f2,metalness:.05,roughness:.07,transmission:.24,transparent:true,opacity:.47,side:THREE.DoubleSide}));
   glass.position.set(-2.72,2.24,front-.18);viewWalls.north.add(glass);
-  // Outdoor skyline and trees visible through the single north window.
-  for(let j=0;j<24;j++){
-    const x=-8.1+j*.45,hh=1.0+(j*31%12)*.17;
-    block(root,x,hh/2+.75,front-3.3-(j%3),.44,hh,.46,[0x94b9ce,0x8fa9c9,0xb0bcd1,0x85aeb1][j%4],false);
-    if(j%3===0)ball(root,x,.72,front-1.8,1.05,0x7eaf87);
+  // Layered low-poly city skyline viewed through the finite office window:
+  // pastel towers with realistic window rhythm, treetops and warm sunlight.
+  // Kept outside the navigable office as pure environment art.
+  for(let j=0;j<19;j++){
+    const x=-8.05+j*.57,hh=1.25+((j*37)%11)*.22;
+    const z=front-3.55-(j%4)*.55;
+    const w=.48+(j%3)*.14;
+    const shell=[0xa1b8c7,0x8ca9bd,0xb1c0ce,0x93b6ba,0xa2adb8][j%5];
+    block(root,x,hh/2+.52,z,w,hh,.46,shell,false);
+    for(let row=0;row<Math.floor(hh/.33);row++){
+      const wy=.68+row*.33;
+      for(const side of [-1,1]){
+        block(root,x+side*w*.22,wy,z+.247,.08,.12,.015,
+          (j+row)%4===0?0xe6d3ab:0x6f93aa,false);
+      }
+    }
+    if(j%3===0){
+      const tx=x+.12;
+      cyl(root,tx,.65,front-1.75,.085,.09,.6,0x876f59);
+      for(let k=0;k<4;k++){
+        const foliage=ball(root,tx+(k-1.5)*.2,1.2+(k%2)*.12,
+          front-1.8,.39,(k+j)%2?0x6aa77b:0x83b98d);
+        foliage.scale.set(1.03,.76,.76);
+      }
+    }
   }
   for(let x=-7.95;x<2.5;x+=1.72)block(viewWalls.north,x,2.28,front-.04,.075,3.25,.11,0x686d7a,false);
   block(viewWalls.north,-2.65,3.55,front-.025,10.7,.10,.15,0x656a73,false);
@@ -443,6 +494,23 @@ export function buildOffice(count=12){
     if(i%2===0){
       const l=ball(party,x,3.41,5.69,.065,mat(0xffe2a1,{emissive:0x9a611b}),1);
       l.castShadow=false;twinkle.push(l);
+    }
+  }
+  // Layered festive frame around the backdrop; all at the far stage,
+  // never hanging over the walking camera.
+  for(let j=0;j<15;j++){
+    const x=-6.42+j*.455;
+    const ornament=ball(party,x,3.83,5.65,.09,
+      mat(j%3===0?0xd45a67:j%3===1?0xf7d991:0x3d956b,
+        {emissive:j%3===1?0x735023:0}),1);
+    ornament.castShadow=false;
+  }
+  for(const x of [-6.52,.04]){
+    for(let j=0;j<15;j++){
+      const y=.99+j*.18;
+      const bulb=ball(party,x,y,5.69,.052,mat(j%2?0xffe8b2:0xfaaf93,
+        {emissive:0x8d5d28}),1);
+      bulb.castShadow=false;
     }
   }
   sign(party,-3.23,2.68,5.64,"SECRET SANTA");
