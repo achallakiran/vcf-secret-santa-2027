@@ -1,6 +1,6 @@
 
 "use strict";
-import {createVisualAvatarEditor} from "./game/avatar-editor.js?v=avatar-expanded-v1";
+import {createVisualAvatarEditor} from "./game/avatar-editor.js?v=avatar-expanded-v2";
 import {createChristmasMusic} from "./game/christmas-music.js?v=jingle-bells-v1";
 const GATEWAY="https://fwrievuhudjkeffmszqf.supabase.co/functions/v1/ss-gateway";
 const PUBLIC_KEY="sb_publishable_SJo2kgXdHNFZI65iAvQmxw_q56zuVLO";
@@ -408,7 +408,7 @@ async function enterOffice(info){
   }
   $("office-loading").classList.remove("hidden");
   officeLoading=(async()=>{
-    const module=await import("./game/main.js?v=avatar-expanded-v1");
+    const module=await import("./game/main.js?v=avatar-expanded-v2");
     officeRuntime=module.mountOffice($("office-canvas"),info,officeToast);
     let cam=null;
     try{cam=localStorage.getItem("vcf-ss-office-camera");}catch{}
@@ -437,7 +437,7 @@ async function enterOffice(info){
 }
 const AVATAR_FIELDS=["gender","outfit","bottom","hairstyle","skin","hair","height","build","footwear","bottomColor","shoeColor","facialHair","glassesStyle","glassesColor"];
 function readAvatarEditor(){
-  const result={schema_version:2};
+  const result={schema_version:3};
   for(const field of AVATAR_FIELDS){
     const input=$("avatar-"+field);
     result[field]=["skin","hair","hairstyle","bottomColor","shoeColor","glassesColor"].includes(field)?Number(input.value):
@@ -584,7 +584,7 @@ async function ensureAvatarStudio(){
       &&!$("player-character").classList.contains("hidden"));
   if(!isVisible())return;
   avatarStudioLoading=(async()=>{
-    const module=await import("./game/studio.js?v=avatar-expanded-v1");
+    const module=await import("./game/studio.js?v=avatar-expanded-v2");
     if(!isVisible())return;
     avatarStudio=module.mountAvatarStudio($("avatar-studio-canvas"),readAvatarEditor());
     visualEditor?.refresh(activeStudioTab);
