@@ -12,6 +12,7 @@ const shadowMaterials=[
   new THREE.MeshBasicMaterial({color:0x33483e,opacity:.095,transparent:true,depthWrite:false}),
   new THREE.MeshBasicMaterial({color:0x243e35,opacity:.10,transparent:true,depthWrite:false})
 ];
+for(const material of shadowMaterials)material.userData.sharedVoxelMaterial=true;
 function mat(color,roughness=.76,metalness=0){return new THREE.MeshStandardMaterial({color,roughness,metalness});}
 function roundedBox(w,h,d,r=.075,steps=2){
   const key=[w,h,d,r,steps].join(":");
