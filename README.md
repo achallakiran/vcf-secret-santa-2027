@@ -23,10 +23,10 @@ A holiday office Secret Santa experience, hosted as a static GitHub Pages fronte
 
 **Not implemented yet:** Full production-quality facial morphs, all contemporary Indian wardrobe variations and footwear choices, published office/day scene generation, truthful daily hints, or organizer-controlled final reveal. Phase 2B now includes a working initial avatar editor and secure per-player save, but visual fidelity still needs real-browser review and further polishing.
 
-## WhatsApp invitations — no phone fields
+## WhatsApp invitations — temporary recipient prompt
 
 - Organizer participant registration asks only for **Name** and optional **Desk**.
-- Each row has a **WhatsApp** shortcut that opens WhatsApp's sharing/contact chooser with the participant's event URL and four-digit invitation code already in the message. The web app no longer asks for a phone number or country code and does not store either.
+- Each row has a **WhatsApp** shortcut that opens a temporary recipient-number dialog. The organizer enters an Indian 10-digit mobile number (automatically prefixed with +91) or a full international number including its country code. The dialog previews the participant's event URL and four-digit invitation code, then opens `wa.me/<number>?text=<encoded invitation>` on demand. WhatsApp pre-fills the recipient and message; **the organizer must tap Send in WhatsApp**—browser links cannot silently send messages. Numbers are never saved to participant records, Supabase or browser storage and are cleared on close.
 - Event details show a selectable full URL immediately beside the **Copy URL** icon. Per-row **Copy** and **Open player** buttons and the redundant code-count metric were removed.
 - Active participant codes are visible to a signed-in organizer; the server keeps encrypted retrievable copies in addition to the one-way login verifiers.
 
