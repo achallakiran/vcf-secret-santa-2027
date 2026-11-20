@@ -87,11 +87,6 @@
       <div id="office-toast" class="office-toast hidden" role="status" aria-live="polite"></div>
     </div>
     <section id="player-menu" class="player-menu panel hidden" aria-label="Character studio and pause menu" role="dialog" aria-modal="true">
-      <div id="character-intro" class="character-intro hidden">
-        <span class="character-step">WELCOME TO YOUR CHRISTMAS OFFICE · STEP 1 OF 2</span>
-        <h2>Make a little character that's <em>you.</em></h2>
-        <p>Choose your face, hair and Indian contemporary fashion. Rotate your fully modeled character before you walk into the celebration.</p>
-      </div>
       <div class="section-head">
         <div><p class="eyebrow">CHRISTMAS NOTEBOOK</p><h3 id="player-greeting">SECRET SANTA</h3><p id="player-event-title" class="muted">Christmas office</p></div>
         <button id="player-close" class="small-outline" type="button" aria-label="Resume game">✕</button>
@@ -101,111 +96,78 @@
         <button type="button" class="tab" id="player-tab-personal">Personal</button>
       </div>
       <section id="player-character" class="character-studio-section">
-        <div class="character-studio">
-          <div class="character-preview-shell">
+        <div class="avatar-atelier">
+          <nav class="atelier-categories" aria-label="Character styling categories">
+            <div class="atelier-side-brand" aria-hidden="true">✦</div>
+            <button type="button" data-studio-tab="look" class="atelier-category active" aria-selected="true"><span class="atelier-category-icon" aria-hidden="true">☺</span><span>Face</span></button>
+            <button type="button" data-studio-tab="hair" class="atelier-category" aria-selected="false"><span class="atelier-category-icon" aria-hidden="true">✂</span><span>Hair</span></button>
+            <button type="button" data-studio-tab="fashion" class="atelier-category" aria-selected="false"><span class="atelier-category-icon" aria-hidden="true">✿</span><span>Outfit</span></button>
+            <button type="button" data-studio-tab="accessories" class="atelier-category" aria-selected="false"><span class="atelier-category-icon" aria-hidden="true">◎</span><span>Accessories</span></button>
+            <button type="button" data-studio-tab="footwear" class="atelier-category" aria-selected="false"><span class="atelier-category-icon" aria-hidden="true">♢</span><span>Footwear</span></button>
+            <button type="button" data-studio-tab="shape" class="atelier-category" aria-selected="false"><span class="atelier-category-icon" aria-hidden="true">↕</span><span>Body</span></button>
+          </nav>
+          <div class="character-preview-shell atelier-preview">
             <div class="studio-brand">
               <span class="studio-eyebrow">THE CHRISTMAS OFFICE</span>
-              <strong>YOUR VOXEL AVATAR</strong>
-              <p>Every choice changes the 3D model.</p>
+              <strong>YOUR VOXEL CHARACTER</strong>
+              <p>Drag to see every little detail</p>
             </div>
             <div id="avatar-studio-canvas" class="avatar-studio-canvas" aria-label="Rotatable full-body 3D voxel character preview"></div>
             <div class="studio-rotate">
-              <button type="button" id="avatar-turn-left" aria-label="Rotate character left" title="Rotate left">↶</button>
+              <button type="button" id="avatar-turn-left" aria-label="Turn character left">↶</button>
               <span>Drag to rotate · 360°</span>
-              <button type="button" id="avatar-turn-right" aria-label="Rotate character right" title="Rotate right">↷</button>
+              <button type="button" id="avatar-turn-right" aria-label="Turn character right">↷</button>
             </div>
-            <button id="avatar-view" type="button" class="studio-office-link"><span id="avatar-view-label">See me in the office</span><span aria-hidden="true">↗</span></button>
+            <button id="avatar-view" type="button" class="studio-office-link">See in Office <span aria-hidden="true">↗</span></button>
           </div>
-          <div class="studio-workbench">
+          <div class="studio-workbench atelier-options">
             <div class="studio-workbench-heading">
-              <div>
-                <span class="studio-eyebrow">MAKE IT YOUR OWN</span>
-                <h4>Style your avatar</h4>
-              </div>
+              <div><span class="studio-eyebrow">STYLE YOUR AVATAR</span><h4 id="atelier-category-title">Face & colors</h4></div>
               <span class="studio-holiday-mark" aria-hidden="true">✧</span>
             </div>
-            <div class="studio-tab-bar" role="tablist" aria-label="Avatar customization categories">
-              <button type="button" data-studio-tab="look" class="active" role="tab" aria-selected="true"><span>☺</span> Look</button>
-              <button type="button" data-studio-tab="hair" role="tab" aria-selected="false"><span>✂</span> Hair</button>
-              <button type="button" data-studio-tab="fashion" role="tab" aria-selected="false"><span>✦</span> Fashion</button>
-              <button type="button" data-studio-tab="shape" role="tab" aria-selected="false"><span>◐</span> Shape</button>
-            </div>
             <form id="avatar-form" class="studio-avatar-form">
-              <section data-studio-panel="look" class="studio-fields" role="tabpanel">
-                <h5>Face & personality</h5>
-                <p>Expressive, friendly and distinctly your own.</p>
-                <div class="studio-inputs">
-                  <label>Gender
-                    <select id="avatar-gender"><option value="female">Female</option><option value="male">Male</option></select>
-                  </label>
-                  <label>Skin tone
-                    <select id="avatar-skin">
-                      <option value="0">Warm ivory</option><option value="1">Golden beige</option>
-                      <option value="2">Medium brown</option><option value="3">Deep brown</option>
-                      <option value="4">Dark brown</option>
-                    </select>
-                  </label>
-                </div>
-                <label class="studio-check"><input id="avatar-glasses" type="checkbox"/> <span>Spectacles</span></label>
+              <div class="atelier-hidden-values" aria-hidden="true">
+                <input type="hidden" id="avatar-gender" value="female"/>
+                <input type="hidden" id="avatar-outfit" value="salwar"/>
+                <input type="hidden" id="avatar-bottom" value="leggings"/>
+                <input type="hidden" id="avatar-hairstyle" value="2"/>
+                <input type="hidden" id="avatar-skin" value="2"/>
+                <input type="hidden" id="avatar-hair" value="0"/>
+                <input type="hidden" id="avatar-color" value="1"/>
+                <input type="hidden" id="avatar-footwear" value="auto"/>
+                <input type="checkbox" id="avatar-glasses"/>
+              </div>
+              <section data-studio-panel="look" class="atelier-panel" aria-labelledby="atelier-category-title">
+                <p class="atelier-description">Choose your character and a color. The model changes with every choice.</p>
+                <div class="atelier-option-heading">Character</div>
+                <div id="avatar-gender-options" class="atelier-card-grid atelier-card-grid-two" role="group" aria-label="Character"></div>
+                <div class="atelier-option-heading">Color</div>
+                <div id="avatar-skin-options" class="atelier-swatch-grid" role="group" aria-label="Character color"></div>
               </section>
-              <section data-studio-panel="hair" class="studio-fields hidden" role="tabpanel">
-                <h5>Hair & styling</h5>
-                <p>Every hairstyle is modeled in three dimensions.</p>
-                <div class="studio-inputs">
-                  <label>Hairstyle
-                    <select id="avatar-hairstyle">
-                      <option value="0">Short layered</option><option value="1">Textured / tied</option>
-                      <option value="2">Long layered</option><option value="3">Ponytail</option>
-                    </select>
-                  </label>
-                  <label>Hair color
-                    <select id="avatar-hair">
-                      <option value="0">Natural black</option><option value="1">Dark brown</option>
-                      <option value="2">Warm brown</option><option value="3">Mahogany</option>
-                      <option value="4">Blue-black</option>
-                    </select>
-                  </label>
-                </div>
-                <div id="hairstyle-tiles" class="studio-visual-choices" aria-label="Select a modeled hairstyle"></div>
+              <section data-studio-panel="hair" class="atelier-panel hidden">
+                <p class="atelier-description">Select a hairstyle from the models, then select a color.</p>
+                <div id="avatar-hairstyle-options" class="atelier-card-grid" role="group" aria-label="Hairstyles"></div>
+                <div class="atelier-option-heading">Hair color</div>
+                <div id="avatar-hair-options" class="atelier-swatch-grid" role="group" aria-label="Hair color"></div>
               </section>
-              <section data-studio-panel="fashion" class="studio-fields hidden" role="tabpanel">
-                <h5>Contemporary Indian fashion</h5>
-                <p>Work-ready smart casual, festive and modern ethnic silhouettes.</p>
-                <div class="studio-inputs">
-                  <label>Outfit
-                    <select id="avatar-outfit">
-                      <option value="shirt">Smart casual shirt</option>
-                      <option value="tshirt">Modern T-shirt</option>
-                      <option value="suit">Tailored office suit</option>
-                      <option value="salwar">Salwar suit</option>
-                      <option value="dress">Contemporary dress</option>
-                      <option value="sweater">Festive knitted sweater</option>
-                    </select>
-                  </label>
-                  <label>Bottoms
-                    <select id="avatar-bottom">
-                      <option value="jeans">Denim jeans</option>
-                      <option value="trousers">Tailored trousers</option>
-                      <option value="leggings">Leggings</option>
-                      <option value="palazzo">Relaxed / palazzo trousers</option>
-                    </select>
-                  </label>
-                </div>
-                <div id="outfit-tiles" class="studio-visual-choices" aria-label="Select a modeled outfit"></div>
-                <label class="studio-color-title">Garment color</label>
-                <input id="avatar-color" type="hidden" value="0"/>
-                <div class="avatar-palette" role="group" aria-label="Clothing colors">
-                  <button type="button" class="avatar-swatch selected" data-avatar-color="0" aria-label="Sage green" title="Sage green" style="--swatch:#4c816c"></button>
-                  <button type="button" class="avatar-swatch" data-avatar-color="1" aria-label="Rose" title="Rose" style="--swatch:#c75b65"></button>
-                  <button type="button" class="avatar-swatch" data-avatar-color="2" aria-label="Indigo" title="Indigo" style="--swatch:#385883"></button>
-                  <button type="button" class="avatar-swatch" data-avatar-color="3" aria-label="Mustard" title="Mustard" style="--swatch:#d19d49"></button>
-                  <button type="button" class="avatar-swatch" data-avatar-color="4" aria-label="Lavender" title="Lavender" style="--swatch:#765e8d"></button>
-                  <button type="button" class="avatar-swatch" data-avatar-color="5" aria-label="Ivory" title="Ivory" style="--swatch:#e1ddd4"></button>
-                </div>
+              <section data-studio-panel="fashion" class="atelier-panel hidden">
+                <p class="atelier-description">Contemporary Indian office fashion, sculpted in 3D.</p>
+                <div id="avatar-outfit-options" class="atelier-card-grid" role="group" aria-label="Outfits"></div>
+                <div class="atelier-option-heading">Bottoms</div>
+                <div id="avatar-bottom-options" class="atelier-card-grid atelier-card-grid-small" role="group" aria-label="Bottoms"></div>
+                <div class="atelier-option-heading">Outfit color</div>
+                <div id="avatar-color-options" class="atelier-swatch-grid" role="group" aria-label="Outfit color"></div>
               </section>
-              <section data-studio-panel="shape" class="studio-fields hidden" role="tabpanel">
-                <h5>Height & body shape</h5>
-                <p>A single rig scales smoothly from petite to tall and slender to fuller-bodied.</p>
+              <section data-studio-panel="accessories" class="atelier-panel hidden">
+                <p class="atelier-description">Small touches that make your character yours.</p>
+                <div id="avatar-glasses-options" class="atelier-card-grid atelier-card-grid-two" role="group" aria-label="Spectacles"></div>
+              </section>
+              <section data-studio-panel="footwear" class="atelier-panel hidden">
+                <p class="atelier-description">Choose the shoes your character wears around the office.</p>
+                <div id="avatar-footwear-options" class="atelier-card-grid atelier-card-grid-two" role="group" aria-label="Footwear"></div>
+              </section>
+              <section data-studio-panel="shape" class="atelier-panel hidden">
+                <p class="atelier-description">Adjust proportions and see your character change in the live preview.</p>
                 <div class="avatar-slider-grid">
                   <label>Height <output id="avatar-height-out" for="avatar-height">100%</output>
                     <input id="avatar-height" type="range" min=".86" max="1.16" step=".01" value="1"/>
@@ -216,11 +178,10 @@
                 </div>
               </section>
               <div class="studio-save-bar">
-                <p id="avatar-preview-status" role="status" aria-live="polite">Your changes preview instantly.</p>
+                <p id="avatar-preview-status" role="status" aria-live="polite">Select a tile to preview your character.</p>
                 <div class="studio-save-buttons">
-                  <button id="avatar-reset" class="studio-reset" type="button" title="Reset to saved appearance">↶ Reset</button>
-                  <button id="avatar-save" class="studio-save" type="submit">Save look ✓</button>
-                  <button id="avatar-continue" class="studio-continue hidden" type="button">Enter Office ✦</button>
+                  <button id="avatar-reset" class="studio-reset" type="button">↶ Reset</button>
+                  <button id="avatar-save" class="studio-save" type="submit">Save Avatar ✓</button>
                 </div>
               </div>
             </form>
