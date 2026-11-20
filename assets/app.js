@@ -296,7 +296,7 @@ async function enterOffice(info){
   }
   $("office-loading").classList.remove("hidden");
   officeLoading=(async()=>{
-    const module=await import("./game/main.js?v=visual-atelier-v3");
+    const module=await import("./game/main.js?v=environment-polish-v1");
     officeRuntime=module.mountOffice($("office-canvas"),info,officeToast);
     let cam=null;
     try{cam=localStorage.getItem("vcf-ss-office-camera");}catch{}
