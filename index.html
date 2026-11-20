@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#080d16"/>
   <meta name="description" content="Voxel Secret Santa — a thoughtful Christmas office mystery."/>
   <title>Voxel Secret Santa</title>
-  <link rel="stylesheet" href="./assets/styles.css?v=admin-avatar-v2"/>
+  <link rel="stylesheet" href="./assets/styles.css?v=whatsapp-recipient-v1"/>
 </head>
 <body>
   <div class="snow" id="snow" aria-hidden="true"></div>
@@ -252,6 +252,22 @@
     </form>
     <div id="admin-avatar-editor-host"></div>
   </dialog>
+  <dialog id="whatsapp-invite-dialog" class="whatsapp-invite-dialog" aria-labelledby="whatsapp-invite-title">
+    <div class="section-head">
+      <div><p class="eyebrow">PRIVATE INVITATION</p><h3 id="whatsapp-invite-title">Share via WhatsApp</h3></div>
+      <button id="whatsapp-invite-close" type="button" class="small-outline" aria-label="Close WhatsApp invitation">✕</button>
+    </div>
+    <p id="whatsapp-invite-person" class="whatsapp-invite-person"></p>
+    <label class="whatsapp-phone-label" for="whatsapp-phone-number">Recipient's phone number</label>
+    <input id="whatsapp-phone-number" type="tel" inputmode="tel" placeholder="98765 43210 or +91 98765 43210" autocomplete="off" maxlength="24" aria-describedby="whatsapp-phone-help whatsapp-phone-error"/>
+    <p id="whatsapp-phone-help" class="muted small">For Indian numbers, enter 10 digits. For other countries, include the country code (for example +1).</p>
+    <p id="whatsapp-phone-error" class="whatsapp-phone-error" aria-live="polite"></p>
+    <div class="whatsapp-invite-preview"><strong>Prepared message</strong><pre id="whatsapp-message-preview"></pre></div>
+    <div class="whatsapp-invite-actions">
+      <a id="whatsapp-open-link" class="primary link-action is-disabled" aria-disabled="true" tabindex="-1" rel="noopener noreferrer" target="_blank">Open WhatsApp ↗</a>
+    </div>
+    <p class="muted small whatsapp-send-note">WhatsApp opens with the recipient and invitation ready. Review the message and tap Send there.</p>
+  </dialog>
   <div id="action-progress" class="action-progress hidden" role="status" aria-live="polite" aria-atomic="true">
     <div class="progress-card">
       <div class="progress-head"><span class="progress-spinner" aria-hidden="true"></span><div><strong id="progress-title">Working…</strong><p id="progress-detail">Saving your changes securely. Please keep this page open.</p></div></div>
@@ -262,6 +278,6 @@
   <script type="importmap">
     {"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js"}}
   </script>
-  <script type="module" src="./assets/app.js?v=admin-avatar-v2"></script>
+  <script type="module" src="./assets/app.js?v=whatsapp-recipient-v1"></script>
 </body>
 </html>
