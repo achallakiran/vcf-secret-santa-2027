@@ -1,6 +1,7 @@
 import * as THREE from "three";
 import {buildOffice} from "./office.js?v=art-hero-v1";
 import {createAvatar,avatarFromPerson} from "./avatar.js?v=art-hero-v1";
+import {createInstancedCrowd} from "./crowd.js";
 
 /* A responsive office runtime. 3D art and camera are independent from the existing Supabase UI. */
 const UP=new THREE.Vector3(0,1,0);
@@ -118,21 +119,6 @@ function spot(scene){
   inner.rotation.x=-Math.PI/2;inner.position.y=.055;group.add(inner);
   group.visible=false;scene.add(group);return {group,ring};
 }
-function fallbackAvatar(parent,x,z,heading,color){
-  const g=new THREE.Group();g.position.set(x,0,z);g.rotation.y=heading;parent.add(g);
-  const make=(w,h,d,c,px,py,pz)=>{
-    const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),new THREE.MeshStandardMaterial({color:c,roughness:.8}));
-    m.position.set(px,py,pz);g.add(m);
-  };
-  make(.53,.55,.34,color,0,1.04,0);
-  make(.54,.5,.48,0xb78768,0,1.62,.02);
-  make(.61,.15,.50,0x30252b,0,1.92,.02);
-  make(.25,.42,.29,0x3d4653,-.13,.56,0);
-  make(.25,.42,.29,0x3d4653,.13,.56,0);
-  make(.14,.42,.22,0xb78768,-.34,1.04,0);
-  make(.14,.42,.22,0xb78768,.34,1.04,0);
-  return g;
-}
 function makeCamera(scene,renderer){
   const camera=new THREE.PerspectiveCamera(43,1,.06,400);
   camera.position.set(4.0,8.2,16);
@@ -165,7 +151,7 @@ export function mountOffice(host,profile,notice=()=>{}){
   scene.add(sun,sun.target);
   const camera=makeCamera(scene,renderer);
   const ray=new THREE.Raycaster(),pointer=new THREE.Vector2(),ground=new THREE.Plane(new THREE.Vector3(0,1,0),0);
-  let office,nav,hero,markers,currentProfile,people=[],mode="three",path=[],clock=new THREE.Clock(),
+  let office,nav,hero,markers,crowd=null,currentProfile,people=[],mode="three",path=[],clock=new THREE.Clock(),
       running=true,paused=false,lastRefresh=0,requestId=0,selectedAction="hi",interactTarget=null;
   let cameraYaw=2.65,cameraPitch=MODES.three.pitch,targetCameraPitch=MODES.three.pitch;
   let zoom=1,manualOrbit=false;
@@ -184,10 +170,11 @@ export function mountOffice(host,profile,notice=()=>{}){
       office=buildOffice(total);scene.add(office.root);
       nav=new Navigation(office);
     }
-    // Remove old NPC groups before updating the roster (never remove the Scene itself).
+    // Retire old coworker LOD batches and previously created nearby rigs.
+    // Group and geometry are independent from the permanent office scene.
+    if(crowd){scene.remove(crowd.group);crowd.dispose();crowd=null;}
     for(const item of people){
       if(item.detailed)scene.remove(item.detailed.group);
-      if(item.placeholder)scene.remove(item.placeholder);
     }
     people=[];
     if(!hero){
@@ -206,22 +193,26 @@ export function mountOffice(host,profile,notice=()=>{}){
     roster.forEach((p,i)=>{
       const seat=office.seats[i+1]||office.seats[0];
       const ap=avatarFromPerson({id:p.id||p.name,name:p.name,avatar:p.avatar},i);
-      const placeholder=fallbackAvatar(scene,seat.position.x,seat.position.z,seat.facing,[0x7f8e9e,0x598e7c,0xd37b6e,0xb69b62][i%4]);
-      people.push({id:p.id,name:p.name||"Colleague",seat,appearance:ap,placeholder,detailed:null});
+      people.push({id:p.id,name:p.name||"Colleague",seat,appearance:ap,detailed:null,lastUsed:-1});
     });
+    // Every coworker gets a three-dimensional expressive doll even when far.
+    // This replaces >100 old generic box placeholders with THREE instancing.
+    crowd=createInstancedCrowd(people);
+    scene.add(crowd.group);
     refreshNpcs();
   }
   function refreshNpcs(){
     if(!hero)return;
     const x=hero.group.position.x,z=hero.group.position.z;
     const distance=people.map((p,i)=>({p,i,d:(p.seat.position.x-x)**2+(p.seat.position.z-z)**2})).sort((a,b)=>a.d-b.d);
-    // Art Hero models are much richer than the initial placeholders. Prioritise
-    // the closest coworkers so a large 150-person office remains responsive.
+    // All coworkers always retain a recognisable face, hair and outfit.
+    // Nearby colleagues additionally use full articulated models; the far
+    // versions are THREE.InstancedMesh dolls, just three draw batches.
     const maxDetailed=window.innerWidth<700?8:14;
     const active=new Set(distance.slice(0,Math.min(maxDetailed,people.length)).map(s=>s.i));
+    crowd?.setDetailed(active);
     people.forEach((p,i)=>{
       const yes=active.has(i);
-      p.placeholder.visible=!yes;
       if(yes&&!p.detailed){
         p.detailed=createAvatar(p.appearance);
         p.detailed.group.position.set(p.seat.position.x,0,p.seat.position.z);
@@ -230,6 +221,14 @@ export function mountOffice(host,profile,notice=()=>{}){
         scene.add(p.detailed.group);
       }
       if(p.detailed)p.detailed.group.visible=yes;
+      if(yes)p.lastUsed=lastRefresh;
+      // Retain a small reserve of sculpted rigs, not all 149 as the player
+      // traverses the hall. The instanced character immediately replaces any
+      // evicted full-detail rig without changing the stored appearance.
+      if(!yes&&p.detailed&&lastRefresh-p.lastUsed>5){
+        scene.remove(p.detailed.group);
+        p.detailed=null;
+      }
     });
   }
   function setCamera(id){
@@ -518,6 +517,7 @@ export function mountOffice(host,profile,notice=()=>{}){
       canvas.removeEventListener("pointerup",up);
       canvas.removeEventListener("pointercancel",cancel);
       canvas.removeEventListener("wheel",wheel);
+      if(crowd){scene.remove(crowd.group);crowd.dispose();crowd=null;}
       renderer.dispose();host.replaceChildren();
     }
   };
