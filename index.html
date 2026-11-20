@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#080d16"/>
   <meta name="description" content="Voxel Secret Santa — a thoughtful Christmas office mystery."/>
   <title>Voxel Secret Santa</title>
-  <link rel="stylesheet" href="./assets/styles.css?v=office-social-v2"/>
+  <link rel="stylesheet" href="./assets/styles.css?v=avatar-expanded-v1"/>
 </head>
 <body>
   <div class="snow" id="snow" aria-hidden="true"></div>
@@ -137,6 +137,11 @@
                 <input type="hidden" id="avatar-hair" value="0"/>
                 <input type="hidden" id="avatar-color" value="1"/>
                 <input type="hidden" id="avatar-footwear" value="auto"/>
+                <input type="hidden" id="avatar-bottomColor" value="-1"/>
+                <input type="hidden" id="avatar-shoeColor" value="-1"/>
+                <input type="hidden" id="avatar-facialHair" value="none"/>
+                <input type="hidden" id="avatar-glassesStyle" value="none"/>
+                <input type="hidden" id="avatar-glassesColor" value="0"/>
                 <input type="checkbox" id="avatar-glasses"/>
               </div>
               <section data-studio-panel="look" class="atelier-panel" aria-labelledby="atelier-category-title">
@@ -147,7 +152,7 @@
                 <div id="avatar-skin-options" class="atelier-swatch-grid" role="group" aria-label="Character color"></div>
               </section>
               <section data-studio-panel="hair" class="atelier-panel hidden">
-                <p class="atelier-description">Select a hairstyle from the models, then select a color.</p>
+                <p class="atelier-description">Choose classic or parted hair, short sides, quiff or textured looks. Select hair color separately.</p>
                 <div id="avatar-hairstyle-options" class="atelier-card-grid" role="group" aria-label="Hairstyles"></div>
                 <div class="atelier-option-heading">Hair color</div>
                 <div id="avatar-hair-options" class="atelier-swatch-grid" role="group" aria-label="Hair color"></div>
@@ -157,16 +162,25 @@
                 <div id="avatar-outfit-options" class="atelier-card-grid" role="group" aria-label="Outfits"></div>
                 <div class="atelier-option-heading">Bottoms</div>
                 <div id="avatar-bottom-options" class="atelier-card-grid atelier-card-grid-small" role="group" aria-label="Bottoms"></div>
-                <div class="atelier-option-heading">Outfit color</div>
-                <div id="avatar-color-options" class="atelier-swatch-grid" role="group" aria-label="Outfit color"></div>
+                <div class="atelier-option-heading">Upper clothing color</div>
+                <div id="avatar-color-options" class="atelier-swatch-grid" role="group" aria-label="Upper clothing color"></div>
+                <div class="atelier-option-heading">Lower clothing color</div>
+                <div id="avatar-bottomColor-options" class="atelier-swatch-grid" role="group" aria-label="Lower clothing color"></div>
               </section>
               <section data-studio-panel="accessories" class="atelier-panel hidden">
-                <p class="atelier-description">Small touches that make your character yours.</p>
-                <div id="avatar-glasses-options" class="atelier-card-grid atelier-card-grid-two" role="group" aria-label="Spectacles"></div>
+                <p class="atelier-description">Tiles show only the facial hair or eyewear shape; the full result appears on your 3D character.</p>
+                <div class="atelier-option-heading">Beards and moustaches</div>
+                <div id="avatar-facialHair-options" class="atelier-card-grid" role="group" aria-label="Beards and moustaches"></div>
+                <div class="atelier-option-heading">Spectacles shape</div>
+                <div id="avatar-glassesStyle-options" class="atelier-card-grid" role="group" aria-label="Spectacles shapes"></div>
+                <div class="atelier-option-heading">Spectacles frame color</div>
+                <div id="avatar-glassesColor-options" class="atelier-swatch-grid" role="group" aria-label="Spectacles frame colors"></div>
               </section>
               <section data-studio-panel="footwear" class="atelier-panel hidden">
                 <p class="atelier-description">Choose the shoes your character wears around the office.</p>
                 <div id="avatar-footwear-options" class="atelier-card-grid atelier-card-grid-two" role="group" aria-label="Footwear"></div>
+                <div class="atelier-option-heading">Shoe color</div>
+                <div id="avatar-shoeColor-options" class="atelier-swatch-grid" role="group" aria-label="Shoe colors"></div>
               </section>
               <section data-studio-panel="shape" class="atelier-panel hidden">
                 <p class="atelier-description">Adjust proportions and see your character change in the live preview.</p>
@@ -279,6 +293,6 @@
   <script type="importmap">
     {"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js"}}
   </script>
-  <script type="module" src="./assets/app.js?v=office-social-v2"></script>
+  <script type="module" src="./assets/app.js?v=avatar-expanded-v1"></script>
 </body>
 </html>
