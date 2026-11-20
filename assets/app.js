@@ -5,7 +5,6 @@ const GATEWAY="https://fwrievuhudjkeffmszqf.supabase.co/functions/v1/ss-gateway"
 const PUBLIC_KEY="sb_publishable_SJo2kgXdHNFZI65iAvQmxw_q56zuVLO";
 const PARAMS=new URLSearchParams(location.search);
 const ADMIN=PARAMS.has("admin");
-const PREVIEW=!ADMIN&&PARAMS.has("preview");
 const EVENT_SLUG=PARAMS.get("event")||"";
 const SESSION_STORAGE_KEY=ADMIN?"vcf_ss_admin_pin_session":"vcf_ss_player_pin_session";
 const $=id=>document.getElementById(id);
@@ -184,6 +183,12 @@ async function openEvent(e){
   event={...e,...result.event};
   participants=result.participants||[];
   assignments=result.assignments||[];
+  // The gateway returns decryptable codes ONLY after organizer authorization.
+  // Repopulate on every event load; do not carry codes between events.
+  codes.clear();
+  for(const [id,code] of Object.entries(result.codes||{})){
+    if(/^[0-9]{4}$/.test(code))codes.set(id,code);
+  }
   $("workspace-title").textContent=event.title;
   $("workspace-slug").textContent=eventUrl();
   $("workspace-open-link").href=eventUrl();
@@ -201,29 +206,51 @@ function renderPeople(){
   const tbody=$("participant-rows");tbody.replaceChildren();
   if(!participants.length){
     const tr=node("tr"),td=node("td","muted","Add the first colleague above.");
-    td.colSpan=5;tr.append(td);tbody.append(tr);
+    td.colSpan=5;td.dataset.label="Employees";tr.append(td);tbody.append(tr);
   }
   for(const p of participants){
-    const tr=node("tr");
-    tr.append(node("td","",p.display_name+(p.is_active?"":" (inactive)")));
-    tr.append(node("td","",p.desk_key||"—"));
-    const codeCell=node("td");codeCell.append(node("code","",codes.get(p.id)||"••••"));tr.append(codeCell);
-    const shareCell=node("td");
+    const tr=node("tr","participant-entry");
+    const nameCell=node("td","participant-name-cell");
+    nameCell.dataset.label="Employee";
+    nameCell.title=p.display_name;
+    nameCell.append(node("strong","participant-full-name",p.display_name));
+    if(!p.is_active)nameCell.append(node("span","participant-inactive","Inactive"));
+    tr.append(nameCell);
+
+    const deskCell=node("td","participant-desk-cell",p.desk_key||"—");
+    deskCell.dataset.label="Desk";tr.append(deskCell);
+
+    const code=codes.get(p.id);
+    const codeCell=node("td","participant-code-cell");
+    codeCell.dataset.label="Code";
+    if(code){
+      codeCell.append(node("code","organizer-code",code));
+    }else{
+      const legacy=node("span","code-not-recoverable","Previously issued · Reissue to view");
+      legacy.title="This older code was created before the encrypted organizer vault. Reissue once to make a code visible here.";
+      codeCell.append(legacy);
+    }
+    tr.append(codeCell);
+
+    const shareCell=node("td","participant-invite-cell");
+    shareCell.dataset.label="Invitation";
     const whatsapp=button("WhatsApp ↗",()=>{
       try{openInvitation(p);}catch(error){toast(error.message,true);}
     });
-    whatsapp.disabled=!codes.has(p.id);
+    whatsapp.disabled=!code;
     const copy=button("Copy",run(async()=>{
       const copied=await copyTextWithFallback(shareText(p));
       if(copied)toast("Invitation copied.");
     }));
-    copy.disabled=!codes.has(p.id);
+    copy.disabled=!code;
     const openLink=node("a","small-outline link-action","Open player ↗");
     openLink.href=eventUrl();
     openLink.target="_blank";
     openLink.rel="noopener noreferrer";
     shareCell.append(whatsapp,copy,openLink);tr.append(shareCell);
-    const controls=node("td");
+
+    const controls=node("td","participant-manage-cell");
+    controls.dataset.label="Manage";
     const edit=button("Edit",run(async()=>{
       const display_name=prompt("Employee name",p.display_name);
       if(display_name===null)return;
@@ -233,11 +260,13 @@ function renderPeople(){
       await openEvent(event);toast("Participant updated.");
     }));
     edit.disabled=!!event.assignments_locked_at;
-    const rotate=button("New code",run(async()=>{
-      if(!confirm("Replace the code for "+p.display_name+"? The previous code will stop working."))return;
+    const rotate=button(code?"New code":"Reissue code",run(async()=>{
+      if(!confirm("Replace the invitation code for "+p.display_name+"? The previous code will stop working."))return;
       const updated=await api("rotate_code",{event_id:event.id,participant_id:p.id});
-      codes.set(p.id,updated.code);
-      await openEvent(event);toast("New private code generated.");
+      await openEvent(event);
+      if(!codes.has(p.id)&&updated.code)codes.set(p.id,updated.code);
+      renderPeople();
+      toast("Private invitation code generated and retained for the organizer.");
     }));
     controls.append(edit,rotate);tr.append(controls);tbody.append(tr);
   }
@@ -323,19 +352,6 @@ async function enterOffice(info){
     console.error("VCF office error:",error);
   }finally{officeLoading=null;}
 }
-function demoData(){
-  const names=["Aditi","Rohan","Neha","Arjun","Priya","Farhan","Meera","Karthik","Divya","Sneha","Siddharth","Ananya","Vivek","Tara","Rahul","Ishita","Krishna"];
-  const colleagues=names.map((name,i)=>({
-    id:"demo-colleague-"+i,name,desk_key:"D-"+String(i+1).padStart(2,"0")
-  }));
-  return {
-    preview:true,
-    event:{title:"VCF Christmas Office · Visual Preview",slug:"visual-preview",status:"demo",budget:500},
-    me:{id:"demo-player",display_name:"Guest explorer",avatar:{gender:"female",outfit:"salwar",skin:2,color:1,hairstyle:1},avatar_version:1,wishlist:[],wishlist_version:1},
-    colleagues,receivedTasks:[],myChild:null,hint:null,today:new Date().toLocaleDateString("en-CA")
-  };
-}
-
 const AVATAR_FIELDS=["gender","outfit","bottom","hairstyle","skin","hair","height","build","footwear"];
 function readAvatarEditor(){
   const result={schema_version:2};
@@ -360,10 +376,8 @@ function setAvatarEditor(values){
   $("avatar-glasses").checked=!!settings.glasses;
   $("avatar-height-out").textContent=Math.round(Number(settings.height)*100)+"%";
   $("avatar-build-out").textContent=Math.round(Number(settings.build)*100)+"%";
-  $("avatar-preview-status").textContent=player?.preview?
-    "Visual preview: customize freely. Saving is available after participant login.":
-    "Your changes preview immediately. Save when you are happy with your look.";
-  $("avatar-save").disabled=!!player?.preview;
+  $("avatar-preview-status").textContent="Your changes preview immediately. Save when you are happy with your look.";
+  $("avatar-save").disabled=false;
   avatarStudio?.update(settings);
   visualEditor?.refresh(activeStudioTab);
 }
@@ -418,7 +432,6 @@ $("avatar-reset").addEventListener("click",()=>{
 $("avatar-form").addEventListener("submit",run(async e=>{
   e.preventDefault();
   clearTimeout(avatarPreviewTimer);
-  if(player?.preview)throw Error("Sign in as a participant to save your avatar.");
   if(!player?.me?.id)throw Error("Please enter the office using your invitation code.");
   const avatar=readAvatarEditor();
   const result=await api("save_avatar",{avatar,version:player.me.avatar_version||1});
@@ -747,7 +760,6 @@ $("player-tab-character").addEventListener("click",()=>showPlayerTab("character"
 $("player-tab-personal").addEventListener("click",()=>showPlayerTab("personal"));
 $("player-sign-out").addEventListener("click",()=>{
   endSession();
-  if(PREVIEW)history.replaceState(null,"",location.pathname);
   toast("Exited the office.");
 });
 $("wishlist-form").addEventListener("submit",run(async e=>{
@@ -782,24 +794,8 @@ async function init(){
   snowfall();
   $("admin").classList.toggle("hidden",!ADMIN);
   $("welcome").classList.toggle("hidden",ADMIN);
-  if(PREVIEW){
-    player=demoData();
-    $("welcome").classList.add("hidden");
-    $("player").classList.remove("hidden");
-    document.body.classList.add("office-playing");
-    $("player-greeting").textContent="✦ Visual preview";
-    $("player-event-title").textContent=player.event.title;
-    $("personal-name").textContent=player.me.display_name;
-    $("player-hint-text").textContent="Preview-only mode: no Supabase account or private participant information is used.";
-    for(const id of ["wishlist-form","task-form"]){
-      $(id).querySelectorAll("input,button").forEach(x=>x.disabled=true);
-    }
-    for(const id of ["child-toggle","save-message","gift-purchased"])$(id).disabled=true;
-    await enterOffice(player);
-    return;
-  }
   // Keep the participant landing page focused on the invitation code.
-  // The event is identified by the ?event=... link when the code is submitted.
+  // Only real participants with event-specific codes may enter the office.
   try{
     const cached=JSON.parse(sessionStorage.getItem(SESSION_STORAGE_KEY)||"null");
     if(cached?.token&&cached.role===(ADMIN?"admin":"player")){
