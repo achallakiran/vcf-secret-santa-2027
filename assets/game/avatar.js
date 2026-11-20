@@ -1,9 +1,9 @@
 import * as THREE from "three";
-import {sculptHead,sculptFoot} from "./avatar-parts.js?v=visual-atelier-v3";
-import {sculptWardrobe} from "./wardrobe.js?v=visual-atelier-v3";
+import {sculptHead,sculptFoot} from "./avatar-parts.js?v=avatar-expanded-v1";
+import {sculptWardrobe} from "./wardrobe.js?v=avatar-expanded-v1";
 import {SKIN_COLORS as SKINS,HAIR_COLORS as HAIR,OUTFIT_COLORS as COLORS,FOOTWEAR_OPTIONS} from "./palette.js?v=visual-atelier-v3";
 import {clothMaterial} from "./visual-materials.js?v=visual-atelier-v3";
-import {sculptFaceVoxels,sculptHairVoxels,sculptGarmentVoxels,sculptSleeveVoxels,sculptShoeVoxels} from "./artisan-voxels.js?v=voxel-art-v5";
+import {sculptFaceVoxels,sculptHairVoxels,sculptGarmentVoxels,sculptSleeveVoxels,sculptShoeVoxels} from "./artisan-voxels.js?v=avatar-expanded-v1";
 /**
  * Hybrid voxel adults with modular, richly sculpted faces and contemporary Indian garments. No external or unverified character assets.
  * The body is rigged with real limb pivots and features layered face and hair meshes.
@@ -60,12 +60,18 @@ function resolve(opts={}){
     gender:n.gender==="female"?"female":"male",
     skin:Math.abs(Number(n.skin)||0)%SKINS.length,
     hair:Math.abs(Number(n.hair)||0)%HAIR.length,
-    hairstyle:Math.abs(Number(n.hairstyle)||0)%4,
-    outfit:["shirt","tshirt","suit","salwar","dress","sweater"].includes(n.outfit)?n.outfit:"shirt",
+    hairstyle:Math.abs(Number(n.hairstyle)||0)%20,
+    outfit:["shirt","tshirt","suit","salwar","dress","sweater","jacket","bomber","blazer"].includes(n.outfit)?n.outfit:"shirt",
     bottom:["jeans","trousers","leggings","palazzo"].includes(n.bottom)?n.bottom:"jeans",
     color:Number.isInteger(n.color)?Math.abs(n.color)%COLORS.length:0,
+    bottomColor:Number.isInteger(n.bottomColor)&&n.bottomColor>=0?n.bottomColor%COLORS.length:-1,
+    shoeColor:Number.isInteger(n.shoeColor)&&n.shoeColor>=0?n.shoeColor%COLORS.length:-1,
+    facialHair:["none","beard-short","beard-full","moustache-pencil","moustache-handlebar","combo-short","combo-full"].includes(n.facialHair)?
+      n.facialHair:(n.gender!=="female"&&[1,3].includes(n.hairstyle)?"combo-short":"none"),
+    glassesStyle:["none","round","rectangle","square","aviator","cat-eye"].includes(n.glassesStyle)?n.glassesStyle:(n.glasses?"rectangle":"none"),
+    glassesColor:Number.isInteger(n.glassesColor)?Math.abs(n.glassesColor)%COLORS.length:0,
     footwear:FOOTWEAR_OPTIONS.includes(n.footwear)?n.footwear:"auto",
-    glasses:!!n.glasses,
+    glasses:!!n.glasses||n.glassesStyle&&n.glassesStyle!=="none",
     height:Math.min(1.16,Math.max(.86,Number(n.height)||1)),
     build:Math.min(1.2,Math.max(.83,Number(n.build)||1))
   };
@@ -91,8 +97,9 @@ export function createAvatar(input={},mini=false){
   const isEthnic=p.outfit==="salwar";
   const top=cloth;
   const bottomColors={jeans:0x375476,trousers:0x394352,leggings:0x433c53,palazzo:0xe0c9af};
-  const bottom=isEthnic?mat(p.bottom==="leggings"?0xf1dfc3:0xe9d3be):
-    p.outfit==="dress"?cloth:mat(p.outfit==="suit"?new THREE.Color(COLORS[p.color]).offsetHSL(0,0,-.10):bottomColors[p.bottom]);
+  const defaultBottom=isEthnic?(p.bottom==="leggings"?0xf1dfc3:0xe9d3be):
+    p.outfit==="dress"?COLORS[p.color]:p.outfit==="suit"?new THREE.Color(COLORS[p.color]).offsetHSL(0,0,-.10):bottomColors[p.bottom];
+  const bottom=p.bottomColor>=0?mat(COLORS[p.bottomColor]):p.outfit==="dress"?cloth:mat(defaultBottom);
   // Lifts the whole avatar off its animation pivots.
   const hips=new THREE.Group();hips.position.y=1.04;body.add(hips);
   // Rebalanced to a cute miniature adult: broad, sculpted upper silhouette,
@@ -116,6 +123,23 @@ export function createAvatar(input={},mini=false){
     const dupatta=part(hips,.14,.86,.10,accent,-.29,.29,.31,.045);
     dupatta.rotation.z=-.11;
     part(hips,.23,.06,.07,mat(0xe1a66c),-.29,-.17,.34,.018);
+  }else if(["jacket","bomber","blazer"].includes(p.outfit)){
+    // Coat geometry layered over the rigged torso. Each outerwear piece has an
+    // independent color and distinct collar/front silhouette.
+    const bomber=p.outfit==="bomber",blazer=p.outfit==="blazer";
+    for(const side of [-1,1]){
+      const panel=part(hips,.33,blazer?.61:bomber?.56:.62,.125,top,side*.17,.36,.248,.065);
+      panel.rotation.z=side*(blazer?.055:.015);
+      part(hips,.16,blazer?.39:.28,.070,blazer?mat(0xdfd0be):accent,side*.13,.52,.328,.036).rotation.z=side*.22;
+      part(hips,.18,.04,.032,accent,side*.20,.19,.324,.012);
+    }
+    part(hips,.024,.49,.046,mat(bomber?0xd7ba89:0xd9d7cb),0,.38,.323,.012);
+    if(bomber){
+      part(hips,.74,.12,.53,mat(0x403b4c),0,.035,.02,.047);
+      for(const side of [-1,1])part(hips,.18,.10,.15,mat(0x403b4c),side*.31,.64,.09,.032);
+    }else if(p.outfit==="jacket"){
+      for(const side of [-1,1])part(hips,.16,.18,.038,mat(0xc5d6df),side*.195,.48,.335,.012);
+    }
   }else if(p.outfit==="suit"){
     part(hips,.22,.55,.025,white,0,.38,.228);
     part(hips,.075,.33,.032,mat(0xb4554b),0,.44,.257);
@@ -146,7 +170,7 @@ export function createAvatar(input={},mini=false){
     for(const side of [-1,1])part(hips,.034,.25,.024,accent,side*.29,-.06,.269,.012);
   }
   // Premium garment overlays preserve the known animation skeleton and save schema.
-  const sculptParams={...p,skinHex:SKINS[p.skin],hairHex:HAIR[p.hair],colorHex:COLORS[p.color]};
+  const sculptParams={...p,skinHex:SKINS[p.skin],hairHex:HAIR[p.hair],colorHex:COLORS[p.color],shoeHex:p.shoeColor>=0?COLORS[p.shoeColor]:null,bottomHex:p.bottomColor>=0?COLORS[p.bottomColor]:null,glassesHex:COLORS[p.glassesColor]};
   const kit={part,orb,mat};
   sculptWardrobe(hips,sculptParams,kit);
   // Dense 3D microvoxel stitchwork on the complete garment, front AND back.
@@ -169,7 +193,7 @@ export function createAvatar(input={},mini=false){
   // Animated shoulder and elbow joints. Both arms attach to torso.
   function arm(side){
     const pivot=new THREE.Group();pivot.position.set(side*.39*width,.64,0);hips.add(pivot);
-    const sleeveLong=p.outfit==="suit"||p.outfit==="shirt"||p.outfit==="salwar"||p.outfit==="sweater";
+    const sleeveLong=["suit","shirt","salwar","sweater","jacket","bomber","blazer"].includes(p.outfit);
     const sleeve=part(pivot,(sleeveLong?.256:.245)*width,sleeveLong?.365:.245,
       .32,top,side*.018,-.17,0,.11);
     const seam=part(pivot,.254*width,.055,.335,
