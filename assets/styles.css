@@ -657,3 +657,26 @@ body.office-playing #player-menu textarea{
   .atelier-preview .avatar-studio-canvas{height:315px}
   .atelier-panel{max-height:245px}
 }
+
+/* Full-body framing controls stay visible over the character stage. */
+.atelier-preview .studio-rotate{
+  display:flex;align-items:center;justify-content:center;gap:9px;
+  left:10px;right:10px;bottom:49px;
+}
+.atelier-preview .studio-rotate button{
+  width:38px;height:38px;flex:0 0 38px;border:1px solid #f4cda1bd;
+  background:#503c4fe8;color:#fff1d9;font-size:23px;
+  border-radius:12px;touch-action:manipulation;
+  box-shadow:0 2px 8px #47304b55;
+}
+.atelier-preview .studio-rotate button.studio-fit-control{
+  width:48px;flex-basis:48px;font-size:13px;font-weight:800;
+}
+.atelier-preview .studio-rotate button:focus-visible{
+  outline:3px solid #ffe7bd;outline-offset:2px;
+}
+@media(max-width:700px){
+  .atelier-preview .studio-rotate{gap:6px;bottom:44px}
+  .atelier-preview .studio-rotate button{width:35px;height:35px;flex-basis:35px;font-size:21px}
+  .atelier-preview .studio-rotate button.studio-fit-control{width:43px;flex-basis:43px}
+}
