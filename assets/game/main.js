@@ -312,6 +312,18 @@ export function mountOffice(host,profile,notice=()=>{}){
       const goalView=new THREE.Vector3().subVectors(look,camera.position).normalize();
       const newLook=lookPosition.lerp(goalView,Math.min(1,dt*3.3));
       camera.lookAt(camera.position.clone().add(newLook));
+      // Camera-safe roof decorations: hide only fixtures directly between the
+      // active camera and the avatar. Restore them when the sightline clears.
+      const sight=target.clone().add(new THREE.Vector3(0,1.25,0)).sub(camera.position);
+      const lengthSquared=sight.lengthSq();
+      for(const fixture of office.overhead||[]){
+        const point=new THREE.Vector3(fixture.x,fixture.y,fixture.z);
+        const rel=point.sub(camera.position);
+        const t=lengthSquared>0?Math.max(0,Math.min(1,rel.dot(sight)/lengthSquared)):0;
+        const projection=sight.clone().multiplyScalar(t);
+        const distance=rel.sub(projection).length();
+        fixture.object.visible=!(t>.07&&t<.91&&distance<fixture.radius);
+      }
     }
     if(clickMarker.group.visible){
       clickMarker.ring.rotation.z+=dt*.55;
@@ -329,9 +341,17 @@ export function mountOffice(host,profile,notice=()=>{}){
     setCamera,
     setProfile:applyProfile,
     playAction(name){
-      if(!hero)return;
+      if(!hero||!["hi","dance","clap","cheer"].includes(name))return false;
+      // Perform immediately: clearing movement makes the selected animation
+      // visible rather than being masked by walk motion.
+      path=[];
+      interactTarget=null;
+      clickMarker.group.visible=false;
       hero.play(name,clock.elapsedTime);
       selectedAction=name;
+      const messages={hi:"👋 Hello!",dance:"🕺 Time for a little dance!",clap:"👏 A round of applause!",cheer:"🎉 Merry Christmas!"};
+      notice(messages[name]);
+      return true;
     },
     goHome(){
       if(hero)moveTo(office.spawn.x,office.spawn.z);
