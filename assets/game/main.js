@@ -215,7 +215,10 @@ export function mountOffice(host,profile,notice=()=>{}){
     if(!hero)return;
     const x=hero.group.position.x,z=hero.group.position.z;
     const distance=people.map((p,i)=>({p,i,d:(p.seat.position.x-x)**2+(p.seat.position.z-z)**2})).sort((a,b)=>a.d-b.d);
-    const active=new Set(distance.slice(0,Math.min(20,people.length)).map(s=>s.i));
+    // Art Hero models are much richer than the initial placeholders. Prioritise
+    // the closest coworkers so a large 150-person office remains responsive.
+    const maxDetailed=window.innerWidth<700?8:14;
+    const active=new Set(distance.slice(0,Math.min(maxDetailed,people.length)).map(s=>s.i));
     people.forEach((p,i)=>{
       const yes=active.has(i);
       p.placeholder.visible=!yes;
