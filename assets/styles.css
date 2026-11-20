@@ -1174,3 +1174,25 @@ body.office-playing #player-menu textarea{
   #player-menu.player-menu{width:100%;border-radius:0}
   #player-menu #player-personal{padding:12px}
 }
+
+
+/* Accessory-only selections: never place eyeglasses or facial hair on a portrait tile. */
+.atelier-accessory-only .atelier-choice-art{
+  background:#fff4eb;border:1px solid #e5d0c9;border-radius:10px;
+  height:85px;padding:7px;
+}
+.atelier-accessory-only .atelier-choice-art img{
+  object-fit:contain;image-rendering:auto;border-radius:8px;
+}
+.atelier-accessory-only .atelier-choice-label{min-height:25px}
+.atelier-auto-color{
+  font-size:13px;font-weight:900;color:#4d3540;line-height:1;
+  background:linear-gradient(135deg,#fff9ef 0 50%,#c9b7aa 50% 100%)!important;
+}
+#player-menu #player-character .atelier-panel{scrollbar-color:#b56d87 #faede7}
+#player-menu .atelier-panel:focus-within{scroll-behavior:smooth}
+@media(max-width:620px){
+  .atelier-accessory-only .atelier-choice-art{height:70px}
+  #player-menu .atelier-card-grid:not(.atelier-card-grid-small){grid-template-columns:repeat(3,minmax(0,1fr))}
+  #player-menu .atelier-choice-label{overflow-wrap:anywhere}
+}
