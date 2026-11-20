@@ -89,6 +89,13 @@ export function createOfficeLife(people,hero,nav,announce=()=>{}){
     st.until=time+25;st.stuck=0;
     st.person.detailed.seated=false;
     st.person.detailed.setActivity("idle");
+    // Reserve the receiving coworker so they don't start a different task
+    // or walk away while their friend is en route to the desk.
+    target.mode="awaitingVisit";
+    target.partner=st;
+    target.until=time+27;
+    target.person.detailed.seated=true;
+    target.person.detailed.setActivity("typing");
     motions.add(st);return true;
   }
   function moveAlong(st,dt){
@@ -141,7 +148,7 @@ export function createOfficeLife(people,hero,nav,announce=()=>{}){
       if(st.mode==="visiting"||st.mode==="returning"){
         moving=!moveAlong(st,dt);
         if(!moving){
-          if(st.mode==="visiting"&&st.partner?.mode==="desk"&&dist(actor.group.position,st.partner.person.detailed.group.position)<2.75){
+          if(st.mode==="visiting"&&st.partner?.mode==="awaitingVisit"&&dist(actor.group.position,st.partner.person.detailed.group.position)<2.75){
             converseWith(st,st.partner,time);
           }else if(st.mode==="returning"){
             resumeDesk(st,time);
@@ -156,7 +163,8 @@ export function createOfficeLife(people,hero,nav,announce=()=>{}){
         st.mode="returning";st.partner=null;st.route=nav.find(actor.group.position,st.home);
         actor.setActivity("idle");
         if(!st.route.length)resumeDesk(st,time);
-      }else if((st.mode==="responding"||st.mode==="player"||st.mode==="awaiting")&&time>=st.until){
+      }else if((st.mode==="responding"||st.mode==="player"||
+        st.mode==="awaiting"||st.mode==="awaitingVisit")&&time>=st.until){
         if(dist(actor.group.position,st.home)<.9)resumeDesk(st,time);
         else{
           st.mode="returning";st.partner=null;
@@ -179,6 +187,12 @@ export function createOfficeLife(people,hero,nav,announce=()=>{}){
     const st=lookup.get(target?.id);
     if(!st)return;
     motions.delete(st);
+    // If another NPC is arriving, release that NPC's visit reservation.
+    if(st.partner&&st.partner.mode==="visiting"){
+      st.partner.route=[];
+      st.partner.mode="returning";
+      st.partner.route=nav.find(st.partner.person.detailed.group.position,st.partner.home);
+    }
     st.mode="awaiting";st.route=[];st.partner=null;
     st.until=time+18;
     st.person.detailed.setActivity("idle");
