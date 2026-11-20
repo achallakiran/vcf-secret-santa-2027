@@ -1,6 +1,6 @@
 
 "use strict";
-import {createVisualAvatarEditor} from "./game/avatar-editor.js?v=visual-atelier-v1";
+import {createVisualAvatarEditor} from "./game/avatar-editor.js?v=visual-atelier-v3";
 const GATEWAY="https://fwrievuhudjkeffmszqf.supabase.co/functions/v1/ss-gateway";
 const PUBLIC_KEY="sb_publishable_SJo2kgXdHNFZI65iAvQmxw_q56zuVLO";
 const PARAMS=new URLSearchParams(location.search);
@@ -296,7 +296,7 @@ async function enterOffice(info){
   }
   $("office-loading").classList.remove("hidden");
   officeLoading=(async()=>{
-    const module=await import("./game/main.js?v=visual-atelier-v1");
+    const module=await import("./game/main.js?v=visual-atelier-v3");
     officeRuntime=module.mountOffice($("office-canvas"),info,officeToast);
     let cam=null;
     try{cam=localStorage.getItem("vcf-ss-office-camera");}catch{}
@@ -459,7 +459,7 @@ async function ensureAvatarStudio(){
   if(avatarStudio||avatarStudioLoading||!officeRuntime||!player)return;
   if($("player-menu").classList.contains("hidden")||$("player-character").classList.contains("hidden"))return;
   avatarStudioLoading=(async()=>{
-    const module=await import("./game/studio.js?v=visual-atelier-v1");
+    const module=await import("./game/studio.js?v=visual-atelier-v3");
     if($("player-menu").classList.contains("hidden")||$("player-character").classList.contains("hidden"))return;
     avatarStudio=module.mountAvatarStudio($("avatar-studio-canvas"),readAvatarEditor());
     visualEditor?.refresh(activeStudioTab);
