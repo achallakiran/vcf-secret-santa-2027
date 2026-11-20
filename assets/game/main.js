@@ -171,8 +171,7 @@ export function mountOffice(host,profile,notice=()=>{}){
       office=buildOffice(total);scene.add(office.root);
       nav=new Navigation(office);
     }
-    for(const item of people)scene.remove(item.detailed?.group||item.placeholder?.parent||new THREE.Group());
-    // Explicitly remove previous NPC groups from the scene.
+    // Remove old NPC groups before updating the roster (never remove the Scene itself).
     for(const item of people){
       if(item.detailed)scene.remove(item.detailed.group);
       if(item.placeholder)scene.remove(item.placeholder);
