@@ -487,3 +487,173 @@ body.office-playing #player-menu textarea{
   .studio-camera-footer{flex-wrap:wrap}
   .studio-camera-footer #camera-reset{margin-left:auto}
 }
+
+/* Visual Avatar Atelier — reference-driven cream/rose/plum character creator.
+   No native dropdowns are visible; choices are images or nameless swatches. */
+#player-menu:has(#player-character:not(.hidden)){
+  width:min(1180px,calc(100vw - 22px));
+  background:linear-gradient(130deg,#fffaf6f9,#f9eae9fa 63%,#efe1e8f9);
+  color:#3e2941;border:1px solid #e8c8bb;
+  box-shadow:0 22px 85px #23132099;
+}
+#player-menu:has(#player-character:not(.hidden)) .section-head h3,
+#player-menu:has(#player-character:not(.hidden)) .section-head p,
+#player-menu:has(#player-character:not(.hidden)) .menu-tabs{color:#492d43}
+#player-menu:has(#player-character:not(.hidden)) .menu-tabs .tab.active{
+  background:#aa526e;color:#fff;border-color:#a14e6a
+}
+#player-menu:has(#player-character:not(.hidden)) .studio-camera-footer>span,
+#player-menu:has(#player-character:not(.hidden)) .camera-gesture-help{color:#755966}
+.avatar-atelier{
+  display:grid;
+  grid-template-columns:86px minmax(290px,.95fr) minmax(365px,1.15fr);
+  align-items:stretch;gap:13px;margin:15px 0 3px;min-height:506px;
+}
+.atelier-categories{
+  display:flex;flex-direction:column;gap:7px;padding:10px 6px;
+  background:#f7e9e8;border:1px solid #edcfd0;border-radius:17px;
+}
+.atelier-side-brand{text-align:center;color:#aa5c77;font-size:26px;margin:1px 0 6px}
+.atelier-category{
+  min-height:69px;display:flex;align-items:center;justify-content:center;
+  flex-direction:column;gap:4px;border:1px solid transparent;
+  border-radius:11px;background:transparent;color:#6b5060;
+  font-size:11px;font-weight:750;cursor:pointer;padding:5px 3px;
+}
+.atelier-category-icon{font-size:24px;line-height:1.15}
+.atelier-category.active,.atelier-category[aria-selected="true"]{
+  color:#8f3658;border-color:#daaab6;background:#fff6f2;
+  box-shadow:0 2px 12px #bb8c9e47;
+}
+.atelier-preview.character-preview-shell{
+  min-height:506px;border:1px solid #b99d8f;border-radius:17px;
+  background:radial-gradient(ellipse at 44% 43%,#f7efe4 4%,#d9b8ba 68%,#8c8296 120%);
+  box-shadow:inset 0 0 0 1px #fff9edba,0 13px 32px #71546637;
+}
+.atelier-preview.character-preview-shell::after{
+  background:linear-gradient(to bottom,transparent 71%,#4b425380 100%)
+}
+.atelier-preview .studio-brand strong{color:#fff8e9;font-size:18px;text-shadow:0 2px 8px #543a4c}
+.atelier-preview .studio-brand p{color:#fff4e9}
+.atelier-preview .studio-eyebrow{color:#ffddbb}
+.atelier-preview .avatar-studio-canvas{height:506px}
+.atelier-preview .studio-office-link{background:#70465ccf}
+.studio-workbench.atelier-options{
+  padding:18px 17px;background:#fffaf7;
+  border:1px solid #edcfcb;min-height:506px;box-shadow:0 11px 25px #9c6b7650;
+  color:#452c3e;
+}
+.atelier-options .studio-workbench-heading{
+  margin-bottom:10px;border-bottom:1px solid #f1dedd;padding-bottom:9px
+}
+.atelier-options .studio-workbench-heading h4{
+  color:#502a4a!important;font-size:22px!important;
+}
+.atelier-options .studio-eyebrow{color:#ae627f}
+.atelier-options .studio-holiday-mark{color:#ba607d}
+.atelier-panel{min-height:310px;max-height:407px;overflow:auto;overscroll-behavior:contain;
+  padding:3px 4px 9px;scrollbar-color:#d1a6ad transparent}
+.atelier-panel.hidden{display:none!important}
+.atelier-description{font-size:12px;color:#8a6974;line-height:1.48;margin:0 0 13px}
+.atelier-option-heading{color:#5e3b51;font-size:12px;font-weight:800;margin:13px 0 8px}
+.atelier-card-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px}
+.atelier-card-grid-two{grid-template-columns:repeat(2,minmax(0,1fr))}
+.atelier-card-grid-small{grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+.atelier-choice{
+  position:relative;min-width:0;min-height:136px;border:2px solid #edd5d0;
+  background:#fff7f0;color:#5b3e4a;border-radius:11px;overflow:hidden;
+  padding:5px;display:flex;flex-direction:column;align-items:center;gap:5px;
+  cursor:pointer;transition:background .14s,border-color .14s,transform .14s;
+}
+.atelier-card-grid-small .atelier-choice{min-height:100px}
+.atelier-choice.selected{
+  border-color:#b34971;background:#ffedf3;box-shadow:0 0 0 1px #e9a4b9;
+}
+.atelier-choice:hover{transform:translateY(-1px);background:#fff0e8}
+.atelier-choice-art{
+  display:grid;place-items:center;overflow:hidden;position:relative;
+  width:100%;height:105px;background:#ebded5;border-radius:8px;
+}
+.atelier-card-grid-small .atelier-choice-art{height:65px}
+.atelier-choice-art img{width:100%;height:100%;object-fit:cover;display:block;
+  opacity:0;transition:opacity .2s}
+.atelier-choice-art img.ready{opacity:1}
+.atelier-thumb-pending{position:absolute;inset:0;display:grid;place-items:center;
+  color:#ad7783;font-size:26px;pointer-events:none}
+.atelier-choice-art img.ready+.atelier-thumb-pending{display:none}
+.atelier-choice-label{font-size:11px;font-weight:700;line-height:1.15;text-align:center}
+.atelier-choice-selected{
+  position:absolute;top:5px;right:5px;width:22px;height:22px;
+  border-radius:50%;background:#a94571;color:#fff;font-size:14px;
+  display:none;place-items:center;box-shadow:0 1px 5px #61334a80;
+}
+.atelier-choice.selected .atelier-choice-selected{display:grid}
+.atelier-swatch-grid{display:flex;gap:10px;flex-wrap:wrap;padding:7px 0 11px}
+.atelier-swatch{
+  border:3px solid #f7f4ef;box-shadow:0 0 0 1px #c7a8a6;
+  width:36px;height:36px;flex:0 0 36px;border-radius:50%;
+  display:grid;place-items:center;background:var(--swatch);cursor:pointer;
+  padding:0;transition:transform .13s,box-shadow .13s;
+}
+.atelier-swatch.selected{box-shadow:0 0 0 2px #a13f65,0 2px 6px #7c495c80;transform:scale(1.08)}
+.atelier-swatch-check{
+  display:none;color:#aa4972;font-size:19px;font-weight:900;
+  text-shadow:0 0 3px #fff,0 0 1px #fff;
+}
+.atelier-swatch.selected .atelier-swatch-check{display:block}
+.atelier-swatch[style*="#000000"] .atelier-swatch-check,
+.atelier-swatch[style*="#1a1419"] .atelier-swatch-check,
+.atelier-swatch[style*="#171921"] .atelier-swatch-check{color:#fff;text-shadow:none}
+.atelier-hidden-values{display:none}
+.atelier-options .studio-save-bar{border-top:1px solid #e8ceca}
+.atelier-options .studio-save-bar p{color:#826774}
+.atelier-options .studio-reset{background:#fff3ee;border:1px solid #d5afb2;color:#86546b}
+.atelier-options .studio-save{background:#9f3f63;border:1px solid #9f3f63;color:#fff}
+.atelier-options .avatar-slider-grid label{color:#563748}
+.atelier-options .avatar-slider-grid input{accent-color:#af5a78}
+@media(max-width:960px){
+  .avatar-atelier{grid-template-columns:68px minmax(220px,1fr) minmax(260px,1.04fr);gap:8px}
+  .atelier-category{min-height:64px;font-size:10px}
+  .atelier-category-icon{font-size:20px}
+  .atelier-preview.character-preview-shell,.studio-workbench.atelier-options{min-height:425px}
+  .atelier-preview .avatar-studio-canvas{height:425px}
+  .atelier-card-grid{gap:5px}
+  .atelier-choice{min-height:115px}
+  .atelier-choice-art{height:86px}
+  .atelier-panel{max-height:320px}
+}
+@media(max-width:700px){
+  #player-menu:has(#player-character:not(.hidden)){
+    width:100%;border-radius:0;max-height:100svh;
+    padding:12px 13px 18px;
+  }
+  .avatar-atelier{grid-template-columns:1fr;gap:9px;margin-top:10px}
+  .atelier-categories{
+    order:0;display:flex;flex-direction:row;overflow-x:auto;
+    scroll-snap-type:x proximity;padding:6px;gap:3px;border-radius:11px
+  }
+  .atelier-side-brand{display:none}
+  .atelier-category{flex:1 0 65px;min-height:53px;scroll-snap-align:center}
+  .atelier-category-icon{font-size:19px}
+  .atelier-preview{order:1}
+  .atelier-options{order:2}
+  .atelier-preview.character-preview-shell{min-height:330px}
+  .atelier-preview .avatar-studio-canvas{height:330px}
+  .atelier-preview .studio-brand strong{font-size:13px}
+  .atelier-panel{min-height:160px;max-height:none;overflow:visible}
+  .studio-workbench.atelier-options{min-height:0;padding:12px}
+  .atelier-card-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .atelier-card-grid-small{grid-template-columns:repeat(4,minmax(0,1fr))}
+  .atelier-choice{min-height:120px}
+  .atelier-choice-art{height:87px}
+  .atelier-save-bar{position:sticky;bottom:0;z-index:8}
+  .atelier-options .studio-save-bar{
+    position:sticky;bottom:0;background:#fff8f3;padding:9px 4px;
+    border-radius:10px;box-shadow:0 -6px 16px #fff7ef
+  }
+}
+@media(max-height:520px) and (orientation:landscape){
+  .atelier-preview.character-preview-shell{min-height:315px}
+  .atelier-preview .avatar-studio-canvas{height:315px}
+  .atelier-panel{max-height:245px}
+}
