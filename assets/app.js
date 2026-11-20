@@ -798,12 +798,8 @@ async function init(){
     await enterOffice(player);
     return;
   }
-  if(EVENT_SLUG&&!ADMIN){
-    try{
-      const result=await api("event_info",{event_slug:EVENT_SLUG});
-      $("entry-event").textContent=result.event.title;
-    }catch(e){$("entry-event").textContent=e.message;}
-  }
+  // Keep the participant landing page focused on the invitation code.
+  // The event is identified by the ?event=... link when the code is submitted.
   try{
     const cached=JSON.parse(sessionStorage.getItem(SESSION_STORAGE_KEY)||"null");
     if(cached?.token&&cached.role===(ADMIN?"admin":"player")){
