@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#080d16"/>
   <meta name="description" content="Voxel Secret Santa — a thoughtful Christmas office mystery."/>
   <title>Voxel Secret Santa</title>
-  <link rel="stylesheet" href="./assets/styles.css?v=organizer-roster-v2"/>
+  <link rel="stylesheet" href="./assets/styles.css?v=admin-avatar-v1"/>
 </head>
 <body>
   <div class="snow" id="snow" aria-hidden="true"></div>
@@ -34,7 +34,7 @@
       <p class="muted">No email or Supabase account is needed. This PIN is verified securely on the server. Change the temporary PIN after entering.</p>
     </section>
     <section id="dashboard" class="hidden">
-      <div class="dashboard-row"><span id="signed-in-user" class="muted"></span><button id="refresh-events" class="small-outline">↻ Refresh</button></div>
+      <div class="dashboard-row"><span id="signed-in-user" class="hidden" aria-hidden="true"></span><button id="refresh-events" class="small-outline">↻ Refresh</button></div>
       <details class="panel pin-settings"><summary>Change administrator PIN</summary>
         <form id="pin-change-form" class="form-row">
           <label>Current PIN<input id="current-pin" type="password" maxlength="12" inputmode="numeric" autocomplete="off" required/></label>
@@ -48,18 +48,22 @@
         <div id="event-list" class="event-list"></div>
       </section>
       <section id="event-workspace" class="panel hidden">
-        <div class="section-head"><div><p class="eyebrow">ACTIVE WORKSPACE</p><h3 id="workspace-title"></h3><p id="workspace-slug" class="muted"></p><div class="workspace-links"><a id="workspace-open-link" class="small-outline link-action" href="#" target="_blank" rel="noopener noreferrer">Open participant page ↗</a><button id="workspace-copy-link" type="button" class="small-outline">Copy event URL</button></div></div><span id="workspace-state" class="chip"></span></div>
-        <div class="metrics"><div><strong id="people-count">0</strong><span>Employees</span></div><div><strong id="assignment-count">0</strong><span>Pairs</span></div><div><strong id="invite-count">0</strong><span>Codes visible to organizer</span></div></div>
-        <form id="participant-form" class="form-row">
-          <label class="grow">Employee name<input id="participant-name" placeholder="First and last name" maxlength="160" required/></label>
-          <label>Country code<select id="participant-country" aria-label="Phone country code"><option value="91" selected>🇮🇳 India +91</option><option value="1">🇺🇸 USA/Canada +1</option><option value="44">🇬🇧 UK +44</option><option value="971">🇦🇪 UAE +971</option><option value="65">🇸🇬 Singapore +65</option></select></label>
-          <label class="grow">Phone number (optional)<input id="participant-phone" placeholder="10-digit mobile number" type="tel" inputmode="numeric" maxlength="10" autocomplete="off" pattern="[0-9]{10}" title="Enter 10 digits without a country code"/></label>
+        <div class="section-head">
+          <div class="workspace-heading">
+            <p class="eyebrow">ACTIVE WORKSPACE</p><h3 id="workspace-title"></h3>
+            <div class="workspace-url-row">
+              <p id="workspace-slug" class="muted" aria-label="Event invitation URL"></p>
+              <button id="workspace-copy-link" type="button" class="small-outline" title="Copy event invitation URL" aria-label="Copy event URL">⧉ <span>Copy URL</span></button>
+            </div>
+          </div><span id="workspace-state" class="chip"></span>
+        </div>
+        <div class="metrics"><div><strong id="people-count">0</strong><span>Employees</span></div><div><strong id="assignment-count">0</strong><span>Pairs</span></div></div>
+        <form id="participant-form" class="form-row roster-add-form">
+          <label class="grow">Employee name<input id="participant-name" placeholder="Name" maxlength="160" required/></label>
           <label>Desk (optional)<input id="participant-desk" placeholder="D-01" maxlength="30"/></label>
-          <button class="primary" type="submit">+ Add</button>
+          <button class="primary" type="submit" aria-label="Add participant">＋ Add</button>
         </form>
-        <p class="muted small">Phone numbers are optional, never sent to Supabase or saved. They are used only to open your WhatsApp invitation.</p>
-        <p class="muted small">The organizer can view and copy each participant's current invitation code here, including after refreshing. Codes are stored encrypted and are not visible to participants. Keep them private.</p>
-        <div class="table-wrap"><table><thead><tr><th>Employee</th><th>Desk</th><th>Code</th><th>Invitation</th><th>Manage</th></tr></thead><tbody id="participant-rows"></tbody></table></div>
+        <div class="table-wrap"><table><thead><tr><th>Employee</th><th>Desk</th><th>Code</th><th>WhatsApp</th><th>Manage</th></tr></thead><tbody id="participant-rows"></tbody></table></div>
         <div class="assignment-box"><div><h3>Secret assignments</h3><p class="muted small">Everyone gives to one colleague and receives from one colleague. Assignments cannot be regenerated after locking.</p></div><button class="primary" id="assign-btn" type="button">🔒 Generate & lock assignments</button></div>
         <details id="assignment-details" class="hidden"><summary>Organizer-only pairings</summary><div id="pair-list"></div></details>
       </section>
@@ -237,18 +241,12 @@
       <button type="button" id="player-sign-out" class="small-outline">Exit to Christmas title</button>
     </section>
   </main>
-  <dialog id="invite-dialog" class="invite-dialog" aria-labelledby="invite-dialog-title">
-    <form id="invite-form">
-      <div class="section-head"><h3 id="invite-dialog-title">Share invitation</h3><button id="invite-cancel" type="button" class="small-outline" aria-label="Close">✕</button></div>
-      <p id="invite-person-name" class="muted"></p>
-      <div class="form-row">
-        <label>Country code<select id="invite-country"><option value="91" selected>🇮🇳 India +91</option><option value="1">🇺🇸 USA/Canada +1</option><option value="44">🇬🇧 UK +44</option><option value="971">🇦🇪 UAE +971</option><option value="65">🇸🇬 Singapore +65</option></select></label>
-        <label class="grow">Phone number<input id="invite-phone" type="tel" inputmode="numeric" autocomplete="off" maxlength="10" pattern="[0-9]{10}" placeholder="10 digits" required title="Enter 10 digits without country code"/></label>
-      </div>
-      <p class="muted small">Used once to open WhatsApp. The number isn't stored in the game or Supabase.</p>
-      <p id="invite-link-status" class="muted small" aria-live="polite">Enter ten digits to enable WhatsApp.</p>
-      <div class="button-row"><a id="invite-open-link" class="primary link-action is-disabled" href="#" target="_blank" rel="noopener noreferrer" aria-disabled="true" tabindex="-1">Open WhatsApp ↗</a><button type="button" id="invite-copy" class="secondary">Copy invite</button></div>
-    </form>
+  <dialog id="admin-avatar-dialog" class="admin-avatar-dialog" aria-label="Edit participant avatar">
+    <header class="admin-avatar-header">
+      <div><span class="eyebrow">ORGANIZER · CHARACTER STUDIO</span><h3 id="admin-avatar-name">Character</h3></div>
+      <button type="button" id="admin-avatar-close" class="small-outline" aria-label="Close character styling and return to admin">✕</button>
+    </header>
+    <div id="admin-avatar-editor-host"></div>
   </dialog>
   <div id="action-progress" class="action-progress hidden" role="status" aria-live="polite" aria-atomic="true">
     <div class="progress-card">
@@ -260,6 +258,6 @@
   <script type="importmap">
     {"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js"}}
   </script>
-  <script type="module" src="./assets/app.js?v=organizer-roster-v2"></script>
+  <script type="module" src="./assets/app.js?v=admin-avatar-v1"></script>
 </body>
 </html>
