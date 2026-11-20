@@ -1,4 +1,4 @@
-import {SKIN_COLORS,HAIR_COLORS,OUTFIT_COLORS,FOOTWEAR_OPTIONS} from "./palette.js?v=visual-atelier-v1";
+import {SKIN_COLORS,HAIR_COLORS,OUTFIT_COLORS,FOOTWEAR_OPTIONS} from "./palette.js?v=visual-atelier-v3";
 
 /**
  * Accessible thumbnail-based character selection, no user-facing dropdowns.
