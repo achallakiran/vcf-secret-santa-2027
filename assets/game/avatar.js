@@ -24,9 +24,13 @@ function part(parent,w,h,d,color,x,y,z,r=.055){
   const mesh=new THREE.Mesh(roundedBox(w,h,d,r),typeof color==="number"?mat(color):color);
   mesh.position.set(x,y,z);mesh.castShadow=true;mesh.receiveShadow=true;parent.add(mesh);return mesh;
 }
+const sphereGeometries=new Map();
 function orb(parent,r,color,x,y,z,sx=1,sy=1,sz=1){
-  const mesh=new THREE.Mesh(new THREE.IcosahedronGeometry(r,1),typeof color==="number"?mat(color):color);
-  mesh.position.set(x,y,z);mesh.scale.set(sx,sy,sz);mesh.castShadow=true;parent.add(mesh);return mesh;
+  // Reuse sphere geometry across generated avatars and live editor updates.
+  const key=r.toFixed(4);
+  if(!sphereGeometries.has(key))sphereGeometries.set(key,new THREE.IcosahedronGeometry(r,1));
+  const mesh=new THREE.Mesh(sphereGeometries.get(key),typeof color==="number"?mat(color):color);
+  mesh.position.set(x,y,z);mesh.scale.set(sx,sy,sz);mesh.castShadow=r>.11;parent.add(mesh);return mesh;
 }
 function ellipse(parent,w,h,color,x,y,z){
   return part(parent,w,h,.014,color,x,y,z,.04);
@@ -62,26 +66,46 @@ export function createAvatar(input={},mini=false){
   const torso=part(hips,.68*width,.72,.43,top,0,.37,0,.115);
   if(feminine){part(hips,.54*width,.11,.43,top,0,.01,.01);}
   if(isEthnic){
-    const tunic=part(hips,.72*width,.49,.51,top,0,-.025,0,.10);
-    part(hips,.36,.05,.02,accent,0,.18,.278);
-    part(hips,.63,.035,.03,accent,0,-.235,.279);
-    const dupatta=part(hips,.12,.69,.08,accent,-.24,.37,.26,.04);dupatta.rotation.z=-.1;
+    // Sculpted salwar suit with a longer hem, embroidered placket and draped dupatta.
+    part(hips,.77*width,.60,.55,top,0,-.07,0,.115);
+    part(hips,.72*width,.095,.58,accent,0,-.34,.005,.025);
+    for(let j=0;j<4;j++){
+      part(hips,.020,.085,.032,accent,0,.48-j*.13,.289,.01);
+      const bead=orb(hips,.018,0xf4d4a0,0,.50-j*.13,.313,.8,.8,.7);
+      bead.castShadow=false;
+    }
+    for(const x of [-.29,.29])part(hips,.048,.43,.039,accent,x,-.07,.291,.013);
+    const dupatta=part(hips,.14,.86,.10,accent,-.29,.29,.31,.045);
+    dupatta.rotation.z=-.11;
+    part(hips,.23,.06,.07,mat(0xe1a66c),-.29,-.17,.34,.018);
   }else if(p.outfit==="suit"){
     part(hips,.22,.55,.025,white,0,.38,.228);
     part(hips,.075,.33,.032,mat(0xb4554b),0,.44,.257);
-    part(hips,.32,.08,.035,top,0,.07,.26);
+    for(const side of [-1,1]){
+      const lapel=part(hips,.205,.42,.052,mat(0x44526c),side*.18,.49,.264,.032);
+      lapel.rotation.z=side*.20;
+      part(hips,.09,.035,.025,accent,side*.245,.22,.288,.012);
+    }
+    for(let j=0;j<2;j++)orb(hips,.016,0xc5ae8a,0,.23-j*.11,.294);
   }else if(p.outfit==="shirt"){
     part(hips,.13,.36,.02,white,0,.41,.228);
     part(hips,.21,.09,.025,mat(0xebdfd0),0,.7,.245);
     for(let i=0;i<3;i++)orb(hips,.018,0x755d4c,0,.53-i*.12,.252);
+  }else if(p.outfit==="tshirt"){
+    part(hips,.27,.055,.035,mat(0xf5eadb),0,.70,.238,.035);
+    const emblem=part(hips,.20,.15,.02,mat(0xf7e2a4),0,.43,.249,.05);
+    emblem.rotation.z=.07;
+    part(hips,.10,.03,.025,mat(0x42697f),0,.41,.271,.008);
   }else if(p.outfit==="sweater"){
     for(let i=0;i<4;i++){
       const t=part(hips,.61,.026,.025,mat(i%2?0xffeadc:0xd85d5d),0,.48-i*.085,.229,.01);
       if(i===0)t.scale.x=.78;
     }
   }else if(p.outfit==="dress"){
-    part(hips,.73,.45,.47,top,0,-.065,0,.12);
+    part(hips,.76,.49,.48,top,0,-.08,0,.11);
+    part(hips,.81,.11,.52,accent,0,-.30,0,.035);
     part(hips,.6,.04,.036,mat(0xe8cba6),0,.09,.275);
+    for(const side of [-1,1])part(hips,.034,.25,.024,accent,side*.29,-.06,.269,.012);
   }
   // Neck and expressive oversized head.
   part(hips,.22,.19,.22,skin,0,.82,0,.055);
@@ -99,16 +123,45 @@ export function createAvatar(input={},mini=false){
     const lock=part(headPivot,.20,.12,.18,hair,x,.58,.315,.035);
     lock.rotation.z=[.12,-.10,.08,-.16][i];
   }
-  if(feminine || p.hairstyle===2){
-    part(headPivot,.18,.52,.40,hair,-.39,.16,-.16,.075);
-    part(headPivot,.18,.53,.40,hair,.39,.16,-.16,.075);
-    part(headPivot,.54,.40,.20,hair,0,.12,-.36,.13);
-    if(p.hairstyle===1||p.hairstyle===3){
-      orb(headPivot,.20,hair,.42,.23,-.33,.75,1.45,.8);
-      part(headPivot,.14,.34,.13,mat(0xcaa076),.45,.06,-.37,.04);
+  // Hairstyle 0: bob/short textured, 1: layered mid-length, 2: long
+  // flowing hair, 3: tied ponytail. Same rig supports both genders.
+  if(p.hairstyle===0){
+    for(let j=0;j<5;j++){
+      const x=-.29+j*.145;
+      const strand=part(headPivot,.15,.16,.13,hair,x,.68,.31,.046);
+      strand.rotation.z=(j-2)*-.10;
+    }
+    if(feminine){
+      part(headPivot,.18,.27,.31,hair,-.38,.30,-.18,.065);
+      part(headPivot,.18,.27,.31,hair,.38,.30,-.18,.065);
     }
   }else if(p.hairstyle===1){
-    for(let i=0;i<4;i++)part(headPivot,.16,.18,.22,hair,-.26+i*.17,.78,-.09,.05);
+    for(let j=0;j<4;j++){
+      const x=-.26+j*.175;
+      part(headPivot,.15,.12,.15,hair,x,.68,.32,.038);
+    }
+    for(const side of [-1,1]){
+      const lock=part(headPivot,.17,.49,.30,hair,side*.39,.17,-.10,.06);
+      lock.rotation.z=side*.06;
+    }
+    part(headPivot,.55,.30,.16,hair,0,.11,-.37,.10);
+  }else if(p.hairstyle===2){
+    for(const side of [-1,1]){
+      for(let k=0;k<3;k++){
+        const strand=part(headPivot,.13,.62,.25,hair,side*(.28+k*.055),.03,-.10-k*.04,.055);
+        strand.rotation.z=side*(k*.08);
+      }
+    }
+    part(headPivot,.63,.60,.17,hair,0,-.01,-.38,.085);
+  }else{
+    part(headPivot,.68,.24,.18,hair,0,.25,-.38,.085);
+    const pony=orb(headPivot,.24,hair,.28,.30,-.44,.75,1.25,.84);
+    part(headPivot,.17,.53,.20,hair,.37,-.02,-.51,.075);
+    part(headPivot,.20,.06,.12,mat(0xddb58e),.34,.07,-.43,.035);
+    for(let j=0;j<3;j++){
+      const lock=part(headPivot,.16,.15,.13,hair,-.22+j*.22,.66,.30,.045);
+      lock.rotation.z=j*.09;
+    }
   }
   const eyes=mat(0x20212c),shine=mat(0xffffff),lips=mat(0xab5860),brow=mat(HAIR[p.hair]);
   for(const x of [-.17,.17]){
@@ -119,7 +172,17 @@ export function createAvatar(input={},mini=false){
     orb(headPivot,.091,0xeaaa89,x*1.35,.18,.34,.9,.55,.24);
   }
   orb(headPivot,.047,skin,0,.205,.378,.7,.75,.58);
-  ellipse(headPivot,.18,.035,lips,0,.105,.354);
+  // A curved sculpted smile instead of one flat horizontal mouth.
+  ellipse(headPivot,.15,.025,lips,0,.10,.365);
+  for(const side of [-1,1]){
+    const corner=orb(headPivot,.022,lips,side*.074,.115,.364,.65,.55,.48);
+    corner.castShadow=false;
+    if(feminine){
+      const earring=orb(headPivot,.036,0xe4c080,side*.426,.13,.055,.70,1.2,.6);
+      earring.castShadow=false;
+    }
+  }
+  part(headPivot,.20,.024,.028,mat(0xf2d1ba),0,.073,.352,.013);
   if(p.glasses){
     for(const x of [-.17,.17]){
       const rim=part(headPivot,.195,.16,.035,dark,x,.305,.367,.05);
@@ -138,6 +201,13 @@ export function createAvatar(input={},mini=false){
   lanyard.rotation.z=.21;
   part(hips,.20,.17,.035,white,.10,.18,.26,.02);
   part(hips,.13,.035,.04,mat(0x65908b),.10,.20,.282,.01);
+  // Seams, embroidered cuffs and a miniature pocket create believable
+  // contemporary garments when seen close-up in the 3D avatar studio.
+  if(!isEthnic&&p.outfit!=="dress"){
+    for(const side of [-1,1]){
+      part(hips,.11,.035,.032,accent,side*.225,.015,.242,.009);
+    }
+  }
   // Animated shoulder and elbow joints. Both arms attach to torso.
   function arm(side){
     const pivot=new THREE.Group();pivot.position.set(side*.39*width,.64,0);hips.add(pivot);
@@ -154,6 +224,11 @@ export function createAvatar(input={},mini=false){
     const tight=p.bottom==="leggings";
     const legWidth=(loose?.31:tight?.205:.245)*width;
     part(pivot,legWidth,.53,loose?.35:.31,bottom,0,-.255,0,.055);
+    // Jeans/trouser texture: slim vertical seam and fabric cuff.
+    if(!loose){
+      part(pivot,.014,.36,.02,mat(0x627589),side*.08,-.29,.163,.007);
+      part(pivot,legWidth+.018,.05,.325,mat(0x5a6670),0,-.49,0,.018);
+    }
     const shoe=isEthnic||p.outfit==="dress"?mat(0xb97756):mat(0xd6d1c7);
     part(pivot,.28,.13,.42,shoe,0,-.55,.10,.04);
     part(pivot,.29,.105,.43,isEthnic?mat(0x9b5c4f):mat(0xffffff),0,-.615,.12,.04);
