@@ -130,6 +130,17 @@ function snowfall(){
     $("snow").append(flake);
   }
 }
+async function copyTextWithFallback(text){
+  try{
+    if(!navigator.clipboard?.writeText)throw Error("Clipboard API unavailable");
+    await navigator.clipboard.writeText(text);
+    return true;
+  }catch{
+    // Mobile browsers can deny clipboard access; offer a selectable text prompt.
+    window.prompt("Copy this link or invitation:",text);
+    return false;
+  }
+}
 function eventUrl(){return location.origin+location.pathname+"?event="+encodeURIComponent(event.slug);}
 function shareText(p){
   const code=codes.get(p.id);
@@ -191,8 +202,8 @@ function renderPeople(){
     });
     whatsapp.disabled=!codes.has(p.id);
     const copy=button("Copy",run(async()=>{
-      await navigator.clipboard.writeText(shareText(p));
-      toast("Invitation copied.");
+      const copied=await copyTextWithFallback(shareText(p));
+      if(copied)toast("Invitation copied.");
     }));
     copy.disabled=!codes.has(p.id);
     const openLink=node("a","small-outline link-action","Open player ↗");
@@ -362,9 +373,8 @@ $("invite-open-link").addEventListener("click",e=>{
 $("workspace-copy-link").addEventListener("click",run(async()=>{
   if(!event)throw Error("Choose an event first.");
   const link=eventUrl();
-  if(navigator.clipboard?.writeText)await navigator.clipboard.writeText(link);
-  else window.prompt("Copy event URL:",link);
-  toast("Event URL copied. Send it to your colleagues.");
+  const copied=await copyTextWithFallback(link);
+  if(copied)toast("Event URL copied. Send it to your colleagues.");
 }));
 
 $("participant-phone").addEventListener("input",e=>{
@@ -390,8 +400,8 @@ $("invite-form").addEventListener("submit",e=>{
 });
 $("invite-copy").addEventListener("click",run(async()=>{
   const person=targetInvitation();
-  await navigator.clipboard.writeText(shareText(person));
-  toast("Invitation copied; no number was saved.");
+  const copied=await copyTextWithFallback(shareText(person));
+  if(copied)toast("Invitation copied; no number was saved.");
   closeInvitation();
 }));
 
