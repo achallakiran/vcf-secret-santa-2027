@@ -2,6 +2,7 @@ import * as THREE from "three";
 import {sculptHead,sculptFoot} from "./avatar-parts.js?v=visual-atelier-v1";
 import {sculptWardrobe} from "./wardrobe.js?v=visual-atelier-v1";
 import {SKIN_COLORS as SKINS,HAIR_COLORS as HAIR,OUTFIT_COLORS as COLORS,FOOTWEAR_OPTIONS} from "./palette.js?v=visual-atelier-v1";
+import {clothMaterial} from "./visual-materials.js?v=visual-atelier-v2";
 /**
  * Hybrid voxel adults with modular, richly sculpted faces and contemporary Indian garments. No external or unverified character assets.
  * The body is rigged with real limb pivots and features layered face and hair meshes.
@@ -83,14 +84,14 @@ export function createAvatar(input={},mini=false){
     root.add(shadow);
   }
   const skin=mat(SKINS[p.skin],.82),hair=mat(HAIR[p.hair],.80),
-        cloth=mat(COLORS[p.color],.90),dark=mat(0x272b3a),white=mat(0xfff4df);
+        cloth=clothMaterial(p.outfit,COLORS[p.color]),dark=mat(0x272b3a),white=mat(0xfff4df);
   const accent=mat(p.outfit==="salwar"?0xebbf87:0xe8d7b8);
   const width=p.build, feminine=p.gender==="female";
   const isEthnic=p.outfit==="salwar";
-  const top=p.outfit==="suit"?mat(0x2d3d59):cloth;
+  const top=cloth;
   const bottomColors={jeans:0x375476,trousers:0x394352,leggings:0x433c53,palazzo:0xe0c9af};
   const bottom=isEthnic?mat(p.bottom==="leggings"?0xf1dfc3:0xe9d3be):
-    p.outfit==="dress"?cloth:mat(p.outfit==="suit"?0x24324b:bottomColors[p.bottom]);
+    p.outfit==="dress"?cloth:mat(p.outfit==="suit"?new THREE.Color(COLORS[p.color]).offsetHSL(0,0,-.10):bottomColors[p.bottom]);
   // Lifts the whole avatar off its animation pivots.
   const hips=new THREE.Group();hips.position.y=1.04;body.add(hips);
   // Rebalanced to a cute miniature adult: broad, sculpted upper silhouette,
