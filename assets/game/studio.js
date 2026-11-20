@@ -203,7 +203,11 @@ export function mountAvatarStudio(host,appearance){
     }
     thumbCamera.lookAt(center);
     thumbCamera.updateProjectionMatrix();
+    // Save the logical viewport before switching to the thumbnail target.
+    // Restoring with canvas.width (physical pixels) was enlarging/cropping
+    // the main character preview on high-DPI devices.
     const previous=renderer.getRenderTarget();
+    const previousViewport=renderer.getViewport(new THREE.Vector4());
     try{
       renderer.setRenderTarget(thumbTarget);
       renderer.setViewport(0,0,thumbWidth,thumbHeight);
@@ -219,7 +223,7 @@ export function mountAvatarStudio(host,appearance){
       return thumbCanvas.toDataURL("image/webp",.83);
     }finally{
       renderer.setRenderTarget(previous);
-      renderer.setViewport(0,0,renderer.domElement.width,renderer.domElement.height);
+      renderer.setViewport(previousViewport);
       thumbScene.remove(sample.group);
       sample.group.traverse(obj=>{
         if(obj.isMesh){
