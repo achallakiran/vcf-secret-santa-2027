@@ -1,9 +1,14 @@
 const SUPABASE_URL = "https://fwrievuhudjkeffmszqf.supabase.co";
 const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_SJo2kgXdHNFZI65iAvQmxw_q56zuVLO";
-const SESSION_KEY = "vcf_ss_organizer_session";
+const SESSION_KEY = "vcf_ss_pin_admin_session";
+const PLAYER_KEY = "vcf_ss_player_session";
 const $ = (id) => document.getElementById(id);
 const param = new URLSearchParams(location.search);
 let session = null;
+let playerSession = null;
+let playerData = null;
+let showChild = false;
+let hintTimeout = null;
 let events = [];
 let activeEvent = null;
 let people = [];
@@ -32,6 +37,7 @@ function setBusy(busy) {
 }
 function withBusy(action) {
   return async function (...args) {
+    if (args[0]?.type === "submit" && args[0]?.preventDefault) args[0].preventDefault();
     if (loading) return;
     setBusy(true);
     try { await action(...args); }
@@ -39,18 +45,25 @@ function withBusy(action) {
     finally { setBusy(false); }
   };
 }
-async function request(path, options = {}) {
-  const resp = await fetch(SUPABASE_URL + path, {
-    ...options,
+async function gateway(action, values = {}, token = null) {
+  const response = await fetch(SUPABASE_URL + "/functions/v1/ss-gateway", {
+    method: "POST",
     headers: {
       "apikey": SUPABASE_PUBLISHABLE_KEY,
-      "Content-Type": "application/json",
-      ...(options.headers || {}),
-    }
+      ...(token ? {"Authorization":"Bearer "+token} : {}),
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({ action, ...values })
   });
-  const data = await resp.json().catch(() => ({}));
-  if (!resp.ok) throw Error(data.error_description || data.msg || data.error || data.message || ("Request failed (" + resp.status + ")"));
-  return data;
+  const result = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    if (response.status === 401 && token) {
+      if (session?.token === token) saveSession(null);
+      if (playerSession?.token === token) clearPlayerSession();
+    }
+    throw Error(result.error || "Request failed ("+response.status+").");
+  }
+  return result;
 }
 function saveSession(value) {
   session = value;
@@ -58,44 +71,27 @@ function saveSession(value) {
   else sessionStorage.removeItem(SESSION_KEY);
   paintAuth();
 }
-async function renewSession() {
-  if (!session?.refresh_token) throw Error("Please sign in again.");
-  try {
-    const result = await request("/auth/v1/token?grant_type=refresh_token", {
-      method: "POST", body: JSON.stringify({ refresh_token: session.refresh_token }),
-    });
-    saveSession(result);
-  } catch (error) {
-    saveSession(null);
-    throw error;
-  }
+function clearPlayerSession() {
+  playerSession = null;
+  playerData = null;
+  sessionStorage.removeItem(PLAYER_KEY);
+  $("player").classList.add("hidden");
+  if(!param.has("admin")) $("welcome").classList.remove("hidden");
 }
-async function organizerApi(action, values = {}, retry = true) {
-  if (!session?.access_token) throw Error("Please sign in.");
-  if (session.expires_at && Date.now() / 1000 > session.expires_at - 60) await renewSession();
-  const resp = await fetch(SUPABASE_URL + "/functions/v1/ss-organizer", {
-    method: "POST",
-    headers: {
-      "apikey": SUPABASE_PUBLISHABLE_KEY,
-      "Authorization": "Bearer " + session.access_token,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ action, ...values }),
-  });
-  const result = await resp.json().catch(() => ({}));
-  if (resp.status === 401 && retry) {
-    await renewSession();
-    return organizerApi(action, values, false);
-  }
-  if (!resp.ok) throw Error(result.error || "Organizer request failed.");
-  return result;
+function organizerApi(action, values = {}) {
+  if (!session?.token) throw Error("Enter your administrator PIN to continue.");
+  return gateway(action, values, session.token);
+}
+function playerApi(action, values = {}) {
+  if (!playerSession?.token) throw Error("Enter your invitation code to continue.");
+  return gateway(action, values, playerSession.token);
 }
 function paintAuth() {
-  const signedIn = !!session?.access_token;
+  const signedIn = !!session?.token;
   $("auth-area").classList.toggle("hidden", signedIn);
   $("dashboard").classList.toggle("hidden", !signedIn);
   $("sign-out").classList.toggle("hidden", !signedIn);
-  $("signed-in-user").textContent = signedIn ? (session.user?.email || "Signed in") : "";
+  $("signed-in-user").textContent = signedIn ? "Admin session active · expires after 8 hours" : "";
   if (!signedIn) {
     events = []; activeEvent = null; people = []; assignments = [];
     shownCodes.clear(); $("event-workspace").classList.add("hidden");
@@ -242,35 +238,37 @@ function makeSnow() {
     root.append(flake);
   }
 }
-$("entry-code").addEventListener("input", e=>{e.target.value=e.target.value.replace(/\D/g,"").slice(0,4);});
-$("entry-form").addEventListener("submit",e=>{
+$("entry-code").addEventListener("input", e => { e.target.value = e.target.value.replace(/\D/g,"").slice(0,4); });
+$("entry-form").addEventListener("submit", withBusy(async e => {
   e.preventDefault();
-  $("entry-note").textContent = "The office entrance is not activated yet. Your organizer can already create and distribute invitation codes.";
-});
-$("auth-form").addEventListener("submit",withBusy(async e=>{
+  const slug = param.get("event");
+  if (!slug) throw Error("Open the event-specific invitation link shared by your organizer, then enter your code.");
+  const result = await gateway("player_login", {event_slug:slug,code:$("entry-code").value});
+  playerSession = result;
+  sessionStorage.setItem(PLAYER_KEY,JSON.stringify(result));
+  $("entry-code").value = "";
+  await openPlayer();
+}));
+$("auth-form").addEventListener("submit", withBusy(async e => {
   e.preventDefault();
-  const email=$("auth-email").value.trim();
-  const password=$("auth-password").value;
-  const result=await request("/auth/v1/token?grant_type=password",{
-    method:"POST",body:JSON.stringify({email,password})
+  const result = await gateway("admin_login", {pin:$("auth-pin").value});
+  $("auth-pin").value = "";
+  saveSession(result);
+  await refreshEvents();
+  toast("Organizer console unlocked.");
+}));
+$("pin-change-form").addEventListener("submit", withBusy(async e => {
+  e.preventDefault();
+  const result = await organizerApi("change_admin_pin", {
+    current_pin:$("current-pin").value,new_pin:$("new-pin").value
   });
   saveSession(result);
-  $("auth-password").value="";
-  await refreshEvents();
-  toast("Welcome back, organizer.");
+  $("pin-change-form").reset();
+  toast("Administrator PIN changed. Older sessions are now invalid.");
 }));
-$("register-btn").addEventListener("click",withBusy(async()=>{
-  const email=$("auth-email").value.trim();
-  const password=$("auth-password").value;
-  if(!email||password.length<8) throw Error("Enter a valid email and a password of at least 8 characters.");
-  const result=await request("/auth/v1/signup",{method:"POST",body:JSON.stringify({email,password})});
-  if(result.access_token){saveSession(result);await refreshEvents();}
-  else toast("Account submitted. Confirm your email if Supabase sends a verification link, then sign in.");
-}));
-$("sign-out").addEventListener("click",async()=>{
-  const token=session?.access_token;
+$("sign-out").addEventListener("click", () => {
   saveSession(null);
-  if(token) await request("/auth/v1/logout",{method:"POST",headers:{"Authorization":"Bearer "+token}}).catch(()=>{});
+  toast("Organizer console locked.");
 });
 $("refresh-events").addEventListener("click",withBusy(refreshEvents));
 $("event-form").addEventListener("submit",withBusy(async e=>{
@@ -303,22 +301,198 @@ $("assign-btn").addEventListener("click",withBusy(async()=>{
   toast(data.assigned + " Santa–Child pairs generated.");
   await refreshEvents();
 }));
+
+// The player has no Supabase account: only an event-scoped invitation code.
+async function openPlayer() {
+  const data=await playerApi("player_dashboard");
+  playerData=data;
+  $("welcome").classList.add("hidden");
+  $("player").classList.remove("hidden");
+  $("player-greeting").textContent="✦ "+data.me.display_name;
+  $("player-event-title").textContent=data.event.title;
+  $("player-menu").classList.add("hidden");
+  $("player-pause").textContent="Ⅱ";
+  $("personal-name").textContent=data.me.display_name;
+  $("task-date").min=data.today;
+  $("task-date").value=data.today;
+  $("santa-message").value=data.myChild?.message||"";
+  $("gift-purchased").checked=!!data.myChild?.gift_purchased;
+  showChild=false;
+  $("child-toggle").textContent="◉ Reveal";
+  $("child-name").textContent=data.myChild ? "Name hidden" : "Assignments not generated yet";
+  renderPersonal();
+}
+async function refreshPlayer() {
+  playerData=await playerApi("player_dashboard");
+  renderPersonal();
+}
+function renderPersonal(){
+  if(!playerData)return;
+  const data=playerData;
+  const wishRoot=$("wishlist-items");
+  wishRoot.replaceChildren();
+  const list=data.me.wishlist||[];
+  if(!list.length)wishRoot.append(node("p","muted","Your wishlist is empty."));
+  for(const item of list){
+    const row=node("div","personal-item");
+    row.append(node("span","",item.text));
+    const remove=node("button","small-outline","✕");
+    remove.type="button";remove.title="Remove this wish";
+    remove.addEventListener("click",withBusy(async()=>{
+      const items=(playerData.me.wishlist||[]).filter(x=>x.id!==item.id);
+      const res=await playerApi("save_wishlist",{items,version:playerData.me.wishlist_version});
+      playerData.me.wishlist=res.wishlist;
+      playerData.me.wishlist_version=res.version;
+      renderPersonal();
+    }));
+    row.append(remove);wishRoot.append(row);
+  }
+  const received=$("received-tasks");
+  received.replaceChildren();
+  if(!data.receivedTasks?.length)received.append(node("p","muted","No tasks from your Santa yet."));
+  for(const task of data.receivedTasks||[]){
+    const row=node("div","personal-item");
+    row.append(node("span","",task.status==="completed"?"✓ ":"○ "));
+    row.append(node("span","",task.task_date+" · "+task.task_text));
+    row.append(node("span","task-status",task.status));
+    received.append(row);
+  }
+  $("child-name").textContent=!data.myChild ? "Not assigned yet" : showChild ? data.myChild.name : "Name hidden";
+  $("child-toggle").disabled=!data.myChild;
+  const childWish=$("child-wishlist");
+  childWish.replaceChildren();
+  if(!data.myChild?.wishlist?.length)childWish.append(node("p","muted","No wishlist items yet."));
+  for(const item of data.myChild?.wishlist||[])childWish.append(node("div","personal-item", "• "+item.text));
+  const assigned=$("assigned-tasks");
+  assigned.replaceChildren();
+  if(!data.myChild?.tasks?.length)assigned.append(node("p","muted","You haven't assigned any tasks yet."));
+  for(const task of data.myChild?.tasks||[]){
+    const row=node("label","personal-item");
+    const input=node("input");input.type="checkbox";input.checked=task.status==="completed";
+    input.disabled=task.status==="cancelled";
+    input.addEventListener("change",withBusy(async()=>{
+      await playerApi("complete_task",{task_id:task.id,completed:input.checked});
+      await refreshPlayer();
+    }));
+    row.append(input,node("span","",task.task_date+" · "+task.task_text));
+    assigned.append(row);
+  }
+  $("task-form").classList.toggle("hidden",!data.myChild);
+  $("save-message").disabled=!data.myChild;
+  $("gift-purchased").disabled=!data.myChild;
+}
+$("wishlist-form").addEventListener("submit",withBusy(async e=>{
+  e.preventDefault();
+  if(!playerData)return;
+  const val=$("wishlist-input").value.trim();
+  if(!val)return;
+  const items=[...(playerData.me.wishlist||[]),{id:crypto.randomUUID(),text:val}];
+  const res=await playerApi("save_wishlist",{items,version:playerData.me.wishlist_version});
+  playerData.me.wishlist=res.wishlist;
+  playerData.me.wishlist_version=res.version;
+  $("wishlist-input").value="";
+  renderPersonal();
+  toast("Wish added.");
+}));
+$("task-form").addEventListener("submit",withBusy(async e=>{
+  e.preventDefault();
+  const date=$("task-date").value;
+  const taskText=$("task-text").value.trim();
+  await playerApi("add_task",{task_date:date,task_text:taskText});
+  $("task-text").value="";
+  await refreshPlayer();
+  toast("Task assigned for "+date+".");
+}));
+$("save-message").addEventListener("click",withBusy(async()=>{
+  await playerApi("save_message",{message:$("santa-message").value});
+  toast("Message saved privately for the ceremony.");
+}));
+$("gift-purchased").addEventListener("change",withBusy(async()=>{
+  await playerApi("gift_status",{purchased:$("gift-purchased").checked});
+  toast("Gift status saved.");
+}));
+$("player-hint").addEventListener("click",()=>{
+  const clue=playerData?.hint || "Your personalized hint will appear when today's office clues are published.";
+  const text=$("player-hint-text");
+  text.textContent=clue;
+  text.classList.remove("hidden");
+  clearTimeout(hintTimeout);
+  hintTimeout=setTimeout(()=>text.classList.add("hidden"),9000);
+});
+$("player-pause").addEventListener("click",()=>{
+  const opening=$("player-menu").classList.contains("hidden");
+  $("player-menu").classList.toggle("hidden",!opening);
+  if(opening){
+    $("player-tab-personal").click();
+    refreshPlayer().catch(e=>toast(e.message,true));
+  }
+});
+$("player-close").addEventListener("click",()=>$("player-menu").classList.add("hidden"));
+$("child-toggle").addEventListener("click",()=>{
+  showChild=!showChild;
+  $("child-toggle").textContent=showChild?"◉ Hide":"◉ Reveal";
+  $("child-name").textContent=showChild?(playerData?.myChild?.name||"Not assigned yet"):"Name hidden";
+});
+$("player-tab-character").addEventListener("click",()=>selectTab("character"));
+$("player-tab-personal").addEventListener("click",()=>selectTab("personal"));
+function selectTab(name) {
+  for(const tab of ["character","personal"]){
+    $("player-"+tab).classList.toggle("hidden",tab!==name);
+    $("player-tab-"+tab).classList.toggle("active",tab===name);
+  }
+}
+$("player-sign-out").addEventListener("click",()=>{
+  clearPlayerSession();
+  toast("You have left the Christmas office.");
+});
+
 async function start() {
   makeSnow();
-  if(param.has("admin")) {$("admin").classList.remove("hidden");$("welcome").classList.add("hidden");}
-  try {
-    const existing=sessionStorage.getItem(SESSION_KEY);
-    if(existing) {
-      const restored=JSON.parse(existing);
-      if(restored?.access_token && restored.refresh_token) {
-        session=restored;
-        paintAuth();
-        await refreshEvents();
+  const isAdmin=param.has("admin");
+  if (isAdmin) {
+    $("admin").classList.remove("hidden");
+    $("welcome").classList.add("hidden");
+    try {
+      const old=sessionStorage.getItem(SESSION_KEY);
+      if (old) {
+        const restored=JSON.parse(old);
+        if (restored?.token) {
+          session=restored;
+          paintAuth();
+          await refreshEvents();
+        }
       }
+    } catch(error) {
+      saveSession(null);
+      toast("Administrator session expired. Please enter your PIN.",true);
     }
-  } catch(error) {
-    saveSession(null);
-    toast("Your organizer session expired. Please sign in again.",true);
+    return;
+  }
+  const slug=param.get("event");
+  if (!slug) {
+    $("entry-note").textContent="Ask your organizer for your event invitation link (which identifies the event).";
+  } else {
+    try {
+      const info=await gateway("event_info",{event_slug:slug});
+      $("entry-note").textContent="Invitation for "+info.event.title+" · Enter your private four-digit code.";
+      const title=info.event.title;
+      const year=title.match(/20\d{2}/)?.[0];
+      if(year) $("hero-year").textContent=year;
+    } catch(error) {
+      $("entry-note").textContent=error.message;
+    }
+  }
+  const stored=sessionStorage.getItem(PLAYER_KEY);
+  if(stored) {
+    try {
+      const restored=JSON.parse(stored);
+      if(restored?.token && restored.event?.slug === slug){
+        playerSession=restored;
+        await openPlayer();
+      }
+    } catch(error) {
+      clearPlayerSession();
+    }
   }
 }
 start();
