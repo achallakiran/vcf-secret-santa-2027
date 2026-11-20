@@ -475,7 +475,7 @@ export function mountOffice(host,profile,notice=()=>{}){
       previous.group.traverse(obj=>{
         if(obj.isMesh){
           const values=Array.isArray(obj.material)?obj.material:[obj.material];
-          values.forEach(m=>{if(m)materials.add(m);});
+          values.forEach(m=>{if(m&&!m.userData?.sharedVoxelMaterial)materials.add(m);});
         }
       });
       for(const material of materials)material.dispose();
