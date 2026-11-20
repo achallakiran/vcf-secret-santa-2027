@@ -29,6 +29,11 @@ export function createOfficeLife(people,hero,nav,announce=()=>{}){
     home:{...person.seat.position},stuck:0
   }));
   const lookup=new Map(states.map(s=>[s.person.id,s]));
+  for(let i=0;i<states.length;i++){
+    const actor=states[i].person.detailed;
+    actor.seated=true;
+    actor.setActivity(i%5===0?"coffee":i%7===0?"apple":"typing");
+  }
   const roamLimit=Math.min(7,Math.max(2,Math.ceil(states.length/18)));
   const motions=new Set();
   const candidateAngles=[0,.45,-.45,.90,-.90,1.45,-1.45,Math.PI];
@@ -136,7 +141,7 @@ export function createOfficeLife(people,hero,nav,announce=()=>{}){
       if(st.mode==="visiting"||st.mode==="returning"){
         moving=!moveAlong(st,dt);
         if(!moving){
-          if(st.mode==="visiting"&&st.partner?.mode==="desk"){
+          if(st.mode==="visiting"&&st.partner?.mode==="desk"&&dist(actor.group.position,st.partner.person.detailed.group.position)<2.75){
             converseWith(st,st.partner,time);
           }else if(st.mode==="returning"){
             resumeDesk(st,time);
@@ -151,8 +156,14 @@ export function createOfficeLife(people,hero,nav,announce=()=>{}){
         st.mode="returning";st.partner=null;st.route=nav.find(actor.group.position,st.home);
         actor.setActivity("idle");
         if(!st.route.length)resumeDesk(st,time);
-      }else if((st.mode==="responding"||st.mode==="player")&&time>=st.until){
-        resumeDesk(st,time);
+      }else if((st.mode==="responding"||st.mode==="player"||st.mode==="awaiting")&&time>=st.until){
+        if(dist(actor.group.position,st.home)<.9)resumeDesk(st,time);
+        else{
+          st.mode="returning";st.partner=null;
+          st.route=nav.find(actor.group.position,st.home);
+          actor.setActivity("idle");
+          if(!st.route.length)resumeDesk(st,time);
+        }
       }else if(st.mode==="desk"&&time>=st.next){
         const r=st.seed();
         if(r>.65&&beginVisit(st,time)){
@@ -163,6 +174,14 @@ export function createOfficeLife(people,hero,nav,announce=()=>{}){
       }
       actor.update(time,moving);
     }
+  }
+  function reserveForPlayer(target,time){
+    const st=lookup.get(target?.id);
+    if(!st)return;
+    motions.delete(st);
+    st.mode="awaiting";st.route=[];st.partner=null;
+    st.until=time+18;
+    st.person.detailed.setActivity("idle");
   }
   function interruptForHero(target,action,time){
     const st=lookup.get(target?.id);if(!st)return;
@@ -188,6 +207,6 @@ export function createOfficeLife(people,hero,nav,announce=()=>{}){
   function dispose(){
     motions.clear();lookup.clear();states.length=0;
   }
-  return {update,findApproach,interruptForHero,mimicNearby,dispose,
+  return {update,findApproach,reserveForPlayer,interruptForHero,mimicNearby,dispose,
     get states(){return states;},minDistance:GREETING_DISTANCE};
 }
