@@ -455,6 +455,9 @@ document.querySelectorAll("[data-studio-tab]").forEach(button=>
 );
 $("avatar-turn-left").addEventListener("click",()=>avatarStudio?.rotate(-Math.PI/5));
 $("avatar-turn-right").addEventListener("click",()=>avatarStudio?.rotate(Math.PI/5));
+$("avatar-zoom-out").addEventListener("click",()=>avatarStudio?.zoom(1.24));
+$("avatar-zoom-in").addEventListener("click",()=>avatarStudio?.zoom(.81));
+$("avatar-fit").addEventListener("click",()=>avatarStudio?.fit());
 async function ensureAvatarStudio(){
   if(avatarStudio||avatarStudioLoading||!officeRuntime||!player)return;
   if($("player-menu").classList.contains("hidden")||$("player-character").classList.contains("hidden"))return;
