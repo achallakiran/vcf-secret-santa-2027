@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import {decorateWorkstation,addWarmOfficeDetails} from "./environment-art.js";
-import {officeTileMaterial,applyOfficeTileRepeat,addOfficeLounge} from "./art-surfaces.js";
+import {officeTileMaterial,applyOfficeTileRepeat,addOfficeLounge} from "./art-surfaces.js?v=art-lod-v2";
 // Fully procedural office furniture, lights and festive scenery; no external models.
 const boxGeo=new THREE.BoxGeometry(1,1,1);
 boxGeo.userData.officeInstancing=true;
