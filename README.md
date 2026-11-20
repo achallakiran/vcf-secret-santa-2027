@@ -23,14 +23,12 @@ A holiday office Secret Santa experience, hosted as a static GitHub Pages fronte
 
 **Not implemented yet:** Full production-quality facial morphs, all contemporary Indian wardrobe variations and footwear choices, published office/day scene generation, truthful daily hints, or organizer-controlled final reveal. Phase 2B now includes a working initial avatar editor and secure per-player save, but visual fidelity still needs real-browser review and further polishing.
 
-## Optional WhatsApp sharing: no phone-number storage
+## WhatsApp invitations — no phone fields
 
-- Organizer entry asks for a **10-digit number** (optional) with a country-code dropdown defaulting to **India (+91)**. Do not enter +91 into the number field.
-- The field is strictly for WhatsApp sharing: after registering a person, a temporary sharing dialog displays the number locally. The number is never sent to the Supabase API and is cleared when the dialog closes.
-- If the number was omitted, the organizer can still generate a code and copy the invitation or use the WhatsApp button and enter a number in the temporary dialog.
-- The database table `ss_participant_private` has **no phone-number column**, and the `ss-gateway` Edge Function never accepts phone values. The legacy phone-capable registration function has been dropped.
-- The app does not store phone numbers in cookies, browser local/session storage, PostgreSQL or Supabase logs. Opening the WhatsApp link necessarily shares the destination number with WhatsApp/the browser, which have their own privacy practices.
-
+- Organizer participant registration asks only for **Name** and optional **Desk**.
+- Each row has a **WhatsApp** shortcut that opens WhatsApp's sharing/contact chooser with the participant's event URL and four-digit invitation code already in the message. The web app no longer asks for a phone number or country code and does not store either.
+- Event details show a selectable full URL immediately beside the **Copy URL** icon. Per-row **Copy** and **Open player** buttons and the redundant code-count metric were removed.
+- Active participant codes are visible to a signed-in organizer; the server keeps encrypted retrievable copies in addition to the one-way login verifiers.
 
 ## Phase 2A — first explorable voxel Christmas office (November 2026)
 
@@ -149,6 +147,18 @@ The `?admin=1` console automatically opens the most recently created event after
 Invitation codes remain visible as four digits **only to the signed-in organizer** after refresh. The server verifies the organizer token before returning codes. One-way event-specific fingerprints remain the participant-login verifier; separate AES-GCM encrypted envelopes in `ss_access_codes.code_vault` allow authorized repeat display. An organizer-only compatibility path restores old codes without changing those already shared. Codes must remain confidential and are never included in another participant's dashboard.
 
 The `?preview=1` fictional coworker mode has been removed. Without a real event-scoped invitation code, the home screen does not enter the office. The organizer must share the event link containing `?event=...` alongside each player's code.
+
+### Organizer character styling and mobile game stability
+
+- **Edit (✎)** on any employee opens the **same full-detail 3D styling panel** found in Pause → Character: actual rendered hairstyle/outfit options, unnamed color swatches including black/white, spectacles, shoes, height/build sliders, rotate and zoom controls, Reset and Save.
+- Organizer can update the employee's Name and Desk in that dialog. Once assignments have been locked, the backend continues to disallow name/desk edits, but avatar styling remains possible.
+- The dialog reuses the real player character styling DOM/renderer and preserves admin session context. Closing with ✕ or Escape always returns to the organizer roster; it never opens the playable office.
+- New organizer-only server action `admin_save_avatar` verifies the admin session, event, participant and avatar_version before saving. The participant's game profile uses the same saved appearance.
+- The admin participant list renders readable full names and compact icon actions, switching to stacked labeled cards on phone/tablet widths without horizontal scrolling.
+- The mobile game uses a stable `100svh` canvas size. The Three.js renderer applies the desired pixel ratio **before** allocating the framebuffer, and only resizes when the CSS width/height/DPR actually change, preventing sudden size jumps when interacting with buttons.
+- The old **Organizer unlocked** message, contact fields, obsolete explanations and participant-code count have been removed from the admin screen.
+
+**Verification:** source syntax, DOM-control wiring and authorization checks have passed. Full interactive browser rendering and responsive device QA remain outstanding.
 
 ## Deployment
 
