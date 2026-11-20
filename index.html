@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#080d16"/>
   <meta name="description" content="Voxel Secret Santa — a thoughtful Christmas office mystery."/>
   <title>Voxel Secret Santa</title>
-  <link rel="stylesheet" href="./assets/styles.css?v=admin-avatar-v1"/>
+  <link rel="stylesheet" href="./assets/styles.css?v=admin-avatar-v2"/>
 </head>
 <body>
   <div class="snow" id="snow" aria-hidden="true"></div>
@@ -31,7 +31,7 @@
         <label>Administrator PIN<input type="password" id="admin-pin" inputmode="numeric" pattern="[0-9]{4,12}" minlength="4" maxlength="12" autocomplete="off" placeholder="••••" required/></label>
         <button type="submit" class="primary" id="login-btn">Unlock organizer console →</button>
       </form>
-      <p class="muted">No email or Supabase account is needed. This PIN is verified securely on the server. Change the temporary PIN after entering.</p>
+      <p class="muted">Enter your organizer PIN to manage the event.</p>
     </section>
     <section id="dashboard" class="hidden">
       <div class="dashboard-row"><span id="signed-in-user" class="hidden" aria-hidden="true"></span><button id="refresh-events" class="small-outline">↻ Refresh</button></div>
@@ -68,7 +68,6 @@
         <details id="assignment-details" class="hidden"><summary>Organizer-only pairings</summary><div id="pair-list"></div></details>
       </section>
     </section>
-    <p class="admin-footer">PIN-based organizer access · No Supabase email/password required</p>
   </main>
   <main id="player" class="player page hidden">
     <div id="office-view" class="office-view">
@@ -263,6 +262,6 @@
   <script type="importmap">
     {"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js"}}
   </script>
-  <script type="module" src="./assets/app.js?v=admin-avatar-v1"></script>
+  <script type="module" src="./assets/app.js?v=admin-avatar-v2"></script>
 </body>
 </html>
