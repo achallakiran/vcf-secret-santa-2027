@@ -680,3 +680,154 @@ body.office-playing #player-menu textarea{
   .atelier-preview .studio-rotate button{width:35px;height:35px;flex-basis:35px;font-size:21px}
   .atelier-preview .studio-rotate button.studio-fit-control{width:43px;flex-basis:43px}
 }
+
+/* Organizer roster: full employee names and invitation codes stay visible.
+   Narrow screens show each participant as a readable labeled card. */
+#event-workspace .table-wrap{
+  overflow-x:auto;
+  -webkit-overflow-scrolling:touch;
+  max-width:100%;
+  border:1px solid #375148;
+  border-radius:12px;
+  background:#101e1bf2;
+}
+#event-workspace .table-wrap table{
+  white-space:normal;
+  table-layout:auto;
+  width:100%;
+  min-width:750px;
+  font-size:13px;
+}
+#event-workspace .table-wrap th,
+#event-workspace .table-wrap td{
+  vertical-align:middle;
+  padding:12px 10px;
+  text-align:left;
+}
+#event-workspace .participant-name-cell{
+  min-width:175px;
+  width:30%;
+  white-space:normal;
+  overflow-wrap:anywhere;
+  line-height:1.5;
+}
+#event-workspace .participant-full-name{
+  font-weight:760;
+  font-size:14px;
+  display:block;
+  white-space:normal;
+  overflow:visible;
+  text-overflow:clip;
+  color:#f7eee0;
+}
+#event-workspace .participant-inactive{
+  display:block;
+  color:#f5bd96;
+  font-size:11px;
+}
+#event-workspace .participant-code-cell{min-width:125px}
+#event-workspace .participant-code-cell code.organizer-code{
+  display:inline-block;
+  padding:8px 10px;
+  letter-spacing:.15em;
+  font-size:18px;
+  font-variant-numeric:tabular-nums;
+  background:#254735;
+  border:1px solid #528666;
+  border-radius:8px;
+  color:#ffdfa2;
+  user-select:all;
+  white-space:nowrap;
+}
+#event-workspace .code-not-recoverable{
+  color:#f6ca96;
+  font-size:11px;
+  white-space:normal;
+  display:block;
+  max-width:180px;
+}
+#event-workspace .participant-invite-cell,
+#event-workspace .participant-manage-cell{
+  min-width:170px;
+  white-space:normal;
+  line-height:2.8;
+}
+#event-workspace .participant-invite-cell>*,
+#event-workspace .participant-manage-cell>*{
+  margin:3px 5px 3px 0;
+  display:inline-block;
+}
+#event-workspace .participant-entry:nth-child(even){background:#1a2d28aa}
+#event-workspace .participant-entry:hover{background:#234137aa}
+@media(max-width:760px){
+  #event-workspace .table-wrap{
+    overflow:visible;
+    border:0;
+    background:transparent;
+  }
+  #event-workspace .table-wrap table{
+    width:100%;
+    min-width:0;
+    border:0;
+    display:block;
+  }
+  #event-workspace .table-wrap thead{display:none}
+  #event-workspace .table-wrap tbody{
+    display:grid;grid-template-columns:1fr;gap:12px;
+  }
+  #event-workspace .table-wrap tr.participant-entry{
+    display:grid;
+    gap:8px;
+    background:#192d26;
+    border:1px solid #456452;
+    border-radius:12px;
+    padding:13px 12px;
+    box-shadow:0 7px 20px #0002;
+  }
+  #event-workspace .table-wrap td{
+    display:grid;
+    grid-template-columns:84px minmax(0,1fr);
+    align-items:center;
+    gap:8px;
+    width:100%;
+    min-width:0;
+    border:0;
+    padding:3px 0;
+    line-height:1.45;
+    text-align:left;
+  }
+  #event-workspace .table-wrap td::before{
+    content:attr(data-label);
+    color:#a5bdab;
+    letter-spacing:.035em;
+    font-size:11px;
+    font-weight:740;
+  }
+  #event-workspace .participant-name-cell{
+    width:100%;
+    min-width:0;
+    border-bottom:1px solid #385548!important;
+    padding-bottom:11px!important;
+  }
+  #event-workspace .participant-full-name{
+    font-size:16px;
+    line-height:1.35;
+  }
+  #event-workspace .participant-invite-cell,
+  #event-workspace .participant-manage-cell{
+    min-width:0;
+    line-height:1.7;
+    display:block;
+  }
+  #event-workspace .participant-invite-cell::before,
+  #event-workspace .participant-manage-cell::before{
+    display:block;
+    margin-bottom:4px;
+  }
+  #event-workspace .participant-invite-cell>*,
+  #event-workspace .participant-manage-cell>*{
+    margin:3px 5px 3px 0;
+  }
+  #event-workspace .table-wrap td[colspan]{display:block}
+  #event-workspace .participant-code-cell code.organizer-code{font-size:19px}
+}
