@@ -248,10 +248,17 @@ export function createAvatar(input={},mini=false){
         right.pivot.rotation.z=1.05+Math.sin(motion*9+2)*.55;
         headPivot.rotation.z=Math.sin(motion*9)*.13;
       }else if(data.action==="clap"){
-        left.pivot.rotation.z=-1.1;right.pivot.rotation.z=1.1;
-        left.pivot.rotation.x=-1.05+Math.abs(wave)*.3;
-        right.pivot.rotation.x=-1.05+Math.abs(wave)*.3;
-        left.lower.rotation.z=-.48+wave*.23;right.lower.rotation.z=.48-wave*.23;
+        // Raise forearms INWARD in front of the chest. The previous shoulder
+        // signs extended both arms away from one another, so no clap occurred.
+        const together=Math.pow(Math.abs(wave),.7);
+        left.pivot.rotation.z=1.04+together*.17;
+        right.pivot.rotation.z=-1.04-together*.17;
+        left.pivot.rotation.x=-.90;
+        right.pivot.rotation.x=-.90;
+        left.lower.rotation.z=-.30+together*.12;
+        right.lower.rotation.z=.30-together*.12;
+        left.wrist.rotation.z=.10;
+        right.wrist.rotation.z=-.10;
       }else if(data.action==="cheer"){
         left.pivot.rotation.z=-2.5+wave*.18;right.pivot.rotation.z=2.5-wave*.18;
         hips.position.y+=Math.abs(wave)*.08;
