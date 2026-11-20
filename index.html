@@ -103,15 +103,93 @@
         <button type="button" class="tab" id="player-tab-personal">Personal</button>
       </div>
       <section id="player-character">
-        <p class="muted">Your cute procedural voxel avatar is visible in the office. Detailed appearance customization and saving will follow in Phase 2B.</p>
+        <div class="avatar-editor-heading">
+          <div>
+            <h4>Make your own cute voxel character</h4>
+            <p class="muted small">Contemporary Indian office fashion · Adults · Your appearance is private to edit and visible to colleagues in the office.</p>
+          </div>
+          <button id="avatar-view" type="button" class="secondary">◉ Inspect in office</button>
+        </div>
+        <form id="avatar-form" class="avatar-form">
+          <div class="avatar-controls">
+            <label>Avatar gender
+              <select id="avatar-gender"><option value="female">Female</option><option value="male">Male</option></select>
+            </label>
+            <label>Outfit
+              <select id="avatar-outfit">
+                <option value="shirt">Contemporary shirt</option>
+                <option value="tshirt">Modern T-shirt</option>
+                <option value="suit">Business suit</option>
+                <option value="salwar">Salwar suit</option>
+                <option value="dress">Modern dress</option>
+                <option value="sweater">Christmas sweater</option>
+              </select>
+            </label>
+            <label>Bottoms
+              <select id="avatar-bottom">
+                <option value="jeans">Denim jeans</option>
+                <option value="trousers">Formal trousers</option>
+                <option value="leggings">Fitted leggings</option>
+                <option value="palazzo">Palazzo / relaxed trousers</option>
+              </select>
+            </label>
+            <label>Hairstyle
+              <select id="avatar-hairstyle">
+                <option value="0">Short layered</option>
+                <option value="1">Textured / tied</option>
+                <option value="2">Long layered</option>
+                <option value="3">Long with ponytail</option>
+              </select>
+            </label>
+            <label>Skin tone
+              <select id="avatar-skin">
+                <option value="0">Warm ivory</option><option value="1">Golden beige</option>
+                <option value="2">Medium brown</option><option value="3">Deep brown</option>
+                <option value="4">Dark brown</option>
+              </select>
+            </label>
+            <label>Hair color
+              <select id="avatar-hair">
+                <option value="0">Natural black</option><option value="1">Dark brown</option>
+                <option value="2">Warm brown</option><option value="3">Mahogany</option>
+                <option value="4">Blue-black</option>
+              </select>
+            </label>
+          </div>
+          <label class="avatar-color-label">Clothing color</label>
+          <input id="avatar-color" type="hidden" value="0"/>
+          <div class="avatar-palette" role="group" aria-label="Clothing colors">
+            <button type="button" class="avatar-swatch selected" data-avatar-color="0" aria-label="Sage green" title="Sage green" style="--swatch:#4c816c"></button>
+            <button type="button" class="avatar-swatch" data-avatar-color="1" aria-label="Rose" title="Rose" style="--swatch:#c75b65"></button>
+            <button type="button" class="avatar-swatch" data-avatar-color="2" aria-label="Indigo" title="Indigo" style="--swatch:#385883"></button>
+            <button type="button" class="avatar-swatch" data-avatar-color="3" aria-label="Mustard" title="Mustard" style="--swatch:#d19d49"></button>
+            <button type="button" class="avatar-swatch" data-avatar-color="4" aria-label="Lavender" title="Lavender" style="--swatch:#765e8d"></button>
+            <button type="button" class="avatar-swatch" data-avatar-color="5" aria-label="Ivory" title="Ivory" style="--swatch:#e1ddd4"></button>
+          </div>
+          <div class="avatar-slider-grid">
+            <label>Height <output id="avatar-height-out" for="avatar-height">100%</output>
+              <input id="avatar-height" type="range" min=".86" max="1.16" step=".01" value="1"/>
+            </label>
+            <label>Body build <output id="avatar-build-out" for="avatar-build">100%</output>
+              <input id="avatar-build" type="range" min=".83" max="1.20" step=".01" value="1"/>
+            </label>
+          </div>
+          <label class="avatar-check"><input type="checkbox" id="avatar-glasses"/> Spectacles</label>
+          <div class="avatar-footer">
+            <p id="avatar-preview-status" role="status" aria-live="polite">Changes preview immediately on your character.</p>
+            <div class="button-row">
+              <button id="avatar-save" class="primary" type="submit">Save appearance</button>
+              <button id="avatar-reset" class="secondary" type="button">Restore saved look</button>
+            </div>
+          </div>
+        </form>
         <h4>Camera perspective</h4>
         <div class="camera-options" role="group" aria-label="Camera perspective">
           <button type="button" data-camera="three" class="camera-option selected">◈ Three-quarter follow</button>
           <button type="button" data-camera="close" class="camera-option">◉ Closer follow</button>
           <button type="button" data-camera="wide" class="camera-option">▣ Wide office view</button>
         </div>
-        <p class="muted small">Movement: tap or click the floor to walk. Tap an employee to greet them. The action button offers Hi, Dance, Clap or Cheer. No joystick or chat.</p>
-        <p class="muted small">Characters and office are drawn from original procedural geometry. Decorative items are everyday office objects, not monument artwork.</p>
+        <p class="muted small">Tap the floor to walk. Tap a colleague to greet. Tap the hand to perform Hi; hold or tap its small chevron to choose Dance, Clap, or Cheer.</p>
       </section>
       <section id="player-personal" class="hidden">
         <h3 id="personal-name"></h3>
