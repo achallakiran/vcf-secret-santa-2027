@@ -22,6 +22,7 @@ let session=null, busy=false, events=[],event=null,participants=[],assignments=[
 let officeRuntime=null,officeLoading=null,officeKey=null,officeNoticeTimer=null;
 let avatarBaseline=null,avatarPreviewTimer=null;
 let avatarStudio=null,avatarStudioLoading=null,activeStudioTab="look",visualEditor=null;
+let adminEditingParticipant=null;
 const codes=new Map();
 function toast(message,error=false){
   const el=$("toast");el.textContent=message;
@@ -49,7 +50,8 @@ const ACTION_STEPS={
   complete_task:"Updating task completion",
   gift_status:"Updating gift-purchase status",
   save_message:"Saving Santa's private message",
-  save_avatar:"Saving your voxel character"
+  save_avatar:"Saving your voxel character",
+  admin_save_avatar:"Saving participant avatar"
 };
 function showProgress(title,detail,state="loading"){
   clearTimeout(progressTimer);
@@ -125,7 +127,7 @@ function paintLogin(){
   $("auth-area").classList.toggle("hidden",yes);
   $("dashboard").classList.toggle("hidden",!yes);
   $("sign-out").classList.toggle("hidden",!yes);
-  $("signed-in-user").textContent=yes?"Organizer unlocked · no email required":"";
+  $("signed-in-user").textContent="";
   if(!yes)$("event-workspace").classList.add("hidden");
 }
 function snowfall(){
@@ -192,11 +194,9 @@ async function openEvent(e){
   }
   $("workspace-title").textContent=event.title;
   $("workspace-slug").textContent=eventUrl();
-  $("workspace-open-link").href=eventUrl();
   $("workspace-state").textContent=event.assignments_locked_at?"LOCKED":"OPEN";
   $("people-count").textContent=participants.length;
   $("assignment-count").textContent=assignments.length;
-  $("invite-count").textContent=codes.size;
   $("event-workspace").classList.remove("hidden");
   const locked=!!event.assignments_locked_at;
   $("participant-form").querySelectorAll("input,button").forEach(el=>el.disabled=locked);
@@ -206,70 +206,48 @@ async function openEvent(e){
 function renderPeople(){
   const tbody=$("participant-rows");tbody.replaceChildren();
   if(!participants.length){
-    const tr=node("tr"),td=node("td","muted","Add the first colleague above.");
-    td.colSpan=5;td.dataset.label="Employees";tr.append(td);tbody.append(tr);
+    const tr=node("tr"),td=node("td","muted","Add a participant above.");
+    td.colSpan=5;tbody.append(tr);tr.append(td);return;
   }
   for(const p of participants){
     const tr=node("tr","participant-entry");
-    const nameCell=node("td","participant-name-cell");
-    nameCell.dataset.label="Employee";
-    nameCell.title=p.display_name;
-    nameCell.append(node("strong","participant-full-name",p.display_name));
-    if(!p.is_active)nameCell.append(node("span","participant-inactive","Inactive"));
-    tr.append(nameCell);
-
-    const deskCell=node("td","participant-desk-cell",p.desk_key||"—");
-    deskCell.dataset.label="Desk";tr.append(deskCell);
-
+    const name=node("td","participant-name-cell");
+    name.dataset.label="Name";
+    name.title=p.display_name;
+    name.append(node("strong","participant-full-name",p.display_name));
+    if(!p.is_active)name.append(node("small","participant-inactive","Inactive"));
+    tr.append(name);
+    const desk=node("td","participant-desk-cell",p.desk_key||"—");
+    desk.dataset.label="Desk";tr.append(desk);
     const code=codes.get(p.id);
-    const codeCell=node("td","participant-code-cell");
-    codeCell.dataset.label="Code";
-    if(code){
-      codeCell.append(node("code","organizer-code",code));
-    }else{
-      const legacy=node("span","code-not-recoverable","Previously issued · Reissue to view");
-      legacy.title="This older code was created before the encrypted organizer vault. Reissue once to make a code visible here.";
-      codeCell.append(legacy);
-    }
+    const codeCell=node("td","participant-code-cell");codeCell.dataset.label="Code";
+    if(code)codeCell.append(node("code","organizer-code",code));
+    else codeCell.append(node("small","code-not-recoverable","Reissue to view"));
     tr.append(codeCell);
-
-    const shareCell=node("td","participant-invite-cell");
-    shareCell.dataset.label="Invitation";
-    const whatsapp=button("WhatsApp ↗",()=>{
-      try{openInvitation(p);}catch(error){toast(error.message,true);}
-    });
-    whatsapp.disabled=!code;
-    const copy=button("Copy",run(async()=>{
-      const copied=await copyTextWithFallback(shareText(p));
-      if(copied)toast("Invitation copied.");
-    }));
-    copy.disabled=!code;
-    const openLink=node("a","small-outline link-action","Open player ↗");
-    openLink.href=eventUrl();
-    openLink.target="_blank";
-    openLink.rel="noopener noreferrer";
-    shareCell.append(whatsapp,copy,openLink);tr.append(shareCell);
-
-    const controls=node("td","participant-manage-cell");
-    controls.dataset.label="Manage";
-    const edit=button("Edit",run(async()=>{
-      const display_name=prompt("Employee name",p.display_name);
-      if(display_name===null)return;
-      const desk_key=prompt("Desk code or blank",p.desk_key||"");
-      if(desk_key===null)return;
-      await api("edit_participant",{event_id:event.id,participant_id:p.id,display_name,desk_key,is_active:p.is_active});
-      await openEvent(event);toast("Participant updated.");
-    }));
-    edit.disabled=!!event.assignments_locked_at;
-    const rotate=button(code?"New code":"Reissue code",run(async()=>{
-      if(!confirm("Replace the invitation code for "+p.display_name+"? The previous code will stop working."))return;
-      const updated=await api("rotate_code",{event_id:event.id,participant_id:p.id});
-      await openEvent(event);
-      if(!codes.has(p.id)&&updated.code)codes.set(p.id,updated.code);
-      renderPeople();
-      toast("Private invitation code generated and retained for the organizer.");
-    }));
-    controls.append(edit,rotate);tr.append(controls);tbody.append(tr);
+    const inviteCell=node("td","participant-invite-cell");inviteCell.dataset.label="Share";
+    const wa=node("a","small-outline roster-whatsapp","◉ WhatsApp");
+    wa.title="Share invitation for "+p.display_name+" using WhatsApp";
+    wa.setAttribute("aria-label",wa.title);
+    if(code){
+      wa.href="https://api.whatsapp.com/send?text="+encodeURIComponent(shareText(p));
+      wa.target="_blank";wa.rel="noopener noreferrer";
+    }else{
+      wa.classList.add("is-disabled");wa.setAttribute("aria-disabled","true");wa.tabIndex=-1;
+    }
+    inviteCell.append(wa);tr.append(inviteCell);
+    const control=node("td","participant-manage-cell");control.dataset.label="Actions";
+    const edit=button("✎",()=>{void openAdminCharacterEditor(p);},"small-outline roster-icon-button");
+    edit.title="Edit "+p.display_name+" and style character";
+    edit.setAttribute("aria-label",edit.title);
+    const rotate=button("↻",run(async()=>{
+      if(!confirm("Replace the code for "+p.display_name+"? The old code will stop working."))return;
+      await api("rotate_code",{event_id:event.id,participant_id:p.id});
+      await openEvent(event);toast("New code generated.");
+    }),"small-outline roster-icon-button");
+    rotate.title=code?"Regenerate invitation code":"Issue readable invitation code";
+    rotate.setAttribute("aria-label",rotate.title);
+    control.append(edit,rotate);tr.append(control);
+    tbody.append(tr);
   }
 }
 function renderPairs(){
@@ -571,96 +549,11 @@ async function saveWishlist(wishes){
   toast("Wishlist saved.");
 }
 
-const transientInvite={participantId:null};
-function openInvitation(person,number="",country="91"){
-  if(!codes.has(person.id))throw Error("Generate a new invitation code before sharing.");
-  const dialog=$("invite-dialog");
-  transientInvite.participantId=person.id; // Only the participant ID is kept; never the phone number.
-  $("invite-person-name").textContent="Invitation for "+person.display_name;
-  $("invite-country").value=country;
-  $("invite-phone").value=number;
-  updateWhatsAppLink();
-  if(!dialog.open)dialog.showModal();
-}
-function closeInvitation(){
-  const dialog=$("invite-dialog");
-  $("invite-form").reset();
-  $("invite-phone").value="";
-  transientInvite.participantId=null;
-  clearWhatsAppLink();
-  if(dialog.open)dialog.close();
-}
-function targetInvitation(){
-  const person=participants.find(p=>p.id===transientInvite.participantId);
-  if(!person)throw Error("This invitation is no longer available. Open it again.");
-  return person;
-}
-function readTemporaryPhone(){
-  const number=$("invite-phone").value.replace(/\D/g,"");
-  const country=$("invite-country").value;
-  if(!/^[0-9]{10}$/.test(number))throw Error("Enter a 10-digit phone number without the country code.");
-  if(!["91","1","44","971","65"].includes(country))throw Error("Select a country code.");
-  return country+number;
-}
-
-function clearWhatsAppLink(){
-  const a=$("invite-open-link");
-  a.removeAttribute("href");a.classList.add("is-disabled");
-  a.setAttribute("aria-disabled","true");a.tabIndex=-1;
-  $("invite-link-status").textContent="Enter ten digits to enable WhatsApp.";
-}
-function updateWhatsAppLink(){
-  try{
-    const person=targetInvitation();
-    const number=readTemporaryPhone();
-    const href="https://wa.me/"+number+"?text="+encodeURIComponent(shareText(person));
-    const a=$("invite-open-link");
-    a.href=href;a.tabIndex=0;
-    a.classList.remove("is-disabled");a.setAttribute("aria-disabled","false");
-    $("invite-link-status").textContent="Ready — tap Open WhatsApp to open the invitation.";
-  }catch{clearWhatsAppLink();}
-}
-$("invite-country").addEventListener("change",updateWhatsAppLink);
-$("invite-open-link").addEventListener("click",e=>{
-  if(!$("invite-open-link").href||$("invite-open-link").classList.contains("is-disabled")){
-    e.preventDefault();toast("Enter a valid ten-digit number first.",true);return;
-  }
-  // Let native browser link navigation begin before the temporary number is cleared.
-  setTimeout(closeInvitation,250);
-});
 $("workspace-copy-link").addEventListener("click",run(async()=>{
   if(!event)throw Error("Choose an event first.");
   const link=eventUrl();
   const copied=await copyTextWithFallback(link);
   if(copied)toast("Event URL copied. Send it to your colleagues.");
-}));
-
-$("participant-phone").addEventListener("input",e=>{
-  e.target.value=e.target.value.replace(/\D/g,"").slice(0,10);
-});
-$("invite-phone").addEventListener("input",e=>{
-  e.target.value=e.target.value.replace(/\D/g,"").slice(0,10);
-  updateWhatsAppLink();
-});
-$("invite-cancel").addEventListener("click",closeInvitation);
-$("invite-dialog").addEventListener("close",()=>{
-  $("invite-phone").value="";
-  transientInvite.participantId=null;
-  clearWhatsAppLink();
-});
-$("invite-form").addEventListener("submit",e=>{
-  e.preventDefault();
-  // WhatsApp opens through the native anchor, not window.open() popup.
-  updateWhatsAppLink();
-  if($("invite-open-link").classList.contains("is-disabled")){
-    toast("Enter a valid ten-digit number.",true);
-  }
-});
-$("invite-copy").addEventListener("click",run(async()=>{
-  const person=targetInvitation();
-  const copied=await copyTextWithFallback(shareText(person));
-  if(copied)toast("Invitation copied; no number was saved.");
-  closeInvitation();
 }));
 
 $("entry-code").addEventListener("input",e=>{
@@ -700,22 +593,13 @@ $("event-form").addEventListener("submit",run(async e=>{
 }));
 $("participant-form").addEventListener("submit",run(async e=>{
   e.preventDefault();
-  // Collect a local, optional contact only for sharing. Never send it to Supabase.
-  const phone=$("participant-phone").value.replace(/\D/g,"");
-  const country=$("participant-country").value;
-  if(phone && !/^[0-9]{10}$/.test(phone))throw Error("Please enter a 10-digit phone number, without the country code.");
   const result=await api("add_participant",{
     event_id:event.id,display_name:$("participant-name").value,
     desk_key:$("participant-desk").value.trim()
   });
-  codes.set(result.id,result.code);
-  const personName=$("participant-name").value.trim();
   $("participant-form").reset();
   await openEvent(event);
-  toast("Participant registered. Share their code privately.");
-  if(phone){
-    openInvitation({id:result.id,display_name:personName},phone,country);
-  }
+  toast("Participant added. Use WhatsApp to share their invitation privately.");
 }));
 $("assign-btn").addEventListener("click",run(async()=>{
   if(!event||!confirm("Lock Santa–Child assignments? You cannot change the roster afterward."))return;
