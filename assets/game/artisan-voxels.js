@@ -253,7 +253,7 @@ export function sculptHairVoxels(head,p){
   if(cut>=21){
     // Micro-voxel plait highlights follow the articulated braid, with a
     // left/right crossover that distinguishes a choti from a straight tail.
-    const twin=cut===23,count=cut===22?23:twin?15:18;
+    const twin=cut===23,count=cut===22?17:twin?12:14;
     for(const center of (twin?[-.34,.34]:[0])){
       const startZ=twin?-.48:-.58;
       for(let j=0;j<count;j++){
