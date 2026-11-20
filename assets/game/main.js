@@ -1,7 +1,6 @@
 import * as THREE from "three";
 import {buildOffice} from "./office.js?v=art-lod-v2";
 import {createAvatar,avatarFromPerson} from "./avatar.js?v=art-lod-v2";
-import {createInstancedCrowd} from "./crowd.js?v=art-lod-v2";
 
 /* A responsive office runtime. 3D art and camera are independent from the existing Supabase UI. */
 const UP=new THREE.Vector3(0,1,0);
@@ -164,7 +163,7 @@ export function mountOffice(host,profile,notice=()=>{}){
   scene.add(sun,sun.target);
   const camera=makeCamera(scene,renderer);
   const ray=new THREE.Raycaster(),pointer=new THREE.Vector2(),ground=new THREE.Plane(new THREE.Vector3(0,1,0),0);
-  let office,nav,hero,markers,crowd=null,currentProfile,people=[],mode="three",path=[],clock=new THREE.Clock(),
+  let office,nav,hero,markers,currentProfile,people=[],mode="three",path=[],clock=new THREE.Clock(),
       running=true,paused=false,lastRefresh=0,requestId=0,selectedAction="hi",interactTarget=null;
   let cameraYaw=2.65,cameraPitch=MODES.three.pitch,targetCameraPitch=MODES.three.pitch;
   let zoom=1,manualOrbit=false;
@@ -183,9 +182,8 @@ export function mountOffice(host,profile,notice=()=>{}){
       office=buildOffice(total);scene.add(office.root);
       nav=new Navigation(office);
     }
-    // Retire old coworker LOD batches and previously created nearby rigs.
-    // Group and geometry are independent from the permanent office scene.
-    if(crowd){scene.remove(crowd.group);crowd.dispose();crowd=null;}
+    // Every colleague is a fully sculpted, articulated avatar. No low-detail
+    // substitutes, impostors, or distance-dependent replacement models.
     for(const item of people){
       if(item.detailed){
         scene.remove(item.detailed.group);
@@ -208,44 +206,13 @@ export function mountOffice(host,profile,notice=()=>{}){
     }
     roster.forEach((p,i)=>{
       const seat=office.seats[i+1]||office.seats[0];
-      const ap=avatarFromPerson({id:p.id||p.name,name:p.name,avatar:p.avatar},i);
-      people.push({id:p.id,name:p.name||"Colleague",seat,appearance:ap,detailed:null,lastUsed:-1});
-    });
-    // Every coworker gets a three-dimensional expressive doll even when far.
-    // This replaces >100 old generic box placeholders with THREE instancing.
-    crowd=createInstancedCrowd(people);
-    scene.add(crowd.group);
-    refreshNpcs();
-  }
-  function refreshNpcs(){
-    if(!hero)return;
-    const x=hero.group.position.x,z=hero.group.position.z;
-    const distance=people.map((p,i)=>({p,i,d:(p.seat.position.x-x)**2+(p.seat.position.z-z)**2})).sort((a,b)=>a.d-b.d);
-    // All coworkers always retain a recognisable face, hair and outfit.
-    // Nearby colleagues additionally use full articulated models; the far
-    // versions are THREE.InstancedMesh dolls, just three draw batches.
-    const maxDetailed=window.innerWidth<700?8:14;
-    const active=new Set(distance.slice(0,Math.min(maxDetailed,people.length)).map(s=>s.i));
-    crowd?.setDetailed(active);
-    people.forEach((p,i)=>{
-      const yes=active.has(i);
-      if(yes&&!p.detailed){
-        p.detailed=createAvatar(p.appearance);
-        p.detailed.group.position.set(p.seat.position.x,0,p.seat.position.z);
-        p.detailed.group.rotation.y=p.seat.facing;
-        p.detailed.seated=true;
-        scene.add(p.detailed.group);
-      }
-      if(p.detailed)p.detailed.group.visible=yes;
-      if(yes)p.lastUsed=lastRefresh;
-      // Retain a small reserve of sculpted rigs, not all 149 as the player
-      // traverses the hall. The instanced character immediately replaces any
-      // evicted full-detail rig without changing the stored appearance.
-      if(!yes&&p.detailed&&lastRefresh-p.lastUsed>5){
-        scene.remove(p.detailed.group);
-        releaseCharacterMaterials(p.detailed);
-        p.detailed=null;
-      }
+      const appearance=avatarFromPerson({id:p.id||p.name,name:p.name,avatar:p.avatar},i);
+      const detailed=createAvatar(appearance);
+      detailed.group.position.set(seat.position.x,0,seat.position.z);
+      detailed.group.rotation.y=seat.facing;
+      detailed.seated=true;
+      scene.add(detailed.group);
+      people.push({id:p.id,name:p.name||"Colleague",seat,appearance,detailed});
     });
   }
   function setCamera(id){
@@ -440,7 +407,6 @@ export function mountOffice(host,profile,notice=()=>{}){
         interactTarget.detailed?.play("hi",elapsed);interactTarget=null;
       }
       hero.update(elapsed,moving);
-      if(elapsed-lastRefresh>.9){lastRefresh=elapsed;refreshNpcs();}
       for(const p of people){
         if(p.detailed?.group.visible)p.detailed.update(elapsed,false);
       }
@@ -535,7 +501,6 @@ export function mountOffice(host,profile,notice=()=>{}){
       canvas.removeEventListener("pointercancel",cancel);
       canvas.removeEventListener("wheel",wheel);
       for(const p of people)if(p.detailed)releaseCharacterMaterials(p.detailed);
-      if(crowd){scene.remove(crowd.group);crowd.dispose();crowd=null;}
       renderer.dispose();host.replaceChildren();
     }
   };
