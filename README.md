@@ -54,13 +54,29 @@ The participant-code flow now opens a new procedural Three.js 3D office scene in
 
 ```
 assets/game/
-  avatar.js        # authored articulated procedural character geometry
-  office.js        # scalable workstations, walls, window, decorations and celebration area
-  main.js          # rendering, camera, A* navigation, actions and nearby NPC details
-  studio.js        # high-detail rotatable character stage, lighting and orbit controls
+  avatar.js          # authored articulated procedural character geometry and shared rig
+  avatar-parts.js    # expressive face, layered hair, modeled footwear
+  wardrobe.js        # actual contemporary Indian garment sculptures and detailing
+  office.js          # scalable workstations, walls, window, decorations and celebration area
+  environment-art.js # original screens, workstations, posters and wall details
+  main.js            # rendering, camera, A* navigation, actions and nearby NPC details
+  studio.js          # high-detail rotatable character stage, lighting and orbit controls
 ```
 
 The Three.js module is loaded at a pinned CDN version via an import map. This new game scene requires network access and WebGL; the previous static login/backend screens remain as before. We have checked module syntax, DOM references, a mocked run of scalable office generation, avatar animation-rig calls, and representative navigation routes. **Full browser rendering, visual fidelity relative to the reference image, performance on real mobile phones, and end-to-end GitHub Pages gameplay still require live verification.**
+
+### Art Hero v1 — first implemented character & environment overhaul
+
+This revision is **implemented in `main`**, rather than a future plan. It is the first art milestone, **not a claim that the visual benchmark has already been met**.
+
+- **Original character sculpture:** `avatar-parts.js` creates softer voxel face contours, layered eyes/sclera/iris/catchlights, eyebrows, cheeks, short smiling mouth, sculpted ears, optional earrings, eyewear, hairstyle-specific layered locks, long hair and ponytail, conditional adult facial hair, and modelled sneaker/formal/ethnic shoes. Male and female bodies share the existing articulated rig and animation pivots.
+- **Fashion construction:** `wardrobe.js` adds garment geometry for contemporary shirts, T-shirts, suits, salwar suits, dresses and festive knitwear: hems, embroidered trim, shaped dupatta, blazer panels/lapels, collars, cuffs, fabric detail, lanyards, seams and sculpted accessories. All previously saved avatar JSON schema fields remain valid and personal avatar saving remains through the existing Supabase function.
+- **Workstation art:** `environment-art.js` creates original Christmas monitor wallpapers with multiple looks, shaped desk stationery, planters, paper stacks, small gifts, framed office posters and wall accent lighting. No monument graphics or unverified external models are used.
+- **Furniture silhouettes:** Desk tops, partitions, swivel-chair backs and seating now have cached beveled voxel geometry instead of being entirely hard-edged boxes. Repeated pieces still support office instancing.
+- **LOD:** High-detail nearby coworkers are capped at 8 on narrow/mobile viewports and 14 on wider viewports; distant colleagues retain lightweight placeholder representation. The hero player uses the detailed model throughout.
+- **Preserved behavior:** camera presets, drag-to-orbit, pinch-to-zoom, tap-to-walk, HUD, blackbox passages, organizer console, invitation login, private data and existing stage remain unchanged.
+
+**Verified in this turn:** syntax of the updated modules and scripted construction/animation of six garment variants; office generation at 1, 12 and 45 participants. Actual fidelity to the supplied screenshots, iPhone Safari performance, live browser rendering and animation appeal remain **unverified** until testing.
 
 **Next milestone:** real-device visual QA of the new touch camera, wide-office cutaways, stable mobile viewport, celebration, wall passages, avatar studio and action animations; compare mobile Safari and desktop against the user's rich voxel reference, then refine body/head silhouettes, footwear, clothing accessories and office lighting/reflections. These visual enhancements are implemented but **the rendering has not yet been tested in a live browser in this session**, so do not treat the richness target as certified. Once accepted, continue to daily frozen office/hint logic and finale.
 
