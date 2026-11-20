@@ -4,6 +4,7 @@ const GATEWAY="https://fwrievuhudjkeffmszqf.supabase.co/functions/v1/ss-gateway"
 const PUBLIC_KEY="sb_publishable_SJo2kgXdHNFZI65iAvQmxw_q56zuVLO";
 const PARAMS=new URLSearchParams(location.search);
 const ADMIN=PARAMS.has("admin");
+const PREVIEW=!ADMIN&&PARAMS.has("preview");
 const EVENT_SLUG=PARAMS.get("event")||"";
 const SESSION_STORAGE_KEY=ADMIN?"vcf_ss_admin_pin_session":"vcf_ss_player_pin_session";
 const $=id=>document.getElementById(id);
@@ -18,6 +19,7 @@ const button=(label,handler,style="small-outline")=>{
   b.type="button"; b.addEventListener("click",handler);return b;
 };
 let session=null, busy=false, events=[],event=null,participants=[],assignments=[],player=null,childVisible=false;
+let officeRuntime=null,officeLoading=null,officeKey=null,officeNoticeTimer=null;
 const codes=new Map();
 function toast(message,error=false){
   const el=$("toast");el.textContent=message;
@@ -103,6 +105,8 @@ function setSession(info){
   paintLogin();
 }
 function endSession(){
+  if(officeRuntime){officeRuntime.dispose();officeRuntime=null;}
+  officeLoading=null;officeKey=null;
   setSession(null);player=null;event=null;participants=[];assignments=[];events=[];codes.clear();
   $("player").classList.add("hidden");
   $("welcome").classList.toggle("hidden",ADMIN);
@@ -242,6 +246,77 @@ function niceDate(value){
 function itemLine(parent,text){
   const row=node("div","personal-item");row.append(node("span","",text));parent.append(row);return row;
 }
+
+function officeToast(message){
+  const el=$("office-toast");
+  if(!el)return;
+  el.textContent=message;
+  el.classList.remove("hidden");
+  clearTimeout(officeNoticeTimer);
+  officeNoticeTimer=setTimeout(()=>el.classList.add("hidden"),3300);
+}
+function avatarIdentity(info){
+  const people=info.colleagues||[];
+  return JSON.stringify({
+    person:info.me?.id,avatar:info.me?.avatar,
+    colleagues:people.map(p=>[p.id,p.name,p.avatar])
+  });
+}
+function syncCameraButtons(){
+  const active=officeRuntime?.mode||"three";
+  document.querySelectorAll("[data-camera]").forEach(b=>b.classList.toggle("selected",b.dataset.camera===active));
+}
+async function enterOffice(info){
+  if(ADMIN)return;
+  const identity=avatarIdentity(info);
+  if(officeRuntime){
+    if(identity!==officeKey){officeRuntime.setProfile(info);officeKey=identity;}
+    return;
+  }
+  if(officeLoading){
+    await officeLoading;
+    if(officeRuntime&&identity!==officeKey){officeRuntime.setProfile(info);officeKey=identity;}
+    return;
+  }
+  $("office-loading").classList.remove("hidden");
+  officeLoading=(async()=>{
+    const module=await import("./game/main.js");
+    officeRuntime=module.mountOffice($("office-canvas"),info,officeToast);
+    const cam=localStorage.getItem("vcf-ss-office-camera");
+    officeRuntime.setCamera(["three","close","wide"].includes(cam)?cam:"three");
+    officeKey=identity;
+    syncCameraButtons();
+    $("office-loading").classList.add("hidden");
+    officeToast("Tap the floor to walk. Choose an action with 👋.");
+  })();
+  try{await officeLoading;}
+  catch(error){
+    const loader=$("office-loading");
+    loader.replaceChildren();
+    const title=node("strong","", "The 3D office could not be opened.");
+    const msg=node("small","",error?.message||"Check WebGL support and internet connectivity.");
+    const retry=button("Try loading again",()=>{
+      officeLoading=null;
+      loader.replaceChildren();
+      enterOffice(player);
+    },"primary");
+    loader.append(title,msg,retry);
+    console.error("VCF office error:",error);
+  }finally{officeLoading=null;}
+}
+function demoData(){
+  const names=["Aditi","Rohan","Neha","Arjun","Priya","Farhan","Meera","Karthik","Divya","Sneha","Siddharth","Ananya","Vivek","Tara","Rahul","Ishita","Krishna"];
+  const colleagues=names.map((name,i)=>({
+    id:"demo-colleague-"+i,name,desk_key:"D-"+String(i+1).padStart(2,"0")
+  }));
+  return {
+    preview:true,
+    event:{title:"VCF Christmas Office · Visual Preview",slug:"visual-preview",status:"demo",budget:500},
+    me:{id:"demo-player",display_name:"Guest explorer",avatar:{gender:"female",outfit:"salwar",skin:2,color:1,hairstyle:1},wishlist:[],wishlist_version:1},
+    colleagues,receivedTasks:[],myChild:null,hint:null,today:new Date().toLocaleDateString("en-CA")
+  };
+}
+
 function showPlayerTab(name){
   const personal=name==="personal";
   $("player-character").classList.toggle("hidden",personal);
@@ -251,9 +326,11 @@ function showPlayerTab(name){
 }
 async function loadPlayer(){
   player=await api("player_dashboard");
+  $("player-hint-text").textContent=player.hint?"Daily office hint: "+player.hint:"Daily office clues will be available when the organizer publishes the office scene.";
   $("welcome").classList.add("hidden");
   $("admin").classList.add("hidden");
   $("player").classList.remove("hidden");
+  void enterOffice(player);
   $("player-greeting").textContent="✦ "+player.me.display_name;
   $("player-event-title").textContent=player.event.title;
   $("personal-name").textContent=player.me.display_name;
@@ -466,19 +543,42 @@ $("assign-btn").addEventListener("click",run(async()=>{
   toast(res.assigned+" Secret Santa pairs created.");
 }));
 $("player-pause").addEventListener("click",()=>{
+  $("action-picker").classList.add("hidden");
   $("player-menu").classList.toggle("hidden");
-  if(!$("player-menu").classList.contains("hidden"))showPlayerTab("personal");
+  if(!$("player-menu").classList.contains("hidden")){
+    showPlayerTab("character");
+    syncCameraButtons();
+  }
 });
 $("player-close").addEventListener("click",()=>$("player-menu").classList.add("hidden"));
-$("player-hint").addEventListener("click",()=>{
-  $("player-hint-text").textContent=player?.hint||"Your next hint isn't available yet.";
-  $("player-hint-text").classList.remove("hidden");
-  clearTimeout(window.hintHide);
-  window.hintHide=setTimeout(()=>$("player-hint-text").classList.add("hidden"),5500);
+$("player-action").addEventListener("click",()=>{
+  if(!$("player-menu").classList.contains("hidden"))return;
+  $("action-picker").classList.toggle("hidden");
 });
+document.querySelectorAll("[data-action]").forEach(b=>b.addEventListener("click",()=>{
+  const icons={hi:"👋",dance:"🕺",clap:"👏",cheer:"🎉"};
+  const chosen=b.dataset.action;
+  if(!icons[chosen])return;
+  document.querySelectorAll("[data-action]").forEach(x=>x.classList.toggle("selected",x===b));
+  $("player-action").textContent=icons[chosen];
+  $("player-action").title=chosen;
+  officeRuntime?.playAction(chosen);
+  $("action-picker").classList.add("hidden");
+}));
+document.querySelectorAll("[data-camera]").forEach(b=>b.addEventListener("click",()=>{
+  const cam=b.dataset.camera;
+  if(!["three","close","wide"].includes(cam))return;
+  officeRuntime?.setCamera(cam);
+  try{localStorage.setItem("vcf-ss-office-camera",cam);}catch{}
+  syncCameraButtons();
+}));
 $("player-tab-character").addEventListener("click",()=>showPlayerTab("character"));
 $("player-tab-personal").addEventListener("click",()=>showPlayerTab("personal"));
-$("player-sign-out").addEventListener("click",()=>{endSession();toast("Exited the office.");});
+$("player-sign-out").addEventListener("click",()=>{
+  endSession();
+  if(PREVIEW)history.replaceState(null,"",location.pathname);
+  toast("Exited the office.");
+});
 $("wishlist-form").addEventListener("submit",run(async e=>{
   e.preventDefault();
   const text=$("wishlist-input").value.trim();
@@ -511,6 +611,21 @@ async function init(){
   snowfall();
   $("admin").classList.toggle("hidden",!ADMIN);
   $("welcome").classList.toggle("hidden",ADMIN);
+  if(PREVIEW){
+    player=demoData();
+    $("welcome").classList.add("hidden");
+    $("player").classList.remove("hidden");
+    $("player-greeting").textContent="✦ Visual preview";
+    $("player-event-title").textContent=player.event.title;
+    $("personal-name").textContent=player.me.display_name;
+    $("player-hint-text").textContent="Preview-only mode: no Supabase account or private participant information is used.";
+    for(const id of ["wishlist-form","task-form"]){
+      $(id).querySelectorAll("input,button").forEach(x=>x.disabled=true);
+    }
+    for(const id of ["child-toggle","save-message","gift-purchased"])$(id).disabled=true;
+    await enterOffice(player);
+    return;
+  }
   if(EVENT_SLUG&&!ADMIN){
     try{
       const result=await api("event_info",{event_slug:EVENT_SLUG});
