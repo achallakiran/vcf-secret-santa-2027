@@ -177,25 +177,37 @@ export function sculptHead(head,p,kit){
 /** Detailed sculpted footwear kept on the original animated leg pivots. */
 export function sculptFoot(pivot,p,kit){
   const {part,orb,mat}=kit;
-  const ethnic=p.outfit==="salwar",formal=p.outfit==="suit";
-  const sneaker=!ethnic&&!formal&&p.outfit!=="dress";
-  const sole=mat(sneaker?0xf4f0e9:formal?0x343033:0x9e624b,.69);
-  const upper=mat(ethnic?0xb26f56:formal?0x4c3b36:p.outfit==="dress"?0xb36e6a:0xe1e0d8,.73);
-  const trim=mat(ethnic?0xe9c38b:formal?0xb6a084:0xf8f8f0,.52);
-  // Chunky shaped shoe, visibly squared toe and proper little outsole.
-  part(pivot,.305,.147,.45,upper,0,-.552,.132,.082);
-  part(pivot,.341,.089,.51,sole,0,-.645,.148,.047);
-  part(pivot,.34,.065,.22,upper,0,-.542,.311,.048);
+  const auto=p.outfit==="salwar"?"sandals":p.outfit==="suit"?"formal":
+    p.outfit==="dress"?"flats":"sneakers";
+  const style=["auto","sneakers","formal","flats","sandals"].includes(p.footwear)?
+    (p.footwear==="auto"?auto:p.footwear):auto;
+  const sneaker=style==="sneakers",formal=style==="formal",flat=style==="flats";
+  const sandal=style==="sandals";
+  const sole=mat(sneaker?0xf4f0e9:formal?0x343033:flat?0x8c5855:0x9e624b,.69);
+  const upper=mat(sneaker?0xe1e0d8:formal?0x4c3b36:flat?0xb36e6a:0xb26f56,.73);
+  const trim=mat(sneaker?0xf9f6ef:formal?0xb6a084:flat?0xe8c1a8:0xe9c38b,.52);
+  // All footwear shares the same foot pivot for consistent animation.
+  part(pivot,.305,flat?.09:sandal?.085:.147,.45,upper,0,-.552,.132,.072);
+  part(pivot,.34,.085,.51,sole,0,-.645,.148,.047);
+  if(!sandal)part(pivot,.34,.055,.22,upper,0,-.542,.311,.039);
   part(pivot,.338,.025,.52,trim,0,-.675,.147,.016);
   if(sneaker){
-    for(let j=0;j<3;j++)
-      part(pivot,.158,.018,.026,trim,0,-.488,.065+j*.072,.009);
+    for(let j=0;j<3;j++)part(pivot,.158,.018,.026,trim,0,-.488,.065+j*.072,.009);
     part(pivot,.329,.034,.035,mat(0x8796a1),0,-.634,-.098,.011);
   }else if(formal){
     part(pivot,.295,.038,.19,trim,0,-.523,.20,.020);
+  }else if(flat){
+    const strap=part(pivot,.31,.046,.14,trim,0,-.534,.06,.019);
+    strap.rotation.z=.10;
+    part(pivot,.32,.042,.07,upper,0,-.51,.22,.027);
   }else{
-    part(pivot,.32,.045,.10,trim,0,-.524,.014,.020);
-    for(const xx of [-.108,.108])
-      orb(pivot,.020,0xe6bd81,xx,-.538,.313,.85,.73,.6);
+    // Sandals have an exposed top and visibly separated crossing straps.
+    const exposed=mat(p.skinHex,.83);
+    part(pivot,.275,.055,.37,exposed,0,-.565,.15,.028);
+    for(const z of [.05,.22]){
+      const strap=part(pivot,.30,.047,.075,upper,0,-.526,z,.025);
+      strap.rotation.z=z===.05?.14:-.14;
+    }
+    for(const x of [-.10,.10])orb(pivot,.021,0xe6bd81,x,-.535,.315,.85,.73,.6);
   }
 }
