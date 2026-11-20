@@ -34,21 +34,46 @@ function present(parent,x,z,size,seed){
   const bow2=ball(g,.12,size+.09,0,.12,0xf4dba7);bow2.scale.set(1.3,.6,1);
 }
 function tree(parent,x,z,scale=1){
+  // Detailed stepped voxel evergreen rather than a single low-poly cone.
   const g=new THREE.Group();g.position.set(x,0,z);g.scale.setScalar(scale);parent.add(g);
-  cyl(g,0,.25,0,.12,.18,.5,0x795b39);
-  for(let tier=0;tier<5;tier++){
-    const y=.72+tier*.48,base=1.28-tier*.18;
-    const cone=new THREE.Mesh(new THREE.ConeGeometry(base,.95,7),mat(tier%2?0x296c4d:0x36845e));
-    cone.position.y=y;cone.castShadow=true;g.add(cone);
-    for(let i=0;i<7;i++){
-      const a=i*2*Math.PI/7+tier*.48;
-      const rr=base*.8;
-      ball(g,Math.cos(a)*rr,y-.2,Math.sin(a)*rr,.1,i%3===0?0xe1c16a:i%3===1?0xce4e59:0x8ec2d0,1);
+  const leaf=[0x276a4c,0x2e7b53,0x34865d,0x245e45];
+  cyl(g,0,.27,0,.15,.19,.54,0x76533d);
+  for(let tier=0;tier<6;tier++){
+    const y=.69+tier*.44,reach=1.24-tier*.17;
+    const green=leaf[tier%leaf.length];
+    block(g,0,y,0,reach*1.63,.43,reach*1.63,green);
+    block(g,0,y-.10,0,reach*1.98,.20,reach*1.22,green);
+    block(g,0,y-.10,0,reach*1.22,.20,reach*1.98,green);
+    for(let i=0;i<8;i++){
+      const angle=i*Math.PI/4+tier*.24,rr=reach*.77;
+      const ornament=ball(g,Math.cos(angle)*rr,y-.10+((i%2)*.11),Math.sin(angle)*rr,.082+(i%3)*.01,
+        i%4===0?mat(0xf9cd73,{emissive:0x7e480d}):
+        i%4===1?0xdf666b:i%4===2?0x91b9c7:0xffebc6,1);
+      ornament.castShadow=false;
+    }
+    // Gold ribbon crosses the foliage and is visible from every camera angle.
+    if(tier%2===0){
+      block(g,0,y+.09,reach*.72,reach*1.5,.034,.035,mat(0xf1c978,{metalness:.15}),false);
+      block(g,reach*.72,y+.09,0,.035,.034,reach*1.5,mat(0xf1c978,{metalness:.15}),false);
     }
   }
-  const star=ball(g,0,3.10,0,.24,mat(0xffe4a1,{emissive:0xeeac48}),1);star.scale.set(.95,1.3,.42);
-  const light=new THREE.PointLight(0xffb96a,2.5,7);light.position.set(0,2.15,0);g.add(light);
-  for(let i=0;i<7;i++){const a=i*6.283/7;present(g,Math.cos(a)*1.1,Math.sin(a)*1.1,.28+i%3*.1,i);}
+  // 5-point star in the front-facing plane, with a warm emissive center.
+  const outline=new THREE.Shape();
+  for(let i=0;i<10;i++){
+    const a=-Math.PI/2+i*Math.PI/5,r=i%2===0?.27:.12;
+    const px=Math.cos(a)*r,py=Math.sin(a)*r;
+    if(i===0)outline.moveTo(px,py);else outline.lineTo(px,py);
+  }
+  outline.closePath();
+  const star=new THREE.Mesh(new THREE.ExtrudeGeometry(outline,{
+    depth:.09,bevelEnabled:true,bevelThickness:.035,bevelSize:.025,bevelSegments:2,steps:1
+  }),mat(0xffdd83,{emissive:0xd39b46,metalness:.13}));
+  star.position.set(0,3.25,0);star.castShadow=false;g.add(star);
+  const light=new THREE.PointLight(0xffbc6d,1.7,6.5);light.position.set(0,2.2,.4);g.add(light);
+  for(let i=0;i<12;i++){
+    const angle=i*Math.PI*2/12,rad=1.0+(i%3)*.15;
+    present(g,Math.cos(angle)*rad,Math.sin(angle)*rad,.21+(i%3)*.10,i);
+  }
   return g;
 }
 function plant(parent,x,z,scale=1){
