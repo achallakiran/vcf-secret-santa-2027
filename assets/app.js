@@ -1,6 +1,6 @@
 
 "use strict";
-import {createVisualAvatarEditor} from "./game/avatar-editor.js?v=avatar-expanded-v2";
+import {createVisualAvatarEditor} from "./game/avatar-editor.js?v=braid-camera-v1";
 import {createChristmasMusic} from "./game/christmas-music.js?v=jingle-bells-v1";
 const GATEWAY="https://fwrievuhudjkeffmszqf.supabase.co/functions/v1/ss-gateway";
 const PUBLIC_KEY="sb_publishable_SJo2kgXdHNFZI65iAvQmxw_q56zuVLO";
@@ -408,7 +408,7 @@ async function enterOffice(info){
   }
   $("office-loading").classList.remove("hidden");
   officeLoading=(async()=>{
-    const module=await import("./game/main.js?v=avatar-expanded-v2");
+    const module=await import("./game/main.js?v=braid-camera-v1");
     officeRuntime=module.mountOffice($("office-canvas"),info,officeToast);
     let cam=null;
     try{cam=localStorage.getItem("vcf-ss-office-camera");}catch{}
@@ -563,8 +563,8 @@ function setStudioTab(name){
   document.querySelectorAll("[data-studio-panel]").forEach(panel=>{
     panel.classList.toggle("hidden",panel.dataset.studioPanel!==name);
   });
-  const titles={look:"Face & skin",hair:"Hair & parting",fashion:"Outfit & colors",
-    accessories:"Facial hair & spectacles",footwear:"Footwear & shoe color",shape:"Height & build"};
+  const titles={look:"Face & skin",hair:"Hair, beards & choti",fashion:"Outfit & colors",
+    accessories:"Spectacles",footwear:"Footwear & shoe color",shape:"Height & build"};
   $("atelier-category-title").textContent=titles[name];
   visualEditor?.refresh(name);
 }
@@ -584,7 +584,7 @@ async function ensureAvatarStudio(){
       &&!$("player-character").classList.contains("hidden"));
   if(!isVisible())return;
   avatarStudioLoading=(async()=>{
-    const module=await import("./game/studio.js?v=avatar-expanded-v2");
+    const module=await import("./game/studio.js?v=braid-camera-v1");
     if(!isVisible())return;
     avatarStudio=module.mountAvatarStudio($("avatar-studio-canvas"),readAvatarEditor());
     visualEditor?.refresh(activeStudioTab);
