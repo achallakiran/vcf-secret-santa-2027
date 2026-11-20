@@ -236,14 +236,14 @@ export function buildOffice(count=12){
   const bays=Math.max(4,Math.ceil(Math.min(150,Math.max(1,count))/3));
   // 2.42 m workstation pitch leaves ~0.90 m free between 1.52 m desk tops.
   // Every fourth wall-facing desk gets an extra cross-passage gap.
-  const rowStart=1.45,step=2.42,doorGap=2.15;
-  const rowZ=i=>rowStart+i*step+Math.floor(i/4)*doorGap;
+  const rowStart=1.45,step=2.42,passageGap=2.15;
+  const rowZ=i=>rowStart+i*step+Math.floor(i/4)*passageGap;
   const rowEnd=rowZ(bays-1);
-  const doorCenters=[];
+  const passageCenters=[];
   for(let group=1;group<=Math.floor(bays/4);group++){
     const last=rowZ(group*4-1);
-    const next=group*4<bays?rowZ(group*4):last+step+doorGap;
-    doorCenters.push((last+next)/2);
+    const next=group*4<bays?rowZ(group*4):last+step+passageGap;
+    passageCenters.push((last+next)/2);
   }
   // A clearly visible but separate decorated zone starts after the last desks.
   const partyStart=rowEnd+3.35,back=partyStart+7.35;
@@ -257,7 +257,7 @@ export function buildOffice(count=12){
   for(let x=left;x<=right+.001;x+=1.1)block(glines,x,.012,(front+back)/2,.012,.008,back-front,0xcfc2bf,false);
   for(let z=front;z<=back+.001;z+=1.1)block(glines,0,.012,z,width,.008,.012,0xcfc2bf,false);
   // Perimeter walls; window on north starts flush with west wall and ends just beyond island.
-  westWallPassages(root,left,front,back,doorCenters);
+  westWallPassages(root,left,front,back,passageCenters);
   block(root,right+.14,2.15,(front+back)/2,.23,4.3,back-front,0xf6eee7,false);
   block(root,0,2.15,back+.12,width,4.3,.26,0xf7f0e9,false);
   block(root,5.24,2.15,front-.10,5.52,4.3,.18,0xf4ede8,false);
@@ -382,5 +382,5 @@ export function buildOffice(count=12){
   return {root,colliders,seats,spawn,bays,
     // Structural wall passages are not additional explorable rooms.
     room:{left,right,front,back},
-    partyStart,twinkle,overhead,doorCenters,rowZ,deskPitch:step,doorGap};
+    partyStart,twinkle,overhead,passageCenters,rowZ,deskPitch:step,passageGap};
 }
