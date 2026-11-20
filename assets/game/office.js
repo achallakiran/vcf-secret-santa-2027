@@ -103,9 +103,11 @@ function chair(parent,x,z,face=1,variant=0){
 }
 function workstation(parent,x,z,i,row,colliders){
   // Width of the desk is along the row (z): its LONG EDGE faces the seated employee.
-  const left=row==="W"?-1:row==="L"?1:-1;
-  const body=row==="W"?-.68:0;
-  const chairX=x+left*.9;
+  // W and R sit east of their desks and face WEST; L sits west and faces EAST.
+  const chairSide=row==="L"?-1:1;
+  const facing=row==="L"?Math.PI/2:-Math.PI/2;
+  const left=-chairSide;
+  const chairX=x+chairSide*.9;
   const g=new THREE.Group();g.position.set(x,0,z);parent.add(g);
   const oak=mat(0xc69d73),white=mat(0xf4f0e9);
   block(g,0,.76,0,.73,.075,1.52,oak);
@@ -136,9 +138,10 @@ function workstation(parent,x,z,i,row,colliders){
     block(g,-.15,.84,.51,.25,.04,.23,0xc76161);
     ball(g,-.15,.91,.51,.08,0x93ad65);
   }
-  const ch=chair(parent,chairX,z,left===-1?Math.PI/2:-Math.PI/2,i);
+  chair(parent,chairX,z,facing,i);
   colliders.push({x,z,hx:.58,hz:.85});
-  return {position:{x:chairX,z:z-.08},facing:left===-1?-Math.PI/2:Math.PI/2,row,index:i};
+  colliders.push({x:chairX,z,hx:.33,hz:.37});
+  return {position:{x:chairX,z:z-.08},facing,row,index:i};
 }
 function lamp(parent,x,z){
   const g=new THREE.Group();g.position.set(x,0,z);parent.add(g);
