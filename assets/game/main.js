@@ -1,7 +1,7 @@
 import * as THREE from "three";
 import {buildOffice} from "./office.js?v=braid-camera-v1";
-import {createAvatar,avatarFromPerson} from "./avatar.js?v=braid-camera-v1";
-import {createOfficeLife} from "./office-life.js?v=office-social-v1";
+import {createAvatar,avatarFromPerson} from "./avatar.js?v=studio-qa-v1";
+import {createOfficeLife} from "./office-life.js?v=studio-qa-v1";
 
 /* A responsive office runtime. 3D art and camera are independent from the existing Supabase UI. */
 const UP=new THREE.Vector3(0,1,0);
@@ -537,6 +537,7 @@ export function mountOffice(host,profile,notice=()=>{}){
     setPaused(value){paused=!!value;},
     setProfile:applyProfile,
     getAvatar(){return hero?{...hero.parameters}:null;},
+    setBodyShape(height,build){hero?.setBodyShape(height,build);},
     previewAvatar(appearance){
       if(!hero||!appearance)return false;
       const previous=hero;
@@ -577,7 +578,7 @@ export function mountOffice(host,profile,notice=()=>{}){
       interactTarget=null;
       clickMarker.group.visible=false;
       hero.play(name,clock.elapsedTime);
-      officeLife?.mimicNearby(name,clock.elapsedTime,2.8);
+      officeLife?.mimicNearby(name,clock.elapsedTime,5.4);
       selectedAction=name;
       const messages={hi:"👋 Hello!",dance:"🕺 Time for a little dance!",clap:"👏 A round of applause!",cheer:"🎉 Merry Christmas!"};
       notice(messages[name]);
