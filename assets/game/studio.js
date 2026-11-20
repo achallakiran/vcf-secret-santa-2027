@@ -59,7 +59,7 @@ export function mountAvatarStudio(host,appearance){
       model.group.traverse(obj=>{
         if(obj.isMesh){
           const m=Array.isArray(obj.material)?obj.material:[obj.material];
-          m.forEach(v=>{if(v)createdMaterials.add(v);});
+          m.forEach(v=>{if(v&&!v.userData?.sharedVoxelMaterial)createdMaterials.add(v);});
         }
       });
       for(const m of createdMaterials)m.dispose();
