@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import {sculptHead,sculptFoot} from "./avatar-parts.js?v=avatar-expanded-v1";
+import {sculptHead,sculptFoot} from "./avatar-parts.js?v=avatar-expanded-v2";
 import {sculptWardrobe} from "./wardrobe.js?v=avatar-expanded-v1";
 import {SKIN_COLORS as SKINS,HAIR_COLORS as HAIR,OUTFIT_COLORS as COLORS,FOOTWEAR_OPTIONS} from "./palette.js?v=visual-atelier-v3";
 import {clothMaterial} from "./visual-materials.js?v=visual-atelier-v3";
