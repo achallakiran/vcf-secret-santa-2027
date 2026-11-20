@@ -3,6 +3,7 @@ import {sculptHead,sculptFoot} from "./avatar-parts.js?v=visual-atelier-v3";
 import {sculptWardrobe} from "./wardrobe.js?v=visual-atelier-v3";
 import {SKIN_COLORS as SKINS,HAIR_COLORS as HAIR,OUTFIT_COLORS as COLORS,FOOTWEAR_OPTIONS} from "./palette.js?v=visual-atelier-v3";
 import {clothMaterial} from "./visual-materials.js?v=visual-atelier-v3";
+import {sculptFaceVoxels,sculptHairVoxels,sculptGarmentVoxels,sculptSleeveVoxels,sculptShoeVoxels} from "./artisan-voxels.js?v=voxel-art-v5";
 /**
  * Hybrid voxel adults with modular, richly sculpted faces and contemporary Indian garments. No external or unverified character assets.
  * The body is rigged with real limb pivots and features layered face and hair meshes.
@@ -148,11 +149,16 @@ export function createAvatar(input={},mini=false){
   const sculptParams={...p,skinHex:SKINS[p.skin],hairHex:HAIR[p.hair],colorHex:COLORS[p.color]};
   const kit={part,orb,mat};
   sculptWardrobe(hips,sculptParams,kit);
+  // Dense 3D microvoxel stitchwork on the complete garment, front AND back.
+  sculptGarmentVoxels(hips,sculptParams);
   // The original rig is kept; only visible face/hair/eyes are resculpted.
   part(hips,.20,.17,.21,skin,0,.83,0,.056);
   const headPivot=new THREE.Group();headPivot.position.set(0,.96,.01);
   headPivot.scale.setScalar(1.08);hips.add(headPivot);
   sculptHead(headPivot,sculptParams,kit);
+  // Real modeled voxels sculpt the expressive face and stepped full-volume hair.
+  sculptFaceVoxels(headPivot,sculptParams);
+  sculptHairVoxels(headPivot,sculptParams);
   // Seams, embroidered cuffs and a miniature pocket create believable
   // contemporary garments when seen close-up in the 3D avatar studio.
   if(!isEthnic&&p.outfit!=="dress"){
@@ -181,6 +187,8 @@ export function createAvatar(input={},mini=false){
     for(const finger of [-1,0,1])
       part(wrist,.065,.105,.085,skin,finger*.068,-.102,.075,.032);
     part(wrist,.077,.13,.11,skin,side*.126,0,.04,.036).rotation.z=side*.26;
+    // Details stay attached to the upper arm and bending elbow as they animate.
+    sculptSleeveVoxels(pivot,lower,sculptParams,side);
     return {pivot,lower,wrist};
   }
   const left=arm(-1),right=arm(1);
@@ -201,6 +209,7 @@ export function createAvatar(input={},mini=false){
       part(pivot,legWidth+.018,.05,.325,mat(0x5a6670),0,-.49,0,.018);
     }
     sculptFoot(pivot,sculptParams,kit);
+    sculptShoeVoxels(pivot,sculptParams);
     return pivot;
   }
   const lLeg=leg(-1),rLeg=leg(1);
