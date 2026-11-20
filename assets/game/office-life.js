@@ -29,6 +29,8 @@ export function createOfficeLife(people,hero,nav,announce=()=>{}){
     home:{...person.seat.position},stuck:0
   }));
   const lookup=new Map(states.map(s=>[s.person.id,s]));
+  const proximityGreeted=new Map();
+  let nextProximityScan=1.5,lastAmbientGreeting=-30;
   for(let i=0;i<states.length;i++){
     const actor=states[i].person.detailed;
     actor.seated=true;
@@ -183,6 +185,22 @@ export function createOfficeLife(people,hero,nav,announce=()=>{}){
       }
       actor.update(time,moving);
     }
+    // Crossing into conversational distance triggers an actual reciprocal
+    // wave even before the player taps anyone. A cooldown prevents spam.
+    if(time>=nextProximityScan){
+      nextProximityScan=time+.8;
+      const closest=states.filter(st=>
+        st.mode==="desk"&&dist(st.person.detailed.group.position,hero.group.position)<3.75&&
+        time-(proximityGreeted.get(st.person.id)??-100)>18)
+        .sort((a,b)=>dist(a.person.detailed.group.position,hero.group.position)-
+                     dist(b.person.detailed.group.position,hero.group.position));
+      if(closest.length&&time-lastAmbientGreeting>7.5){
+        const st=closest[0];
+        proximityGreeted.set(st.person.id,time);
+        lastAmbientGreeting=time;
+        interruptForHero(st.person,"hi",time,false);
+      }
+    }
   }
   function reserveForPlayer(target,time){
     const st=lookup.get(target?.id);
@@ -197,30 +215,43 @@ export function createOfficeLife(people,hero,nav,announce=()=>{}){
     st.mode="awaiting";st.route=[];st.partner=null;
     st.until=time+18;
     st.person.detailed.setActivity("idle");
+    if(dist(st.person.detailed.group.position,hero.group.position)<4){
+      // A colleague acknowledges being selected rather than freezing.
+      st.person.detailed.seated=false;
+      st.person.detailed.group.rotation.y=angleTo(st.person.detailed.group.position,hero.group.position);
+      st.person.detailed.play("hi",time);
+    }
   }
-  function interruptForHero(target,action,time){
+  function interruptForHero(target,action,time,facePlayer=true){
     const st=lookup.get(target?.id);if(!st)return;
     const actor=st.person.detailed;
     motions.delete(st);
     st.mode="player";st.partner=null;st.route=[];st.until=time+3.7;
     actor.seated=false;actor.setActivity("talk");
     face(actor,hero);
-    face(hero,actor);
+    if(facePlayer)face(hero,actor);
     const gesture=ACTIONS.includes(action)?action:"hi";
     actor.play(gesture,time+.02);
-    announce(st.person,"Hello!",time);
+    const responses={hi:"Hi there!",dance:"Let's dance!",clap:"Bravo!",cheer:"Merry Christmas!"};
+    announce(st.person,responses[gesture],time);
   }
-  function mimicNearby(action,time,range=2.6){
+  function mimicNearby(action,time,range=5.4){
     const candidates=states.filter(st=>
-      dist(st.person.detailed.group.position,hero.group.position)<range);
+      dist(st.person.detailed.group.position,hero.group.position)<=range);
     if(!candidates.length)return null;
     candidates.sort((a,b)=>dist(a.person.detailed.group.position,hero.group.position)-
       dist(b.person.detailed.group.position,hero.group.position));
-    interruptForHero(candidates[0].person,action,time);
+    // Nearby coworkers acknowledge the same action: one responds directly
+    // while the next two can join without rotating the player repeatedly.
+    for(const [i,st] of candidates.slice(0,3).entries()){
+      interruptForHero(st.person,action,time,i===0);
+      proximityGreeted.set(st.person.id,time);
+    }
+    lastAmbientGreeting=time;
     return candidates[0].person;
   }
   function dispose(){
-    motions.clear();lookup.clear();states.length=0;
+    motions.clear();lookup.clear();proximityGreeted.clear();states.length=0;
   }
   return {update,findApproach,reserveForPlayer,interruptForHero,mimicNearby,dispose,
     get states(){return states;},minDistance:GREETING_DISTANCE};
