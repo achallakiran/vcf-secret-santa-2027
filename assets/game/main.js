@@ -16,6 +16,19 @@ const TWO_PI=Math.PI*2;
 function v2(x,z){return {x,z};}
 function clamp(n,a,b){return Math.max(a,Math.min(b,n));}
 function greetObject(name){return "👋 "+name;}
+function releaseCharacterMaterials(avatar){
+  if(!avatar?.group)return;
+  // Shared sculpture geometry and cached finishes belong to the art factory;
+  // only per-character extras (for example transparent lenses) are disposable.
+  const owned=new Set();
+  avatar.group.traverse(obj=>{
+    if(!obj.isMesh)return;
+    for(const material of Array.isArray(obj.material)?obj.material:[obj.material]){
+      if(material&&!material.userData?.sharedVoxelMaterial)owned.add(material);
+    }
+  });
+  owned.forEach(material=>material.dispose());
+}
 class MinHeap{
   constructor(){this.data=[];}
   push(n){const a=this.data;a.push(n);let i=a.length-1;while(i>0){let p=(i-1)>>1;if(a[p].f<=n.f)break;a[i]=a[p];i=p;}a[i]=n;}
@@ -174,7 +187,10 @@ export function mountOffice(host,profile,notice=()=>{}){
     // Group and geometry are independent from the permanent office scene.
     if(crowd){scene.remove(crowd.group);crowd.dispose();crowd=null;}
     for(const item of people){
-      if(item.detailed)scene.remove(item.detailed.group);
+      if(item.detailed){
+        scene.remove(item.detailed.group);
+        releaseCharacterMaterials(item.detailed);
+      }
     }
     people=[];
     if(!hero){
@@ -227,6 +243,7 @@ export function mountOffice(host,profile,notice=()=>{}){
       // evicted full-detail rig without changing the stored appearance.
       if(!yes&&p.detailed&&lastRefresh-p.lastUsed>5){
         scene.remove(p.detailed.group);
+        releaseCharacterMaterials(p.detailed);
         p.detailed=null;
       }
     });
@@ -517,6 +534,7 @@ export function mountOffice(host,profile,notice=()=>{}){
       canvas.removeEventListener("pointerup",up);
       canvas.removeEventListener("pointercancel",cancel);
       canvas.removeEventListener("wheel",wheel);
+      for(const p of people)if(p.detailed)releaseCharacterMaterials(p.detailed);
       if(crowd){scene.remove(crowd.group);crowd.dispose();crowd=null;}
       renderer.dispose();host.replaceChildren();
     }
