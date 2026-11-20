@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import {clothMaterial} from "./visual-materials.js?v=visual-atelier-v2";
+import {clothMaterial} from "./visual-materials.js?v=visual-atelier-v3";
 
 /**
  * Contemporary Indian wardrobe detailing for the existing humanoid game rig.
