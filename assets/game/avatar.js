@@ -358,13 +358,14 @@ export function createAvatar(input={},mini=false){
     data.seated=false;
   };
   const scale=p.height*(mini?.9:1);
+  const baseBuild=p.build;
   // Height stretches body along the vertical axis (not a uniform zoom).
   // Body width has its own shape factor and never changes camera distance.
   root.scale.set(1,scale,1);
   data.setBodyShape=(height,build)=>{
     const h=Math.min(1.30,Math.max(.80,Number(height)||1));
     const b=Math.min(1.55,Math.max(.65,Number(build)||1));
-    const ratio=b/p.build;
+    const ratio=b/baseBuild;
     root.scale.y=h*(mini?.9:1);
     hips.scale.set(ratio,1,Math.pow(ratio,.52));
     // Keep the face and hairstyle at their original proportions while body
