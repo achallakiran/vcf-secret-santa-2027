@@ -27,10 +27,8 @@ function toast(message, isError = false) {
 }
 function setBusy(busy) {
   loading = busy;
-  document.querySelectorAll("button").forEach(button => {
-    if (button.id === "sign-out" || button.id === "refresh-events") return;
-    button.disabled = busy;
-  });
+  // Keep each button's own authorization and validation disabled state intact.
+  document.body.classList.toggle("processing", busy);
 }
 function withBusy(action) {
   return async function (...args) {
