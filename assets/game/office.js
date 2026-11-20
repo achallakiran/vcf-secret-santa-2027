@@ -228,7 +228,9 @@ function sign(parent,x,y,z,text){
   ctx.fillText(text,210,86);
   const tex=new THREE.CanvasTexture(can);tex.colorSpace=THREE.SRGBColorSpace;
   const p=new THREE.Mesh(new THREE.PlaneGeometry(3,1),new THREE.MeshBasicMaterial({map:tex,side:THREE.DoubleSide}));
-  p.position.set(x,y,z);parent.add(p);return p;
+  p.position.set(x,y,z);
+  p.rotation.y=Math.PI; // readable from the window-side entrance camera
+  parent.add(p);return p;
 }
 export function buildOffice(count=12){
   const bays=Math.max(4,Math.ceil(Math.min(150,Math.max(1,count))/3));
