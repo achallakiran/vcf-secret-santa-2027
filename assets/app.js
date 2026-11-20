@@ -171,8 +171,8 @@ function normalizeWhatsAppNumber(raw){
   if(!trimmed)return "";
   // Allow conventional separators and optional international +, but no
   // extensions, slashes, letters or additional + symbols.
-  if(!/^\\+?[0-9(). -]+$/.test(trimmed))return "";
-  let digits=trimmed.replace(/\\D/g,"");
+  if(!/^\+?[0-9(). -]+$/.test(trimmed))return "";
+  let digits=trimmed.replace(/\D/g,"");
   if(digits.startsWith("00")&&digits.length>12)digits=digits.slice(2);
   // This is a Bengaluru-based event. Bare 10-digit domestic numbers use +91.
   // For international recipients the organizer must provide a country code.
