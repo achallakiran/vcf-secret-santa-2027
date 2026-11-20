@@ -253,26 +253,23 @@ async function adminAction(action:string,data:any){
   }
   const event=await ownerEvent(data.event_id);
   if(action==="list_participants"){
-    const [roster,phones,pairs]=await Promise.all([
+    const [roster,pairs]=await Promise.all([
       db("ss_participants?select=id,display_name,desk_key,is_active,created_at&event_id=eq."+event.id+"&order=created_at.asc"),
-      db("ss_participant_private?select=participant_id,phone_e164&event_id=eq."+event.id),
       db("ss_assignments?select=id,santa_id,child_id&event_id=eq."+event.id)
     ]);
-    const numbers=new Map(phones.map((p:any)=>[p.participant_id,p.phone_e164]));
-    return {event,participants:roster.map((p:any)=>({...p,phone_e164:numbers.get(p.id)||null})),assignments:pairs};
+    return {event,participants:roster,assignments:pairs};
   }
   if(action==="add_participant"){
     if(event.assignments_locked_at)fail("Assignments locked; participant registration is closed.");
     const name=string(data.display_name,160);
-    const phone=string(data.phone_e164,20);
     const desk=string(data.desk_key,30);
     if(!name)fail("Employee name required.");
-    if(phone&&!/^\+[1-9][0-9]{6,14}$/.test(phone))fail("Use a complete international number (+91…).");
+    // Phone numbers are deliberately never accepted or persisted by this endpoint.
     for(let i=0;i<10;i++){
       const code=randomCode();
       try{
         const id=await db("rpc/ss_register_participant","POST",{
-          p_event_id:event.id,p_display_name:name,p_phone_e164:phone||null,p_desk_key:desk||null,
+          p_event_id:event.id,p_display_name:name,p_desk_key:desk||null,
           p_code_fingerprint:await fingerprint(event.id,code)
         });
         return {id,code};
@@ -286,14 +283,12 @@ async function adminAction(action:string,data:any){
   if(action==="edit_participant"){
     if(event.assignments_locked_at)fail("The roster is locked.");
     if(!validId(data.participant_id))fail("Invalid participant.");
-    const name=string(data.display_name,160),phone=string(data.phone_e164,20),desk=string(data.desk_key,30);
+    const name=string(data.display_name,160),desk=string(data.desk_key,30);
     if(!name)fail("Name required.");
-    if(phone&&!/^\+[1-9][0-9]{6,14}$/.test(phone))fail("Invalid phone number.");
     const updated=await db("ss_participants?id=eq."+data.participant_id+"&event_id=eq."+event.id,"PATCH",{
       display_name:name,desk_key:desk||null,is_active:!!data.is_active,updated_at:stamp()
     },true);
     if(!updated?.length)fail("Participant not found.",404);
-    await db("ss_participant_private?participant_id=eq."+data.participant_id+"&event_id=eq."+event.id,"PATCH",{phone_e164:phone||null,updated_at:stamp()});
     return {ok:true};
   }
   if(action==="rotate_code"){
