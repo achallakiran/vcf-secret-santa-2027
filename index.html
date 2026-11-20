@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#080d16"/>
   <meta name="description" content="Voxel Secret Santa — a thoughtful Christmas office mystery."/>
   <title>Voxel Secret Santa</title>
-  <link rel="stylesheet" href="./assets/styles.css?v=avatar-expanded-v2"/>
+  <link rel="stylesheet" href="./assets/styles.css?v=braid-camera-v1"/>
 </head>
 <body>
   <div class="snow" id="snow" aria-hidden="true"></div>
@@ -152,10 +152,13 @@
                 <div id="avatar-skin-options" class="atelier-swatch-grid" role="group" aria-label="Character color"></div>
               </section>
               <section data-studio-panel="hair" class="atelier-panel hidden">
-                <p class="atelier-description">Choose classic or parted hair, short sides, quiff or textured looks. Select hair color separately.</p>
+                <p class="atelier-description">Choose hairstyles, bald looks, Indian chotis, beards and moustaches. Your character changes in the 3D preview.</p>
+                <div class="atelier-option-heading">Hairstyles</div>
                 <div id="avatar-hairstyle-options" class="atelier-card-grid" role="group" aria-label="Hairstyles"></div>
                 <div class="atelier-option-heading">Hair color</div>
                 <div id="avatar-hair-options" class="atelier-swatch-grid" role="group" aria-label="Hair color"></div>
+                <div class="atelier-option-heading">Beards, moustaches &amp; stubble</div>
+                <div id="avatar-facialHair-options" class="atelier-card-grid" role="group" aria-label="Facial hair styles"></div>
               </section>
               <section data-studio-panel="fashion" class="atelier-panel hidden">
                 <p class="atelier-description">Contemporary Indian office fashion, sculpted in 3D.</p>
@@ -168,9 +171,7 @@
                 <div id="avatar-bottomColor-options" class="atelier-swatch-grid" role="group" aria-label="Lower clothing color"></div>
               </section>
               <section data-studio-panel="accessories" class="atelier-panel hidden">
-                <p class="atelier-description">Tiles show only the facial hair or eyewear shape; the full result appears on your 3D character.</p>
-                <div class="atelier-option-heading">Beards and moustaches</div>
-                <div id="avatar-facialHair-options" class="atelier-card-grid" role="group" aria-label="Beards and moustaches"></div>
+                <p class="atelier-description">Choose spectacles shape and frame color. The tiles show eyewear only.</p>
                 <div class="atelier-option-heading">Spectacles shape</div>
                 <div id="avatar-glassesStyle-options" class="atelier-card-grid" role="group" aria-label="Spectacles shapes"></div>
                 <div class="atelier-option-heading">Spectacles frame color</div>
@@ -293,6 +294,6 @@
   <script type="importmap">
     {"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js"}}
   </script>
-  <script type="module" src="./assets/app.js?v=avatar-expanded-v2"></script>
+  <script type="module" src="./assets/app.js?v=braid-camera-v1"></script>
 </body>
 </html>
