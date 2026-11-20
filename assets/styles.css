@@ -1225,3 +1225,31 @@ body.office-playing #player-menu textarea{
   .player #player-menu.player-menu{width:100%;max-height:100dvh;border-radius:0}
   #player-menu #player-personal{padding:5px 0}
 }
+
+
+/* The new proportional controls always read 0..100 with an average at 50. */
+#player-menu .avatar-slider-grid label{
+  display:flex;flex-direction:column;gap:8px;
+  padding:14px 15px;border:1px solid #e8d0d0;border-radius:12px;
+  background:#fff5ee;color:#573a4c;font-weight:760;
+}
+#player-menu .avatar-slider-grid output{
+  align-self:flex-end;color:#973e64;font-size:14px;font-weight:850;
+  font-variant-numeric:tabular-nums;
+}
+#player-menu .avatar-slider-grid input[type="range"]{
+  width:100%;min-height:30px;touch-action:pan-y;cursor:ew-resize;
+  accent-color:#ad4b72;
+}
+#player-menu .avatar-range-labels{
+  display:flex;justify-content:space-between;gap:4px;
+  color:#866b7a;font-size:10px;font-weight:600;
+}
+#player-menu .avatar-range-labels span:nth-child(2){font-weight:850;color:#6e465d}
+#player-menu .atelier-choice-art img{object-fit:contain}
+#player-menu #avatar-hairstyle-options .atelier-choice-art{
+  background:linear-gradient(180deg,#f8e8df,#e7d7d7);
+}
+#player-menu #avatar-hairstyle-options .atelier-choice-art img{
+  object-fit:contain;object-position:center center;
+}
