@@ -1,13 +1,11 @@
 import * as THREE from "three";
-import {sculptHead,sculptFoot} from "./avatar-parts.js?v=visual-sculpt-v3";
-import {sculptWardrobe} from "./wardrobe.js?v=visual-sculpt-v3";
+import {sculptHead,sculptFoot} from "./avatar-parts.js?v=visual-atelier-v1";
+import {sculptWardrobe} from "./wardrobe.js?v=visual-atelier-v1";
+import {SKIN_COLORS as SKINS,HAIR_COLORS as HAIR,OUTFIT_COLORS as COLORS,FOOTWEAR_OPTIONS} from "./palette.js?v=visual-atelier-v1";
 /**
  * Hybrid voxel adults with modular, richly sculpted faces and contemporary Indian garments. No external or unverified character assets.
  * The body is rigged with real limb pivots and features layered face and hair meshes.
  */
-const SKINS=[0xf1c69e,0xddad84,0xbc805d,0x955d46,0x714331];
-const HAIR=[0x1a1419,0x2c201c,0x50342b,0x392323,0x171921];
-const COLORS=[0x4c816c,0xc75b65,0x385883,0xd19d49,0x765e8d,0xe1ddd4];
 const shared=new Map();
 const contactGeometry=new THREE.CircleGeometry(1,28);
 const shadowMaterials=[
@@ -63,7 +61,8 @@ function resolve(opts={}){
     hairstyle:Math.abs(Number(n.hairstyle)||0)%4,
     outfit:["shirt","tshirt","suit","salwar","dress","sweater"].includes(n.outfit)?n.outfit:"shirt",
     bottom:["jeans","trousers","leggings","palazzo"].includes(n.bottom)?n.bottom:"jeans",
-    color:Number.isInteger(n.color)?n.color%COLORS.length:0,
+    color:Number.isInteger(n.color)?Math.abs(n.color)%COLORS.length:0,
+    footwear:FOOTWEAR_OPTIONS.includes(n.footwear)?n.footwear:"auto",
     glasses:!!n.glasses,
     height:Math.min(1.16,Math.max(.86,Number(n.height)||1)),
     build:Math.min(1.2,Math.max(.83,Number(n.build)||1))
@@ -174,11 +173,14 @@ export function createAvatar(input={},mini=false){
       part(lower,.216,.055,.27,accent,0,-.21,0,.025);
       part(lower,.21,.125,.27,skin,0,-.302,.02,.077);
     }else part(lower,.18,.25,.24,skin,0,-.13,0,.085);
-    const palm=part(lower,.235,.18,.266,skin,0,-.308,.04,.088);
+    // Independently articulated wrist/palm/fingers; the wave happens beside
+    // the head rather than by swinging a rigid arm through the face.
+    const wrist=new THREE.Group();wrist.position.set(0,-.308,.04);lower.add(wrist);
+    part(wrist,.235,.18,.266,skin,0,0,0,.088);
     for(const finger of [-1,0,1])
-      part(lower,.065,.105,.085,skin,finger*.068,-.41,.115,.032);
-    part(lower,.077,.13,.11,skin,side*.126,-.309,.08,.036).rotation.z=side*.26;
-    return {pivot,lower};
+      part(wrist,.065,.105,.085,skin,finger*.068,-.102,.075,.032);
+    part(wrist,.077,.13,.11,skin,side*.126,0,.04,.036).rotation.z=side*.26;
+    return {pivot,lower,wrist};
   }
   const left=arm(-1),right=arm(1);
   function leg(side){
@@ -212,6 +214,8 @@ export function createAvatar(input={},mini=false){
     right.pivot.rotation.x=gait*.6;
     left.pivot.rotation.z=-.07;right.pivot.rotation.z=.07;
     left.lower.rotation.x=0;right.lower.rotation.x=0;
+    left.lower.rotation.z=0;right.lower.rotation.z=0;
+    left.wrist.rotation.z=0;right.wrist.rotation.z=0;
     hips.position.y=1.04+(moving?Math.abs(Math.sin(time*10))*.035:Math.sin(time*2)*.012);
     hips.rotation.z=0;
     headPivot.rotation.y=Math.sin(time*1.4)*.028;
@@ -226,8 +230,16 @@ export function createAvatar(input={},mini=false){
     if(actionActive){
       const wave=Math.sin(motion*12);
       if(data.action==="hi"){
-        right.pivot.rotation.z=-2.75;right.pivot.rotation.x=-.15;
-        right.lower.rotation.z=-.26+wave*.37;
+        // Positive shoulder Z raises the RIGHT arm OUTWARDS. Negative Z
+        // previously put the hand behind the face when viewed from the front.
+        const phase=Math.min(1,motion/.30,(data.actionDuration-motion)/.27);
+        const ease=Math.sin(Math.max(0,Math.min(1,phase))*Math.PI/2);
+        right.pivot.rotation.z=.07+(2.14-.07)*ease;
+        right.pivot.rotation.x=-.24*ease;
+        right.lower.rotation.z=.53*ease;
+        right.lower.rotation.x=-.17*ease;
+        right.wrist.rotation.z=wave*.31*ease;
+        headPivot.rotation.z=-.035*ease;
       }else if(data.action==="dance"){
         hips.rotation.z=Math.sin(motion*9)*.17;
         hips.position.y+=Math.abs(Math.sin(motion*9))*.1;
