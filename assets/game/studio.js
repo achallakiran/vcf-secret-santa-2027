@@ -6,8 +6,9 @@ export function mountAvatarStudio(host,appearance){
   if(!host)throw new Error("Avatar studio preview element is missing.");
   const scene=new THREE.Scene();
   const camera=new THREE.PerspectiveCamera(38,1,.1,45);
-  camera.position.set(2.05,2.32,4.12);
-  camera.fov=35;camera.lookAt(0,1.27,0);
+  // Camera pose is derived from the ACTUAL avatar bounds, never fixed.
+  // Full head, hair, shoes and pedestal must remain visible at any viewport.
+  camera.fov=35;
   const renderer=new THREE.WebGLRenderer({antialias:true,alpha:true,powerPreference:"high-performance"});
   renderer.outputColorSpace=THREE.SRGBColorSpace;
   renderer.toneMapping=THREE.ACESFilmicToneMapping;
@@ -50,7 +51,41 @@ export function mountAvatarStudio(host,appearance){
   const orbit=new THREE.Group();
   orbit.position.y=.365;scene.add(orbit);
   let model=null,dragging=false,lastX=0,angle=-.16,targetAngle=-.16,lastActive=performance.now();
+  let zoom=1,fitDistance=6,fitTarget=new THREE.Vector3(0,1.65,0);
+  let prevPinch=0;
+  const touches=new Map();
   const createdMaterials=new Set();
+
+  // Reserve room above the head for the title and below the shoes for the
+  // rotation/zoom toolbar. The model always fits when the canvas resizes.
+  function frameAvatar(){
+    if(!model)return;
+    orbit.updateMatrixWorld(true);
+    const bounds=new THREE.Box3().setFromObject(orbit);
+    if(bounds.isEmpty())return;
+    const size=bounds.getSize(new THREE.Vector3());
+    fitTarget=bounds.getCenter(new THREE.Vector3());
+    const width=Math.max(host.clientWidth,1),height=Math.max(host.clientHeight,1);
+    const reserved=height<390?92:112;
+    const usableHeight=Math.max(150,height-reserved);
+    const vfov=THREE.MathUtils.degToRad(camera.fov);
+    const aspect=Math.max(.45,width/height);
+    const vertical=(Math.max(size.y,2.7)+.18)/(2*Math.tan(vfov/2));
+    const across=Math.max(size.x,size.z,1.5)+.20;
+    const horizontal=across/(2*Math.tan(vfov/2)*aspect);
+    fitDistance=Math.max(vertical*height/usableHeight,horizontal)*1.12;
+    updateCameraPosition();
+  }
+  function updateCameraPosition(){
+    const view=new THREE.Vector3(.29,.13,.95).normalize();
+    camera.position.copy(fitTarget).addScaledVector(view,fitDistance*zoom);
+    camera.lookAt(fitTarget);
+    camera.updateProjectionMatrix();
+  }
+  function setZoom(next){
+    zoom=THREE.MathUtils.clamp(next,1,2.65);
+    updateCameraPosition();
+  }
   const swap=(props)=>{
     if(model){
       orbit.remove(model.group);
@@ -67,35 +102,61 @@ export function mountAvatarStudio(host,appearance){
     }
     model=createAvatar(props);
     orbit.add(model.group);
+    frameAvatar();
     return model;
   };
+  const touchDistance=()=>{
+    const items=[...touches.values()];
+    return items.length>=2?Math.hypot(items[0].x-items[1].x,items[0].y-items[1].y):0;
+  };
   const pointerDown=e=>{
-    dragging=true;lastX=e.clientX;lastActive=performance.now();
+    touches.set(e.pointerId,{x:e.clientX,y:e.clientY});
+    dragging=touches.size===1;
+    lastX=e.clientX;
+    prevPinch=touchDistance();
+    lastActive=performance.now();
     renderer.domElement.setPointerCapture?.(e.pointerId);
-    renderer.domElement.style.cursor="grabbing";
+    renderer.domElement.style.cursor=dragging?"grabbing":"zoom-out";
   };
   const pointerMove=e=>{
-    if(!dragging)return;
-    const dx=e.clientX-lastX;
-    lastX=e.clientX;
-    targetAngle+=dx*.010;
+    if(!touches.has(e.pointerId))return;
+    touches.set(e.pointerId,{x:e.clientX,y:e.clientY});
+    if(touches.size>=2){
+      const next=touchDistance();
+      if(prevPinch>0&&next>0)setZoom(zoom*prevPinch/next);
+      prevPinch=next;
+      dragging=false;
+    }else if(dragging){
+      const dx=e.clientX-lastX;
+      lastX=e.clientX;
+      targetAngle+=dx*.010;
+    }
     lastActive=performance.now();
   };
   const pointerUp=e=>{
+    touches.delete(e.pointerId);
+    prevPinch=touchDistance();
     dragging=false;lastActive=performance.now();
     renderer.domElement.style.cursor="grab";
     try{renderer.domElement.releasePointerCapture?.(e.pointerId);}catch{}
+  };
+  const wheel=e=>{
+    e.preventDefault();
+    setZoom(zoom*Math.exp(e.deltaY*.0011));
+    lastActive=performance.now();
   };
   renderer.domElement.addEventListener("pointerdown",pointerDown);
   renderer.domElement.addEventListener("pointermove",pointerMove);
   renderer.domElement.addEventListener("pointerup",pointerUp);
   renderer.domElement.addEventListener("pointercancel",pointerUp);
+  renderer.domElement.addEventListener("wheel",wheel,{passive:false});
   let running=true,raf=0,clock=new THREE.Clock(),ro=null;
   function resize(){
     const width=Math.max(1,host.clientWidth),height=Math.max(1,host.clientHeight);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,1.45));
     renderer.setSize(width,height,false);
     camera.aspect=width/height;camera.updateProjectionMatrix();
+    frameAvatar();
   }
   if(typeof ResizeObserver!=="undefined"){
     ro=new ResizeObserver(resize);ro.observe(host);
@@ -124,13 +185,23 @@ export function mountAvatarStudio(host,appearance){
     const sample=createAvatar(props);
     thumbScene.add(sample.group);
     sample.update(0,false);
+    const tb=new THREE.Box3().setFromObject(sample.group);
+    const center=tb.getCenter(new THREE.Vector3());
+    const size=tb.getSize(new THREE.Vector3());
+    thumbCamera.fov=portrait?29:38;
     if(portrait){
-      thumbCamera.fov=28;thumbCamera.position.set(1.6,2.88,3.2);
-      thumbCamera.lookAt(0,2.05,0);
+      // Portrait cards may focus on the head, but never cut its hair off.
+      center.y=tb.max.y-size.y*.30;
+      const headHeight=Math.max(1.18,size.y*.50);
+      const h=headHeight/(2*Math.tan(THREE.MathUtils.degToRad(thumbCamera.fov)/2))*1.3;
+      thumbCamera.position.set(center.x+h*.22,center.y+h*.08,center.z+h*.975);
     }else{
-      thumbCamera.fov=38;thumbCamera.position.set(2.0,2.17,4.30);
-      thumbCamera.lookAt(0,1.23,0);
+      const v=size.y/(2*Math.tan(THREE.MathUtils.degToRad(thumbCamera.fov)/2))*1.30;
+      const h=Math.max(size.x,size.z)/(2*Math.tan(THREE.MathUtils.degToRad(thumbCamera.fov)/2)*(thumbWidth/thumbHeight))*1.25;
+      const dist=Math.max(v,h);
+      thumbCamera.position.set(center.x+dist*.22,center.y+dist*.08,center.z+dist*.975);
     }
+    thumbCamera.lookAt(center);
     thumbCamera.updateProjectionMatrix();
     const previous=renderer.getRenderTarget();
     try{
@@ -179,6 +250,8 @@ export function mountAvatarStudio(host,appearance){
     update:swap,
     thumbnail,
     rotate(delta){targetAngle+=delta;lastActive=performance.now();},
+    zoom(delta){setZoom(zoom*delta);lastActive=performance.now();},
+    fit(){zoom=1;frameAvatar();lastActive=performance.now();},
     dispose(){
       running=false;cancelAnimationFrame(raf);ro?.disconnect();
       window.removeEventListener("resize",resize);
@@ -186,6 +259,8 @@ export function mountAvatarStudio(host,appearance){
       renderer.domElement.removeEventListener("pointermove",pointerMove);
       renderer.domElement.removeEventListener("pointerup",pointerUp);
       renderer.domElement.removeEventListener("pointercancel",pointerUp);
+      renderer.domElement.removeEventListener("wheel",wheel);
+      touches.clear();
       thumbTarget.dispose();
       renderer.dispose();
       host.replaceChildren();
