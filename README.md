@@ -48,7 +48,11 @@ The participant-code flow now opens a new procedural Three.js 3D office scene in
 
 **Mobile viewport stability:** the game pins to the stable `100svh` viewport on touch devices, disables browser scroll and pinch-to-zoom only over the gameplay canvas, preserves scroll in Pause/Character/Personal panels, and uses 16px input fonts to prevent iOS Safari focus zoom. Rotating the phone still recalculates aspect ratio. The organizer console is unaffected.
 
-**Avatar studio:** Pause → Character opens a **prominent, rotatable full-body 3D model** on a gold-trimmed pedestal, with warm studio lights and compact category tabs: Look, Hair, Fashion and Shape. Drag the model to rotate it or use the dedicated rotation arrows. Available wardrobes include contemporary Indian smart-casual clothes, salwar suits (no sarees or kurtas), tailored suits, dresses and holiday sweaters; hairstyles, skin tones, height/build, clothing colors, and spectacles remain available. Changes update both the 3D studio model and the player's game model. `See me in the office` shows the game character up close; Reset restores the last saved model. **Save look** uses the existing signed, player-scoped Supabase `ss-gateway` with validated appearance data and optimistic `avatar_version` concurrency. The public fictional preview does not save; no unrelated database tables are changed.
+**Avatar atelier (visual creator v3):** Pause → Character now uses the reference-driven cream/rose/plum layout: category icon rail at left, **large draggable live 3D model** in the center, and **real 3D option thumbnails** at right. Gender, hairstyle, outfit, bottoms, spectacles and footwear use clickable image tiles—**no appearance dropdowns**. Height and build retain sliders. Skin, hair and clothing use **unnamed color swatches**, including pure black and pure white. Color indices previously saved remain compatible. Options are rendered using the **same full-quality procedural avatar**, not a reduced preview mesh. Thumbnails are cached and rendered through the existing studio's single WebGL renderer; updates preview live on the in-game character. Save/Reset continue using the signed player-scoped Supabase `ss-gateway` with optimistic avatar version checks. Public preview allows customization but cannot persist changes. Existing login-to-office flow is unchanged; an accidentally added pre-office wizard has been removed.
+
+**Hi and gesture animation:** The right-arm Hi previously used a large negative shoulder-Z rotation that moved the hand across/behind the face. This was replaced by an **outward raised arm, bent elbow and independently rotating wrist** with smooth raise/lower timing. Clap now brings hands inward instead of moving them apart; Dance/Cheer remain rigged. All coworkers use the same full-resolution character model.
+
+**Shared color validation:** The dedicated `ss-gateway` Edge Function (version 6) validates the enlarged color choices and a `footwear` field using the existing server-side avatar ownership/version workflow. No unrelated Supabase tables, authentication settings or other functions were changed.
 
 **Code organization:**
 
@@ -57,6 +61,9 @@ assets/game/
   avatar.js          # authored articulated procedural character geometry and shared rig
   avatar-parts.js    # expressive face, layered hair, modeled footwear
   wardrobe.js        # actual contemporary Indian garment sculptures and detailing
+  palette.js         # shared indexed colors including pure black and white
+  visual-materials.js# authored procedural garment fabrics and textile patterns
+  avatar-editor.js   # visual avatar option cards and unnamed color swatches
   office.js          # scalable workstations, walls, window, decorations and celebration area
   environment-art.js # original screens, workstations, posters and wall details
   art-surfaces.js    # warm tile materials and furnished collaboration nooks
@@ -65,6 +72,18 @@ assets/game/
 ```
 
 The Three.js module is loaded at a pinned CDN version via an import map. This new game scene requires network access and WebGL; the previous static login/backend screens remain as before. We have checked module syntax, DOM references, a mocked run of scalable office generation, avatar animation-rig calls, and representative navigation routes. **Full browser rendering, visual fidelity relative to the reference image, performance on real mobile phones, and end-to-end GitHub Pages gameplay still require live verification.**
+
+### Visual atelier v3 — implementation status
+
+Implemented on `main`:
+- Reference-style full visual avatar editor (category navigation, central 3D preview, true 3D option thumbnails, selected checkmarks), with no appearance dropdowns.
+- Black and white swatches for skin, hair and clothing, alongside existing colors; no named complexion categories.
+- Footwear cards and real footwear geometry; existing avatar save pathway supports the new validated field.
+- Hi wave corrected to keep the right hand outside the face silhouette; wrist animation is independent.
+- Clap arm movement revised to converge inward; wardrobe fabrics now include reusable weave/embroidery patterns.
+- Indoor plants and wall garlands refined with layered leaves, ribbon bows and brighter wall lighting. No roof bars added.
+
+The public preview can be used to inspect these changes at `?preview=1`. Static syntax, data-flow and geometry checks do **not** prove the image-reference standard has been reached. Real browser screenshots, iPhone/desktop GPU tests and recorded animated poses still need to be inspected before claiming the complete art-quality milestone.
 
 ### Full-detail visual sculpture v3 — reference-led character and office art
 
