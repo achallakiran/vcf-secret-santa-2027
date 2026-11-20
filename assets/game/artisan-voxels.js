@@ -62,20 +62,20 @@ export function sculptFaceVoxels(head,p){
     const cx=side*.225;
     // Stepped eye frame and prominent top lid. High-contrast sclera remains
     // large, retaining the cute expression of the agreed character references.
-    for(let k=0;k<7;k++){
-      const x=cx+(k-3)*.035;
-      const y=.477+Math.sin(k/6*Math.PI)*.010;
-      b.voxel(x,y,.433,.038,.020,.026,hair);
+    for(let k=0;k<5;k++){
+      const x=cx+(k-2)*.041;
+      const y=.485+Math.sin(k/4*Math.PI)*.008;
+      b.voxel(x,y,.425,.036,.012,.016,colorHex(hair,.14));
     }
     for(let k=0;k<5;k++){
       const x=cx+(k-2)*.038;
       b.voxel(x,.317-(k===0||k===4?.010:0),.429,.039,.016,.025,deep);
     }
     // Small curved brow segments, with separately angled ends.
-    for(let k=0;k<6;k++){
-      const x=cx+(k-2.5)*.038;
-      b.voxel(x,.548+Math.sin(k/5*Math.PI)*.026,.423,.035,.040,.024,
-        colorHex(hair,k%3===0?.07:0));
+    for(let k=0;k<5;k++){
+      const x=cx+(k-2)*.041;
+      b.voxel(x,.548+Math.sin(k/4*Math.PI)*.014,.414,.029,.014,.016,
+        colorHex(hair,.12));
     }
     // Outer eyelashes / creases and softly colored lower eyelid.
     for(let k=0;k<3;k++){
@@ -165,18 +165,20 @@ export function sculptHairVoxels(head,p){
   }
   // Forehead fringe is organized as intersecting angular locks and staggered
   // ends. Stop above the large eye region so expressions remain readable.
-  for(let col=0;col<12;col++){
-    const x=(col-5.5)*.086;
+  for(let col=0;col<10;col++){
+    const x=(col-4.5)*.099;
     const delta=(col*7+style*3)%4;
     // Center/side parting removes the fringe along a visible scalp seam.
     if(parting>=0){
       const seam=parting===0?3:parting===1?8:6;
       if(Math.abs(col-seam)<=0)continue;
     }
-    const y=.784-delta*.034+(cut>=13?.055:0);
-    b.voxel(x,y,.449,.092,.166+delta*.019,.128,pigment(6,col),
-      0,0,(col-5.5)*-.022);
-    b.voxel(x,y-.085-delta*.012,.499,.071,.052,.055,pigment(7,col));
+    const y=.858-delta*.020+(cut>=13?.033:0);
+    // Keep the eyebrow and upper eye region clear, even with short hair.
+    if(cut>=13)continue;
+    b.voxel(x,y,.382,.096,.084+delta*.011,.102,pigment(6,col),
+      0,0,(col-4.5)*-.015);
+    b.voxel(x,y-.047-delta*.006,.420,.063,.034,.033,pigment(7,col));
   }
   // Rounded-but-stepped side walls. Front visible locks frame the face but
   // never conceal the eyes or cheeks.
