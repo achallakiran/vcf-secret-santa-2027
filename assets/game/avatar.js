@@ -39,6 +39,7 @@ function resolve(opts={}){
     hair:Math.abs(Number(n.hair)||0)%HAIR.length,
     hairstyle:Math.abs(Number(n.hairstyle)||0)%4,
     outfit:["shirt","tshirt","suit","salwar","dress","sweater"].includes(n.outfit)?n.outfit:"shirt",
+    bottom:["jeans","trousers","leggings","palazzo"].includes(n.bottom)?n.bottom:"jeans",
     color:Number.isInteger(n.color)?n.color%COLORS.length:0,
     glasses:!!n.glasses,
     height:Math.min(1.16,Math.max(.86,Number(n.height)||1)),
@@ -52,7 +53,9 @@ export function createAvatar(input={},mini=false){
   const width=p.build, feminine=p.gender==="female";
   const isEthnic=p.outfit==="salwar";
   const top=p.outfit==="suit"?mat(0x2d3d59):cloth;
-  const bottom=isEthnic?mat(0xf1dfc3):p.outfit==="dress"?cloth:mat(p.outfit==="suit"?0x24324b:0x35465b);
+  const bottomColors={jeans:0x375476,trousers:0x394352,leggings:0x433c53,palazzo:0xe0c9af};
+  const bottom=isEthnic?mat(p.bottom==="leggings"?0xf1dfc3:0xe9d3be):
+    p.outfit==="dress"?cloth:mat(p.outfit==="suit"?0x24324b:bottomColors[p.bottom]);
   // Lifts the whole avatar off its animation pivots.
   const hips=new THREE.Group();hips.position.y=1.04;body.add(hips);
   const pelvis=part(hips,.55*width,.32,.38,bottom,0,-.12,0);
@@ -147,9 +150,13 @@ export function createAvatar(input={},mini=false){
   const left=arm(-1),right=arm(1);
   function leg(side){
     const pivot=new THREE.Group();pivot.position.set(side*.17,-.18,0);hips.add(pivot);
-    part(pivot,.245*width,.53,.31,bottom,0,-.255,0,.055);
-    part(pivot,.28,.13,.42,mat(0xd6d1c7),0,-.55,.10,.04);
-    part(pivot,.29,.105,.43,mat(0xffffff),0,-.615,.12,.04);
+    const loose=p.bottom==="palazzo"||p.outfit==="salwar"&&p.bottom!=="leggings";
+    const tight=p.bottom==="leggings";
+    const legWidth=(loose?.31:tight?.205:.245)*width;
+    part(pivot,legWidth,.53,loose?.35:.31,bottom,0,-.255,0,.055);
+    const shoe=isEthnic||p.outfit==="dress"?mat(0xb97756):mat(0xd6d1c7);
+    part(pivot,.28,.13,.42,shoe,0,-.55,.10,.04);
+    part(pivot,.29,.105,.43,isEthnic?mat(0x9b5c4f):mat(0xffffff),0,-.615,.12,.04);
     return pivot;
   }
   const lLeg=leg(-1),rLeg=leg(1);
@@ -221,6 +228,7 @@ export function avatarFromPerson(person,i=0){
     skin:(hash>>>3)%5,hair:(hash>>>9)%5,hairstyle:(hash>>>12)%4,
     color:(hash>>>15)%6,glasses:((hash>>>17)&3)===1,
     outfit:presets[(hash>>>19)%presets.length],
+    bottom:["jeans","trousers","leggings","palazzo"][(hash>>>11)%4],
     height:.91+((hash>>>23)%16)/100,build:.9+((hash>>>27)%22)/100
   };
   return resolve({...fallback,...(person.avatar&&typeof person.avatar==="object"?person.avatar:{})});
