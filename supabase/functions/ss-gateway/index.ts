@@ -89,9 +89,12 @@ async function db(path:string,method="GET",body?:unknown,returnRows=false):Promi
   return data;
 }
 async function guard(key:string,success:boolean,limit=6,lock=1200,windowSec=900):Promise<{allowed:boolean; failures:number;locked_until:string|null}> {
-  return await db("rpc/ss_auth_attempt","POST",{
+  const result = await db("rpc/ss_auth_attempt","POST",{
     p_guard_key:key,p_success:success,p_failure_limit:limit,p_lock_seconds:lock,p_window_seconds:windowSec
   });
+  // PostgREST serializes SETOF/RETURNS TABLE RPC results as an array.
+  if(!Array.isArray(result)||!result.length)fail("Login limiter unavailable.",503);
+  return result[0];
 }
 async function adminGuard(){
   const rows=await db("ss_auth_guard?select=guard_key,pin_salt_hex,pin_hash_hex,pbkdf2_iterations,token_version,locked_until&guard_key=eq.admin&limit=1");
