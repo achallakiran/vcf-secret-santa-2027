@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
+  <meta name="theme-color" content="#080d16"/>
+  <meta name="description" content="Voxel Secret Santa — a thoughtful Christmas office mystery."/>
+  <title>Voxel Secret Santa</title>
+  <link rel="stylesheet" href="./assets/styles.css"/>
+</head>
+<body>
+  <div class="snow" id="snow" aria-hidden="true"></div>
+  <div class="ambience" aria-hidden="true"><span class="star st1">✧</span><span class="star st2">✦</span><span class="star st3">✧</span></div>
+  <main id="welcome" class="welcome page">
+    <header class="topbar"><span class="brand">✦ VCF GAMES</span><a id="admin-entry" class="quiet-link" href="?admin=1">Organizer ↗</a></header>
+    <section class="hero">
+      <div class="hat" aria-hidden="true"><i></i></div>
+      <div class="title-wrap"><h1 class="voxel-title"><span class="red">SECRET</span><span class="green">SANTA</span></h1><div class="year" id="hero-year">2026</div></div>
+      <p class="intro">A little mystery. A lot of Christmas cheer.</p>
+      <form id="entry-form" class="entry-form">
+        <label for="entry-code">YOUR INVITATION CODE</label>
+        <div class="entry-row"><input id="entry-code" type="text" maxlength="4" inputmode="numeric" autocomplete="one-time-code" placeholder="••••" pattern="[0-9]{4}" required aria-label="Four-digit invitation code"/><button type="submit" class="arrow-button" aria-label="Enter office">➜</button></div>
+        <p id="entry-note" class="field-note" aria-live="polite">Enter the four digits shared by your organizer.</p>
+      </form>
+    </section>
+    <section class="rules" aria-label="Secret Santa rules"><div class="rule-icon">🎁</div><div><h2>THE SPIRIT OF SECRET SANTA</h2><p>We recommend keeping your gift within <strong>₹500</strong>. Take time to choose something thoughtful for your Secret Child, rather than something expensive.</p><p>Your anonymous Santa may assign you small, fun daily tasks. Enjoy the surprises and look for clues around the office.</p><p class="rule-last">Above all, leave your warm wishes and make your Secret Child feel special!</p></div></section>
+    <footer class="footer">MADE FOR KINDNESS, NOT COMPETITION <span>✳</span> 2026</footer>
+  </main>
+  <main id="admin" class="admin page hidden">
+    <header class="admin-header"><a class="back" href="./">← Return to Christmas</a><span>SECRET SANTA · ORGANIZER</span><button id="sign-out" class="small-outline hidden">Sign out</button></header>
+    <div class="admin-intro"><p class="eyebrow">THE CONTROL ROOM</p><h2>Your Christmas office<br/><em>starts here.</em></h2><p>Create an event, invite colleagues, and keep the surprise safely hidden.</p></div>
+    <section id="auth-area" class="panel auth-panel">
+      <div class="section-head"><h3>Organizer sign in</h3><span class="chip">SECURE ACCESS</span></div>
+      <form id="auth-form" class="stack">
+        <label>Email<input type="email" id="auth-email" autocomplete="email" placeholder="you@company.com" required/></label>
+        <label>Password<input type="password" id="auth-password" minlength="8" autocomplete="current-password" placeholder="At least 8 characters" required/></label>
+        <div class="button-row"><button type="submit" class="primary" id="login-btn">Sign in →</button><button type="button" class="secondary" id="register-btn">Create organizer account</button></div>
+      </form><p class="muted">Use an email address you control. New accounts may require email confirmation. Only the creator can manage their event.</p>
+    </section>
+    <section id="dashboard" class="hidden">
+      <div class="dashboard-row"><span id="signed-in-user" class="muted"></span><button id="refresh-events" class="small-outline">↻ Refresh</button></div>
+      <section class="panel"><div class="section-head"><h3>Christmas events</h3><span class="chip">MULTI-EVENT</span></div>
+        <form id="event-form" class="form-row"><label class="grow">Event name<input id="event-name" maxlength="160" required placeholder="VCF Secret Santa 2026"/></label><button class="primary" type="submit">+ Create event</button></form>
+        <div id="event-list" class="event-list"></div>
+      </section>
+      <section id="event-workspace" class="panel hidden">
+        <div class="section-head"><div><p class="eyebrow">ACTIVE WORKSPACE</p><h3 id="workspace-title"></h3><p id="workspace-slug" class="muted"></p></div><span id="workspace-state" class="chip"></span></div>
+        <div class="metrics"><div><strong id="people-count">0</strong><span>Employees</span></div><div><strong id="assignment-count">0</strong><span>Pairs</span></div><div><strong id="invite-count">0</strong><span>Codes visible this session</span></div></div>
+        <form id="participant-form" class="form-row"><label class="grow">Employee name<input id="participant-name" placeholder="First and last name" maxlength="160" required/></label><label class="grow">WhatsApp number (optional)<input id="participant-phone" placeholder="+919876543210" type="tel" autocomplete="off"/></label><label>Desk (optional)<input id="participant-desk" placeholder="D-01" maxlength="30"/></label><button class="primary" type="submit">+ Add</button></form>
+        <p class="muted small">Codes are displayed when created and are not stored in readable form. If you lose a code, regenerate it and send the new one.</p>
+        <div class="table-wrap"><table><thead><tr><th>Employee</th><th>Desk</th><th>Code</th><th>Invitation</th><th>Manage</th></tr></thead><tbody id="participant-rows"></tbody></table></div>
+        <div class="assignment-box"><div><h3>Secret assignments</h3><p class="muted small">Everyone gives to one colleague and receives from one colleague. Assignments cannot be regenerated after locking.</p></div><button class="primary" id="assign-btn" type="button">🔒 Generate & lock assignments</button></div>
+        <details id="assignment-details" class="hidden"><summary>Organizer-only pairings</summary><div id="pair-list"></div></details>
+      </section>
+    </section>
+    <p class="admin-footer">Protected by Supabase authentication · Existing applications remain separate</p>
+  </main>
+  <div class="toast hidden" id="toast" role="status" aria-live="polite"></div>
+  <script type="module" src="./assets/app.js"></script>
+</body>
+</html>
