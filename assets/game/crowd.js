@@ -179,11 +179,17 @@ function descriptors(p){
 export function createInstancedCrowd(people){
   const group=new THREE.Group();
   group.name="Expressive seated voxel coworkers (instanced)";
-  const byType={soft:[],cube:[],jewel:[]};
+  // Split a very long 150-person office into spatial batches. The old
+  // all-in-one InstancedMeshes rendered every distant person on mobile,
+  // including dozens of rows beyond the camera.
+  const buckets=new Map();
   const source=people||[];
   for(let i=0;i<source.length;i++){
     const person=source[i],p=person.appearance||{},seat=person.seat;
     if(!seat)continue;
+    const chunk=Math.floor(seat.position.z/11);
+    if(!buckets.has(chunk))buckets.set(chunk,{soft:[],cube:[],jewel:[]});
+    const byType=buckets.get(chunk);
     const root=new THREE.Matrix4().makeRotationY(seat.facing);
     root.setPosition(seat.position.x,0,seat.position.z);
     const height=Math.max(.86,Math.min(1.16,Number(p.height)||1));
@@ -198,15 +204,17 @@ export function createInstancedCrowd(people){
     }
   }
   const meshes=[],invisible=new THREE.Matrix4().makeScale(.00001,.00001,.00001);
-  for(const kind of Object.keys(byType)){
-    const parts=byType[kind];if(!parts.length)continue;
+  for(const [chunk,bucket] of buckets)for(const kind of Object.keys(bucket)){
+    const parts=bucket[kind];if(!parts.length)continue;
     const material=new THREE.MeshStandardMaterial({color:0xffffff,roughness:.79,metalness:0,
       flatShading:kind==="jewel"});
     const mesh=new THREE.InstancedMesh(GEOMETRIES[kind],material,parts.length);
-    mesh.name="Crowd "+kind+" · "+parts.length+" voxels";
+    mesh.name="Coworkers bay "+chunk+" / "+kind+" · "+parts.length+" voxels";
     mesh.castShadow=false;
     mesh.receiveShadow=true;
-    mesh.frustumCulled=false; // never cull the whole crowd because one wing is out of view
+    // A bounded 11m slice has meaningful camera culling; retaining the full
+    // room in a single batch was drawing thousands of unseen meshes.
+    mesh.frustumCulled=true;
     for(let i=0;i<parts.length;i++){
       mesh.setMatrixAt(i,parts[i].matrix);
       mesh.setColorAt(i,tempColor.setHex(parts[i].color));
@@ -214,6 +222,7 @@ export function createInstancedCrowd(people){
     mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
     mesh.instanceMatrix.needsUpdate=true;
     if(mesh.instanceColor)mesh.instanceColor.needsUpdate=true;
+    mesh.computeBoundingSphere?.(); // freeze bounds based on unhidden positions
     group.add(mesh);meshes.push({mesh,parts});
   }
   let activeKey="";
@@ -236,6 +245,7 @@ export function createInstancedCrowd(people){
     }
   };
   return {group,setDetailed,dispose,count:source.length,
-    voxelParts:Object.values(byType).reduce((sum,arr)=>sum+arr.length,0),
+    voxelParts:[...buckets.values()].reduce((sum,b)=>sum+
+      Object.values(b).reduce((s,arr)=>s+arr.length,0),0),
     drawBatches:meshes.length};
 }
