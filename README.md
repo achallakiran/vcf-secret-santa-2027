@@ -1,41 +1,66 @@
-# VCF Voxel Secret Santa
+# VCF Secret Santa — browser game
 
-A multi-event Christmas office Secret Santa experience. Current milestone: **PIN-only admin console and participant personal dashboard**, with the detailed 3D voxel office still in development.
+A holiday office Secret Santa experience, hosted as a static GitHub Pages frontend with an isolated Supabase backend.
 
-## Access
+## Access — no Supabase login for organizers or players
 
-- Admin console: `https://achallakiran.github.io/vcf-secret-santa-2027/?admin=1`. Enter the temporary administrator PIN chosen for this project. **No Supabase email or password is required.**
-- Player: open the **event-specific** invitation URL, `https://achallakiran.github.io/vcf-secret-santa-2027/?event=<event-slug>`, then enter the organizer-provided four-digit invitation code. **No player registration or additional credentials.**
-- From the admin console: create an event, add colleagues, record optional WhatsApp numbers and desk IDs, generate and share their codes, and lock randomized one-to-one Secret Santa assignments.
-- Players can edit itemized wishlists, receive scheduled daily tasks without learning their Santa's identity, assign tasks to their own Secret Child and mark them complete, record gift status, and write a private finale message.
+- **Organizer:** `?admin=1` on the deployed game URL. Enter the **temporary organizer PIN** supplied privately by the event owner. You can change the PIN in the organizer console, without changing Supabase Auth settings.
+- **Player:** open the event-specific invitation link (`?event=<event-slug>`) shared by the organizer. Enter only the unique **four-digit invitation code**. No email, password or Supabase account is required.
+- The four-digit values are checked by the dedicated **`ss-gateway` Edge Function**. Browser code contains only the Supabase public/publishable key, never the service-role secret.
+- PINs are low entropy; this prototype uses server-side PBKDF2 verification for the administrator, keyed HMAC fingerprints for invitations, attempt lockouts, and expiring signed sessions. **Change the default PIN before inviting real colleagues.** Do not use this prototype to handle confidential company data.
+- The administrator PIN is **global** for this initial single-organizer prototype: anyone with it can access all events. Future multi-office independent administrators will need per-event credentials and authorization.
+
+## Current implementation
+
+- Black Christmas entry screen with animated falling snow, festive title, rules including the suggested ₹500 gift budget and optional Santa tasks.
+- PIN-based organizer interface: create events, register participants with optional phone and desk, create or rotate four-digit codes, share WhatsApp invitations, generate/lock one-to-one Secret Santa pairings, and change the admin PIN.
+- Participant code redemption: signed event-scoped sessions, personal dashboard, editable itemized wishlist.
+- Santa-side interface: see only your Secret Child, read the Child's wishlist, assign dated tasks, tick tasks complete, record gift purchase, write private ceremony message.
+- Child-side interface: read tasks assigned up to the current day, including completion status, without revealing their Santa's identity.
+- Minimal two-icon player HUD (pause, hint) and pause menu with **Character** and **Personal** tabs.
+- Supabase database: 8 `ss_*` game tables, plus one restricted `ss_auth_guard` table for PIN verification/lockout, and three privileged transaction helpers.
+- Supabase functions: `ss-gateway` is the current API; `ss-organizer` is retired and returns HTTP 410.
+
+**Not implemented yet:** Detailed voxel avatar editor, playable office scene (currently a placeholder), persistent office/day scene generation, truthful daily hints, or organizer-controlled final reveal. Player hints correctly show a not-yet-available message until an office scene is published.
 
 ## Deployment
 
-Enable **Settings → Pages → Deploy from branch → main / (root)** to serve `index.html`. The published Pages URL has not yet been independently confirmed live.
+Repository: https://github.com/achallakiran/vcf-secret-santa-2027
 
-The frontend consists of `index.html`, `assets/app.js`, and `assets/styles.css` with no package build step; Supabase connectivity is required. The visual office is presently a placeholder.
+Expected GitHub Pages address (requires GitHub Pages setup):
 
-## Backend
+https://achallakiran.github.io/vcf-secret-santa-2027/
 
-Supabase project: `fwrievuhudjkeffmszqf` (the owner's existing project).
+If this URL gives 404, set **Repository Settings → Pages → Deploy from a branch → main → /(root)**. The current session could not independently verify live GitHub Pages publication.
 
-- Eight application tables under the `ss_` prefix, plus security-only `ss_auth_guard` for verifier/lockout state.
-- Active Edge Function: `supabase/functions/ss-gateway/index.ts` (`verify_jwt=false`, **custom server-side authentication**).
-- Old email-based Edge Function: `supabase/functions/ss-organizer/index.ts`, retired (returns HTTP 410).
-- Admin PIN verifier: salted PBKDF2; short-lived server-signed admin sessions and rate-limited attempts.
-- Player code verifier: server-keyed fingerprint; event-scoped sessions, date-aware tasks, code rotation, and server-filtered player data.
-- Public frontend contains only the Supabase **publishable key**, not the service-role key.
-- Existing unrelated tables, project-wide Auth settings, and data have not been changed.
+No build step: `index.html` references `assets/styles.css` and `assets/app.js` from the repo. Frontend logic needs an internet connection to communicate with Supabase and is not yet an offline-playable game.
 
-**Security note:** A common four-digit admin PIN is a weak temporary credential for a low-stakes prototype. Change it to a longer PIN inside the admin console before sharing widely. This build currently has **one global administrator role for all Secret Santa events**; per-office organizers will need event-scoped admin permissions before separate offices are onboarded.
+## Repository structure
+
+```
+index.html
+assets/
+  app.js
+  styles.css
+supabase/
+  functions/
+    ss-gateway/
+      index.ts
+    ss-organizer/
+      index.ts       # retired endpoint
+README.md
+```
+
+## Database separation
+
+Uses Supabase project `fwrievuhudjkeffmszqf` (the existing `achallakiran's Project`). Secret Santa tables/functions are prefixed `ss_`. Other applications' existing data, application tables, and Supabase Auth configuration were not modified.
+
+Current `public.ss_events`, `public.ss_participants`, `public.ss_assignments` and code tables have **no live event/participant data** until the organizer creates the first event. The server-generated assignment cycle ensures every participating Santa has a different Child, and everyone receives exactly one Santa.
 
 ## Verification status
 
-Database registration, assignment generation and login-attempt functions were tested in rollback-only transactions. Frontend JavaScript syntax and DOM element references were checked. The Edge Function is deployed. **Live browser login, end-to-end API requests and GitHub Pages availability have not yet been independently tested.**
-
-## Remaining development
-
-- Visual 3D voxel office and detailed character customization.
-- NPC movement, tap-to-walk interactions and daily shared office snapshots.
-- Truthful personalized daily hints.
-- Organizer-controlled final Christmas stage and reveal.
+- Backend gateway deployed and reporting ACTIVE.
+- Existing Supabase tables and revoked role privileges checked.
+- GitHub files checked for syntax and DOM event wiring.
+- The DB registration/assignment helper functions previously passed a rollback-only three-participant verification.
+- **The new anonymous-PIN end-to-end network login has not yet been run in a real browser.** It should be tested after GitHub Pages is accessible, along with rate limiting, wrong-PIN handling, token rotation, privacy, and mobile Safari.
