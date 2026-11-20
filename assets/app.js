@@ -1,6 +1,6 @@
 
 "use strict";
-import {createVisualAvatarEditor} from "./game/avatar-editor.js?v=braid-camera-v1";
+import {createVisualAvatarEditor} from "./game/avatar-editor.js?v=studio-qa-v1";
 import {createChristmasMusic} from "./game/christmas-music.js?v=jingle-bells-v1";
 const GATEWAY="https://fwrievuhudjkeffmszqf.supabase.co/functions/v1/ss-gateway";
 const PUBLIC_KEY="sb_publishable_SJo2kgXdHNFZI65iAvQmxw_q56zuVLO";
@@ -408,7 +408,7 @@ async function enterOffice(info){
   }
   $("office-loading").classList.remove("hidden");
   officeLoading=(async()=>{
-    const module=await import("./game/main.js?v=braid-camera-v1");
+    const module=await import("./game/main.js?v=studio-qa-v1");
     officeRuntime=module.mountOffice($("office-canvas"),info,officeToast);
     let cam=null;
     try{cam=localStorage.getItem("vcf-ss-office-camera");}catch{}
@@ -436,12 +436,26 @@ async function enterOffice(info){
   }finally{officeLoading=null;}
 }
 const AVATAR_FIELDS=["gender","outfit","bottom","hairstyle","skin","hair","height","build","footwear","bottomColor","shoeColor","facialHair","glassesStyle","glassesColor"];
+// 50 means natural proportions. Slider bounds are visual, not stored
+// percentages: existing profiles remain valid and keep their measurements.
+const SHAPE_BOUNDS={height:[.80,1.30],build:[.65,1.55]};
+function shapeFromSlider(field,value){
+  const [low,high]=SHAPE_BOUNDS[field],n=Math.max(0,Math.min(100,Number(value)||0));
+  return n<=50?1-(1-low)*(50-n)/50:1+(high-1)*(n-50)/50;
+}
+function sliderFromShape(field,value){
+  const [low,high]=SHAPE_BOUNDS[field],n=Number(value)||1;
+  return Math.round(Math.max(0,Math.min(100,n<=1?50-(1-n)*50/(1-low):50+(n-1)*50/(high-1))));
+}
+function syncShapeOutputs(){
+  for(const field of ["height","build"])$("avatar-"+field+"-out").textContent=$("avatar-"+field).value+" / 100";
+}
 function readAvatarEditor(){
   const result={schema_version:3};
   for(const field of AVATAR_FIELDS){
     const input=$("avatar-"+field);
     result[field]=["skin","hair","hairstyle","bottomColor","shoeColor","glassesColor"].includes(field)?Number(input.value):
-      ["height","build"].includes(field)?Number(input.value):input.value;
+      ["height","build"].includes(field)?shapeFromSlider(field,input.value):input.value;
   }
   result.color=Number($("avatar-color").value);
   result.glasses=result.glassesStyle!=="none";
@@ -455,12 +469,11 @@ function setAvatarEditor(values){
   if(!Object.hasOwn(avatar,"glassesStyle") && avatar.glasses)settings.glassesStyle="rectangle";
   for(const field of AVATAR_FIELDS){
     const el=$("avatar-"+field);
-    el.value=String(settings[field]);
+    el.value=String(["height","build"].includes(field)?sliderFromShape(field,settings[field]):settings[field]);
   }
   $("avatar-color").value=String(settings.color);
   $("avatar-glasses").checked=!!settings.glasses;
-  $("avatar-height-out").textContent=Math.round(Number(settings.height)*100)+"%";
-  $("avatar-build-out").textContent=Math.round(Number(settings.build)*100)+"%";
+  syncShapeOutputs();
   $("avatar-preview-status").textContent="Your changes preview immediately. Save when you are happy with your look.";
   $("avatar-save").disabled=false;
   avatarStudio?.update(settings);
@@ -471,20 +484,33 @@ function previewAvatarNow(){
   const data=readAvatarEditor();
   if(!adminEditingParticipant)officeRuntime?.previewAvatar(data);
   avatarStudio?.update(data);
-  $("avatar-height-out").textContent=Math.round(Number(data.height)*100)+"%";
-  $("avatar-build-out").textContent=Math.round(Number(data.build)*100)+"%";
+  syncShapeOutputs();
   $("avatar-preview-status").textContent=adminEditingParticipant?
     "Changes are visible in the 3D preview. Save to update this participant.":
     "Unsaved changes are visible on your 3D character.";
 }
 function previewAvatarSoon(){
   clearTimeout(avatarPreviewTimer);
-  $("avatar-height-out").textContent=Math.round(Number($("avatar-height").value)*100)+"%";
-  $("avatar-build-out").textContent=Math.round(Number($("avatar-build").value)*100)+"%";
-  avatarPreviewTimer=setTimeout(previewAvatarNow,95);
+  syncShapeOutputs();
+  avatarPreviewTimer=setTimeout(previewAvatarNow,45);
 }
 for(const field of AVATAR_FIELDS){
+  if(field==="height"||field==="build")continue;
   $("avatar-"+field).addEventListener("input",previewAvatarSoon);
+}
+for(const field of ["height","build"]){
+  $("avatar-"+field).addEventListener("input",()=>{
+    clearTimeout(avatarPreviewTimer);
+    syncShapeOutputs();
+    const height=shapeFromSlider("height",$("avatar-height").value);
+    const build=shapeFromSlider("build",$("avatar-build").value);
+    avatarStudio?.setBodyShape(height,build);
+    if(!adminEditingParticipant)officeRuntime?.setBodyShape(height,build);
+    $("avatar-preview-status").textContent="Live proportions updated. Release the slider to apply detailed clothing.";
+  });
+  // Rebuild detailed clothing only at the end of the drag. This avoids
+  // expensive, laggy WebGL regeneration for every touch movement.
+  $("avatar-"+field).addEventListener("change",previewAvatarNow);
 }
 $("avatar-glasses").addEventListener("change",previewAvatarSoon);
 // Actual 3D outfit/hair/accessory cards, swatches and two character portraits.
@@ -584,7 +610,7 @@ async function ensureAvatarStudio(){
       &&!$("player-character").classList.contains("hidden"));
   if(!isVisible())return;
   avatarStudioLoading=(async()=>{
-    const module=await import("./game/studio.js?v=braid-camera-v1");
+    const module=await import("./game/studio.js?v=studio-qa-v1");
     if(!isVisible())return;
     avatarStudio=module.mountAvatarStudio($("avatar-studio-canvas"),readAvatarEditor());
     visualEditor?.refresh(activeStudioTab);
