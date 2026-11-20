@@ -14,6 +14,30 @@ function block(parent,x,y,z,w,h,d,color,cast=true){
   const m=new THREE.Mesh(boxGeo,typeof color==="number"?mat(color):color);
   m.position.set(x,y,z);m.scale.set(w,h,d);m.castShadow=cast;m.receiveShadow=true;parent.add(m);return m;
 }
+const beveledGeometryCache=new Map();
+function softBlock(parent,x,y,z,w,h,d,color,rounding=.115,cast=true){
+  // A beveled block is still authored voxel geometry. Shared across desks
+  // and chairs so the more polished silhouette costs few extra draw calls.
+  const radius=Math.min(.21,Math.max(.03,rounding)),key=radius.toFixed(3);
+  if(!beveledGeometryCache.has(key)){
+    const shape=new THREE.Shape(),r=radius;
+    shape.moveTo(-.5+r,-.5);
+    shape.lineTo(.5-r,-.5);shape.quadraticCurveTo(.5,-.5,.5,-.5+r);
+    shape.lineTo(.5,.5-r);shape.quadraticCurveTo(.5,.5,.5-r,.5);
+    shape.lineTo(-.5+r,.5);shape.quadraticCurveTo(-.5,.5,-.5,.5-r);
+    shape.lineTo(-.5,-.5+r);shape.quadraticCurveTo(-.5,-.5,-.5+r,-.5);
+    const bevel=Math.min(.042,r*.34);
+    const geometry=new THREE.ExtrudeGeometry(shape,{
+      depth:1-2*bevel,steps:1,curveSegments:3,
+      bevelEnabled:true,bevelSize:bevel,bevelThickness:bevel,bevelSegments:2
+    });
+    geometry.center();geometry.userData.officeInstancing=true;
+    beveledGeometryCache.set(key,geometry);
+  }
+  const m=new THREE.Mesh(beveledGeometryCache.get(key),typeof color==="number"?mat(color):color);
+  m.position.set(x,y,z);m.scale.set(w,h,d);
+  m.castShadow=cast;m.receiveShadow=true;parent.add(m);return m;
+}
 function ball(parent,x,y,z,r,color,detail=0){
   const key=r.toFixed(4)+":"+detail;
   if(!cachedBallGeometries.has(key)){
@@ -170,10 +194,10 @@ function chair(parent,x,z,face=1,variant=0){
   cyl(g,0,.30,0,.055,.05,.47,0x484c56);
   for(let i=0;i<5;i++){const a=i*Math.PI*2/5;block(g,Math.cos(a)*.34,.095,Math.sin(a)*.34,.12,.05,.12,0x444b54);}
   // Rounded padded seat, curved-looking double cushion and visible headrest.
-  block(g,0,.55,0,.53,.13,.47,dark);
-  block(g,0,.97,-.21,.54,.75,.13,dark);
-  block(g,0,1.27,-.23,.44,.20,.16,0x566377);
-  block(g,0,.97,-.125,.39,.49,.055,variant%2?0x475766:0x50667a,false);
+  softBlock(g,0,.55,0,.53,.13,.47,dark,.19);
+  softBlock(g,0,.97,-.21,.54,.75,.13,dark,.19);
+  softBlock(g,0,1.27,-.23,.44,.20,.16,0x566377,.18);
+  softBlock(g,0,.97,-.125,.39,.49,.055,variant%2?0x475766:0x50667a,.11,false);
   block(g,-.28,.72,-.02,.075,.13,.4,0x5e6471);
   block(g,.28,.72,-.02,.075,.13,.4,0x5e6471);
   for(const side of [-1,1])ball(g,side*.35,.095,.08,.063,0x353c45);
@@ -188,15 +212,15 @@ function workstation(parent,x,z,i,row,colliders){
   const chairX=x+chairSide*.9;
   const g=new THREE.Group();g.position.set(x,0,z);parent.add(g);
   const oak=mat(0xc69d73),white=mat(0xf4f0e9);
-  block(g,0,.76,0,.73,.075,1.52,oak);
+  softBlock(g,0,.76,0,.73,.075,1.52,oak,.12);
   // A walnut edge with a satin metallic inlay makes the desk read as
   // contemporary modular office furniture rather than stacked boxes.
   block(g,chairSide*.34,.735,0,.017,.028,1.50,0xd6be9c,false);
   block(g,-chairSide*.34,.737,0,.014,.028,1.49,0x9b775e,false);
-  block(g,0,.38,-.66,.62,.68,.08,white);
-  block(g,0,.38,.66,.62,.68,.08,white);
+  softBlock(g,0,.38,-.66,.62,.68,.08,white,.09);
+  softBlock(g,0,.38,.66,.62,.68,.08,white,.09);
   block(g,0,.18,0,.52,.22,1.3,mat(0xeae5dc));
-  block(g,0,1.1,0,.045,.52,1.42,row==="W"?0xefe5d7:0xe9d7bf,false);
+  softBlock(g,0,1.1,0,.045,.52,1.42,row==="W"?0xefe5d7:0xe9d7bf,.12,false);
   // Monitors face the employee (west/east), with long edge of desk fronting the chair.
   const screenX=-left*.13;
   block(g,screenX,.98,-.22,.09,.45,.62,0x343d48);
