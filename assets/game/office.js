@@ -455,9 +455,9 @@ function batchOfficeStaticGeometry(root,twinkle,viewWalls){
 }
 export function buildOffice(count=12){
   const bays=Math.max(4,Math.ceil(Math.min(150,Math.max(1,count))/3));
-  // 2.42 m workstation pitch leaves ~0.90 m free between 1.52 m desk tops.
-  // Every fourth wall-facing desk gets an extra cross-passage gap.
-  const rowStart=2.3,step=4.80,passageGap=2.8; // 1.44 m between 3.36 m desks
+  // Generous aisle between full-sized workstations for walking and NPC social interaction.
+  // Every fourth row also creates an additional cross-passage.
+  const rowStart=2.3,step=6.80,passageGap=3.2; // 3.44 m between 3.36 m desk tops; wider cross passages
   const rowZ=i=>rowStart+i*step+Math.floor(i/4)*passageGap;
   const rowEnd=rowZ(bays-1);
   const passageCenters=[];
