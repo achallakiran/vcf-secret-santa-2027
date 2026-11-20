@@ -1,6 +1,6 @@
 import * as THREE from "three";
-import {buildOffice} from "./office.js?v=celebration-richness-v3";
-import {createAvatar,avatarFromPerson} from "./avatar.js?v=celebration-richness-v3";
+import {buildOffice} from "./office.js?v=celebration-richness-v4";
+import {createAvatar,avatarFromPerson} from "./avatar.js?v=celebration-richness-v4";
 
 /* A responsive office runtime. 3D art and camera are independent from the existing Supabase UI. */
 const UP=new THREE.Vector3(0,1,0);
