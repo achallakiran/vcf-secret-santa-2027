@@ -92,50 +92,6 @@
       <button type="button" id="player-sign-out" class="small-outline">Exit to Christmas title</button>
     </section>
   </main>
-  <main id="player" class="admin page hidden">
-    <header class="admin-header">
-      <span>✦ SECRET SANTA · MY CORNER</span>
-      <div class="button-row"><button type="button" id="player-refresh" class="small-outline" title="Refresh personal data">↻</button><button type="button" id="player-logout" class="small-outline">Exit</button></div>
-    </header>
-    <div class="admin-intro"><p class="eyebrow">THE CHRISTMAS OFFICE</p><h2 id="player-greeting">Welcome, Santa!</h2><p id="player-event-name"></p></div>
-    <section class="panel">
-      <div class="section-head"><h3>My personal corner</h3><span class="chip">PRIVATE</span></div>
-      <p class="muted">Your avatar will explore the Christmas office in the next game milestone. Your wishlist and daily Secret Santa tasks are already connected to Supabase.</p>
-      <h4>My wishlist</h4>
-      <div id="wishlist-items" class="mini-list"></div>
-      <form id="wishlist-form" class="form-row">
-        <label class="grow">Add a wish<input id="wish-input" maxlength="240" placeholder="A thoughtful book, a desk plant…" required/></label>
-        <button class="primary" type="submit">+ Add wish</button>
-      </form>
-    </section>
-    <section class="panel">
-      <div class="section-head"><h3>Tasks from my anonymous Santa</h3><span class="chip">DAILY</span></div>
-      <p class="muted">Your Santa decides when a task has been completed. Scheduled tasks appear on their assigned date.</p>
-      <div id="received-tasks" class="mini-list"></div>
-    </section>
-    <section class="panel" id="my-child-panel">
-      <div class="section-head"><h3>My Secret Child</h3><button type="button" id="reveal-child" class="small-outline">◉ Reveal privately</button></div>
-      <div id="child-private-content" class="hidden">
-        <h4 id="child-name"></h4>
-        <p class="eyebrow">THEIR WISHLIST</p>
-        <div id="child-wishlist" class="mini-list"></div>
-        <label class="toggle-line"><input type="checkbox" id="gift-purchased"/> I've purchased a gift for my Secret Child</label>
-        <h4>Tasks for my Child</h4>
-        <div id="my-child-tasks" class="mini-list"></div>
-        <form id="task-form" class="form-row">
-          <label class="grow">New cheerful task<input id="task-text" maxlength="1000" placeholder="Make three colleagues smile…" required/></label>
-          <label>Task date<input id="task-date" type="date" required/></label>
-          <button type="submit" class="primary">+ Assign</button>
-        </form>
-        <h4>A heartfelt Christmas message</h4>
-        <textarea id="santa-message" class="message-input" maxlength="5000" rows="4" placeholder="Tell your Child something warm and special…"></textarea>
-        <button type="button" class="secondary" id="save-message">Save private message</button>
-        <p class="muted small">Your message remains hidden from your Child until the organizer-controlled final ceremony.</p>
-      </div>
-      <p class="muted" id="no-child-label">Your Secret Child is concealed. Reveal only when you are somewhere private.</p>
-    </section>
-    <p class="admin-footer">The full voxel office and finale are under development. Your personal information is saved securely.</p>
-  </main>
   <div class="toast hidden" id="toast" role="status" aria-live="polite"></div>
   <script type="module" src="./assets/app.js"></script>
 </body>
