@@ -425,6 +425,12 @@ export function buildOffice(count=12){
   }
   plant(party,6.75,.9,.75);plant(party,-6.85,5.35,.92);
   for(const x of [-6.7,6.7])wreath(party,x,2.30,6.15,x<0?Math.PI/2:-Math.PI/2);
+  // Treat stage, gift-table and snowman as real solid objects. The carpet
+  // remains walkable and the player can approach the stage for the ceremony.
+  colliders.push({x:-3.23,z:partyStart+5.03,hx:3.48,hz:1.15});
+  colliders.push({x:-3.2,z:partyStart+3.66,hx:2.40,hz:.67});
+  colliders.push({x:.15,z:partyStart+4.75,hx:1.23,hz:.61});
+  colliders.push({x:6.67,z:partyStart+5.37,hx:.53,hz:.59});
   // The near-spawn tree is a visual teaser, without replacing the main tree.
   plant(root,7.1,front+1,1.3);
   for(let k=0;k<3;k++)picture(root,7.94,3.06,front+5+k*5,[0xc6c6ad,0xb1c6cb,0xe3cdb2][k]);
