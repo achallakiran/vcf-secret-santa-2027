@@ -193,15 +193,20 @@ function sanitizedAvatar(data:unknown){
     const v=Number(r[key]);return Number.isFinite(v)&&v>=min&&v<=max?Math.round(v*100)/100:fallback;
   };
   return {
-    schema_version:2,
+    schema_version:3,
     gender:strVal("gender",["male","female"],"male"),
-    outfit:strVal("outfit",["shirt","tshirt","suit","salwar","dress","sweater"],"shirt"),
+    outfit:strVal("outfit",["shirt","tshirt","suit","salwar","dress","sweater","jacket","bomber","blazer"],"shirt"),
     bottom:strVal("bottom",["jeans","trousers","leggings","palazzo"],"jeans"),
-    skin:intVal("skin",4),
-    hair:intVal("hair",4),
-    hairstyle:intVal("hairstyle",3),
-    color:intVal("color",5),
-    glasses:r.glasses===true,
+    skin:intVal("skin",8),
+    hair:intVal("hair",8),
+    hairstyle:intVal("hairstyle",19),
+    color:intVal("color",11),
+    bottomColor:intVal("bottomColor",11,-1),
+    shoeColor:intVal("shoeColor",11,-1),
+    facialHair:strVal("facialHair",["none","beard-short","beard-full","moustache-pencil","moustache-handlebar","combo-short","combo-full"],"none"),
+    glassesStyle:strVal("glassesStyle",["none","round","rectangle","square","aviator","cat-eye"],r.glasses===true?"rectangle":"none"),
+    glassesColor:intVal("glassesColor",11),
+    glasses:r.glassesStyle&&r.glassesStyle!=="none"||r.glasses===true,
     height:numVal("height",.86,1.16,1),
     build:numVal("build",.83,1.2,1)
   };
