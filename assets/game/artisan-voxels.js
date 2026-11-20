@@ -99,7 +99,7 @@ export function sculptFaceVoxels(head,p){
     .036,.018,.024,colorHex(lip,k===0?.07:0));
   // An adult beard is modeled as fine voxel clumps around the lower jaw,
   // never pasted over the mouth.
-  if(p.gender==="male"&&(p.hairstyle===1||p.hairstyle===3)){
+  if(p.gender==="male"&&(p.facialHair||"none").includes("beard")||p.gender==="male"&&(p.facialHair||"none").startsWith("combo")){
     for(let row=0;row<4;row++)for(let col=-5;col<=5;col++){
       if(Math.abs(col)<3&&row>1)continue;
       const x=col*.067, y=.048-row*.035;
@@ -113,7 +113,9 @@ export function sculptFaceVoxels(head,p){
 /** Dense, layered stepped hair with silhouette depth from *every* camera. */
 export function sculptHairVoxels(head,p){
   const b=voxelBrush(head,"Hundreds of layered hair voxels");
-  const style=((Number(p.hairstyle)||0)%4+4)%4,base=p.hairHex;
+  const cut=Number(p.hairstyle)||0;
+  const style=cut<4?cut:cut<=6?0:cut<=9?1:cut<=12?2:0;
+  const parting=cut>=4&&cut<=12?(cut-4)%3:-1,base=p.hairHex;
   const shades=[colorHex(base,-.10),colorHex(base,-.052),colorHex(base,0),
     colorHex(base,.055),colorHex(base,.095)];
   const pigment=(row,col)=>shades[(row*5+col*7+17)%shades.length];
@@ -133,7 +135,12 @@ export function sculptHairVoxels(head,p){
   for(let col=0;col<12;col++){
     const x=(col-5.5)*.086;
     const delta=(col*7+style*3)%4;
-    const y=.784-delta*.034;
+    // Center/side parting removes the fringe along a visible scalp seam.
+    if(parting>=0){
+      const seam=parting===0?3:parting===1?8:6;
+      if(Math.abs(col-seam)<=0)continue;
+    }
+    const y=.784-delta*.034+(cut>=13?.055:0);
     b.voxel(x,y,.449,.092,.166+delta*.019,.128,pigment(6,col),
       0,0,(col-5.5)*-.022);
     b.voxel(x,y-.085-delta*.012,.499,.071,.052,.055,pigment(7,col));
@@ -146,7 +153,7 @@ export function sculptHairVoxels(head,p){
       for(let col=0;col<4;col++){
         const z=-.31+col*.156;
         const x=side*(.535+((row+col)%3)*.013);
-        const omit=(col===3&&row>4)||(col===2&&row>6);
+        const omit=(col===3&&row>4)||(col===2&&row>6)||(cut>=13&&row>3);
         if(omit)continue;
         b.voxel(x,y,z,.105,.107,.162,pigment(10+row,col+Math.round(side)),
           0,side*.035,side*.030);
@@ -155,7 +162,7 @@ export function sculptHairVoxels(head,p){
   }
   // Back silhouette extends down past the head according to the chosen hair.
   // From follow camera this is the most important visual distinction.
-  const end=style===0?.33:style===1?-.24:style===2?-.70:-.10;
+  const end=cut>=13?.54:style===0?.33:style===1?-.24:style===2?-.70:-.10;
   const rows=Math.ceil((.80-end)/.092);
   if(style!==3){
     for(let row=0;row<rows;row++){
@@ -337,18 +344,18 @@ export function sculptShoeVoxels(pivot,p){
   const outfit=p.outfit||"shirt";
   const formal=p.footwear==="formal"||(p.footwear==="auto"&&outfit==="suit");
   const sandal=p.footwear==="sandals"||(p.footwear==="auto"&&outfit==="salwar");
-  const shade=formal?0x726056:sandal?0xd6ae7f:0xe9e6df;
+  const shade=p.shoeHex??(formal?0x726056:sandal?0xd6ae7f:0xe9e6df);
   for(const side of [-1,1])for(let j=0;j<8;j++){
     const z=-.045+j*.057;
     b.voxel(side*.16,-.648,z,.027,.027,.059,shade);
   }
   if(!sandal)for(let j=0;j<5;j++){
     b.voxel(0,-.481,.022+j*.059,.137,.014,.021,
-      j%2?0xa3b1b5:0xf7f7f1);
+      p.shoeHex??(j%2?0xa3b1b5:0xf7f7f1));
   }
   for(let j=0;j<6;j++){
     b.voxel((j%2?1:-1)*.093,-.557,.025+j*.053,
-      .025,.019,.023,formal?0xc5b79d:sandal?0x9e6f54:0xffffff);
+      .025,.019,.023,p.shoeHex??(formal?0xc5b79d:sandal?0x9e6f54:0xffffff));
   }
   return b.finish();
 }
