@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import {decorateWorkstation,addWarmOfficeDetails} from "./environment-art.js";
+import {officeTileMaterial,applyOfficeTileRepeat,addOfficeLounge} from "./art-surfaces.js";
 // Fully procedural office furniture, lights and festive scenery; no external models.
 const boxGeo=new THREE.BoxGeometry(1,1,1);
 boxGeo.userData.officeInstancing=true;
@@ -352,11 +353,14 @@ export function buildOffice(count=12){
   });
   // Subtle PBR flooring, tile grid lines and wall baseboards.
   block(root,0,-.13,(front+back)/2,width,.24,back-front,mat(0xe6d9d1,.25),false);
-  const floor=new THREE.Mesh(new THREE.PlaneGeometry(width,back-front),mat(0xe3d7d1,{roughness:.32}));
-  floor.rotation.x=-Math.PI/2;floor.position.set(0,.003,(front+back)/2);floor.receiveShadow=true;root.add(floor);
-  const glines=new THREE.Group();root.add(glines);
-  for(let x=left;x<=right+.001;x+=1.1)block(glines,x,.012,(front+back)/2,.012,.008,back-front,0xcfc2bf,false);
-  for(let z=front;z<=back+.001;z+=1.1)block(glines,0,.012,z,width,.008,.012,0xcfc2bf,false);
+  const tileMaterial=officeTileMaterial();
+  applyOfficeTileRepeat(tileMaterial,width,back-front);
+  const floor=new THREE.Mesh(new THREE.PlaneGeometry(width,back-front),tileMaterial);
+  floor.rotation.x=-Math.PI/2;
+  floor.position.set(0,.009,(front+back)/2);
+  floor.receiveShadow=true;root.add(floor);
+  // Grout is drawn into the tile texture rather than using hundreds of
+  // shadow-fighting grid bars over the walking surface.
   // Perimeter walls; window on north starts flush with west wall and ends just beyond island.
   westWallPassages(viewWalls.west,left,front,back,passageCenters);
   block(viewWalls.east,right+.14,2.15,(front+back)/2,.23,4.3,back-front,0xf6eee7,false);
@@ -497,6 +501,8 @@ export function buildOffice(count=12){
   addWarmOfficeDetails(root,{
     left,right,front,back,partyStart,viewWalls,twinkle
   },{block,ball,cyl,mat});
+  addOfficeLounge(root,{rowZ,bays,partyStart,colliders,room:{left,right,front,back}},
+    {softBlock,block,ball,cyl,plant,mat});
   const optimizedBatches=batchOfficeStaticGeometry(root,twinkle,viewWalls);
   return {root,colliders,seats,spawn,bays,optimizedBatches,
     // Structural wall passages are not additional explorable rooms.
