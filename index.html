@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#080d16"/>
   <meta name="description" content="Voxel Secret Santa — a thoughtful Christmas office mystery."/>
   <title>Voxel Secret Santa</title>
-  <link rel="stylesheet" href="./assets/styles.css?v=avatar-fit-v4"/>
+  <link rel="stylesheet" href="./assets/styles.css?v=organizer-roster-v2"/>
 </head>
 <body>
   <div class="snow" id="snow" aria-hidden="true"></div>
@@ -49,7 +49,7 @@
       </section>
       <section id="event-workspace" class="panel hidden">
         <div class="section-head"><div><p class="eyebrow">ACTIVE WORKSPACE</p><h3 id="workspace-title"></h3><p id="workspace-slug" class="muted"></p><div class="workspace-links"><a id="workspace-open-link" class="small-outline link-action" href="#" target="_blank" rel="noopener noreferrer">Open participant page ↗</a><button id="workspace-copy-link" type="button" class="small-outline">Copy event URL</button></div></div><span id="workspace-state" class="chip"></span></div>
-        <div class="metrics"><div><strong id="people-count">0</strong><span>Employees</span></div><div><strong id="assignment-count">0</strong><span>Pairs</span></div><div><strong id="invite-count">0</strong><span>Codes visible this session</span></div></div>
+        <div class="metrics"><div><strong id="people-count">0</strong><span>Employees</span></div><div><strong id="assignment-count">0</strong><span>Pairs</span></div><div><strong id="invite-count">0</strong><span>Codes visible to organizer</span></div></div>
         <form id="participant-form" class="form-row">
           <label class="grow">Employee name<input id="participant-name" placeholder="First and last name" maxlength="160" required/></label>
           <label>Country code<select id="participant-country" aria-label="Phone country code"><option value="91" selected>🇮🇳 India +91</option><option value="1">🇺🇸 USA/Canada +1</option><option value="44">🇬🇧 UK +44</option><option value="971">🇦🇪 UAE +971</option><option value="65">🇸🇬 Singapore +65</option></select></label>
@@ -58,7 +58,7 @@
           <button class="primary" type="submit">+ Add</button>
         </form>
         <p class="muted small">Phone numbers are optional, never sent to Supabase or saved. They are used only to open your WhatsApp invitation.</p>
-        <p class="muted small">Codes are displayed when created and are not stored in readable form. If you lose a code, regenerate it and send the new one.</p>
+        <p class="muted small">The organizer can view and copy each participant's current invitation code here, including after refreshing. Codes are stored encrypted and are not visible to participants. Keep them private.</p>
         <div class="table-wrap"><table><thead><tr><th>Employee</th><th>Desk</th><th>Code</th><th>Invitation</th><th>Manage</th></tr></thead><tbody id="participant-rows"></tbody></table></div>
         <div class="assignment-box"><div><h3>Secret assignments</h3><p class="muted small">Everyone gives to one colleague and receives from one colleague. Assignments cannot be regenerated after locking.</p></div><button class="primary" id="assign-btn" type="button">🔒 Generate & lock assignments</button></div>
         <details id="assignment-details" class="hidden"><summary>Organizer-only pairings</summary><div id="pair-list"></div></details>
@@ -260,6 +260,6 @@
   <script type="importmap">
     {"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js"}}
   </script>
-  <script type="module" src="./assets/app.js?v=landing-clean-v1"></script>
+  <script type="module" src="./assets/app.js?v=organizer-roster-v2"></script>
 </body>
 </html>
