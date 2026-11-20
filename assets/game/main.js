@@ -340,6 +340,39 @@ export function mountOffice(host,profile,notice=()=>{}){
     get mode(){return mode;},
     setCamera,
     setProfile:applyProfile,
+    getAvatar(){return hero?{...hero.parameters}:null;},
+    previewAvatar(appearance){
+      if(!hero||!appearance)return false;
+      const previous=hero;
+      const lastPosition=previous.group.position.clone();
+      const lastRotation=previous.group.rotation.y;
+      const next=createAvatar(appearance);
+      next.group.position.copy(lastPosition);
+      next.group.rotation.y=lastRotation;
+      scene.remove(previous.group);
+      scene.add(next.group);
+      // The geometries are shared/cacheable across avatars; dispose only each
+      // old per-character material after the preview geometry is replaced.
+      const materials=new Set();
+      previous.group.traverse(obj=>{
+        if(obj.isMesh){
+          const values=Array.isArray(obj.material)?obj.material:[obj.material];
+          values.forEach(m=>{if(m)materials.add(m);});
+        }
+      });
+      for(const material of materials)material.dispose();
+      hero=next;
+      path=[];interactTarget=null;clickMarker.group.visible=false;
+      return true;
+    },
+    focusAvatar(){
+      if(!hero)return;
+      setCamera("close");
+      // Rotate towards the active camera only while inspecting the appearance.
+      const dx=camera.position.x-hero.group.position.x;
+      const dz=camera.position.z-hero.group.position.z;
+      hero.group.rotation.y=Math.atan2(dx,dz);
+    },
     playAction(name){
       if(!hero||!["hi","dance","clap","cheer"].includes(name))return false;
       // Perform immediately: clearing movement makes the selected animation
