@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#080d16"/>
   <meta name="description" content="Voxel Secret Santa — a thoughtful Christmas office mystery."/>
   <title>Voxel Secret Santa</title>
-  <link rel="stylesheet" href="./assets/styles.css?v=20261120-links-progress-v2"/>
+  <link rel="stylesheet" href="./assets/styles.css?v=office2a1"/>
 </head>
 <body>
   <div class="snow" id="snow" aria-hidden="true"></div>
@@ -71,28 +71,80 @@
     <p class="admin-footer">PIN-based organizer access · No Supabase email/password required</p>
   </main>
   <main id="player" class="player page hidden">
-    <header class="player-bar"><span id="player-greeting">SECRET SANTA</span><span id="player-event-title">CHRISTMAS OFFICE</span><div class="player-controls"><button id="player-hint" type="button" aria-label="Daily hint" title="Daily hint">💡</button><button id="player-pause" type="button" aria-label="Personal menu" title="Personal menu">Ⅱ</button></div></header>
-    <section class="office-placeholder"><div class="winter-tree">🎄</div><h2>Welcome to the Christmas office</h2><p>The full voxel office scene is still being built. Your private Secret Santa activities are available in the Personal menu.</p><p id="player-hint-text" class="hint-text hidden"></p></section>
-    <section id="player-menu" class="player-menu panel hidden">
-      <div class="section-head"><h3>Christmas notebook</h3><button id="player-close" class="small-outline" type="button" aria-label="Close menu">✕</button></div>
-      <div class="menu-tabs"><button type="button" class="tab active" id="player-tab-character">Character</button><button type="button" class="tab" id="player-tab-personal">Personal</button></div>
+    <div id="office-view" class="office-view">
+      <div id="office-canvas" class="office-canvas" aria-label="Interactive 3D Christmas office. Tap or click the floor to walk."></div>
+      <div id="office-loading" class="office-loading" role="status" aria-live="polite">
+        <span class="office-loading-spinner" aria-hidden="true"></span>
+        <strong>Preparing your Christmas office…</strong>
+        <small>Bringing the workstations and coworkers to life</small>
+      </div>
+      <button id="player-pause" class="office-pause" type="button" aria-label="Open pause menu" title="Pause">Ⅱ</button>
+      <div class="office-action-dock">
+        <div id="action-picker" class="office-action-picker hidden" aria-label="Choose one of four animated actions">
+          <button data-action="hi" type="button" aria-label="Hi" title="Hi">👋</button>
+          <button data-action="dance" type="button" aria-label="Dance" title="Dance">🕺</button>
+          <button data-action="clap" type="button" aria-label="Clap" title="Clap">👏</button>
+          <button data-action="cheer" type="button" aria-label="Cheer" title="Cheer">🎉</button>
+        </div>
+        <button id="player-action" class="office-action" type="button" aria-label="Choose an action" title="Choose an action">👋</button>
+      </div>
+      <div id="office-toast" class="office-toast hidden" role="status" aria-live="polite"></div>
+    </div>
+    <section id="player-menu" class="player-menu panel hidden" aria-label="Pause menu">
+      <div class="section-head">
+        <div><p class="eyebrow">CHRISTMAS NOTEBOOK</p><h3 id="player-greeting">SECRET SANTA</h3><p id="player-event-title" class="muted">Christmas office</p></div>
+        <button id="player-close" class="small-outline" type="button" aria-label="Resume game">✕</button>
+      </div>
+      <div class="menu-tabs">
+        <button type="button" class="tab active" id="player-tab-character">Character</button>
+        <button type="button" class="tab" id="player-tab-personal">Personal</button>
+      </div>
       <section id="player-character">
-        <p class="muted">Detailed male and female voxel character customization will be added in the next milestone. Your avatar record is already saved in Supabase.</p>
+        <p class="muted">Your cute procedural voxel avatar is visible in the office. Detailed appearance customization and saving will follow in Phase 2B.</p>
+        <h4>Camera perspective</h4>
+        <div class="camera-options" role="group" aria-label="Camera perspective">
+          <button type="button" data-camera="three" class="camera-option selected">◈ Three-quarter follow</button>
+          <button type="button" data-camera="close" class="camera-option">◉ Closer follow</button>
+          <button type="button" data-camera="wide" class="camera-option">▣ Wide office view</button>
+        </div>
+        <p class="muted small">Movement: tap or click the floor to walk. Tap an employee to greet them. The action button offers Hi, Dance, Clap or Cheer. No joystick or chat.</p>
+        <p class="muted small">Characters and office are drawn from original procedural geometry. Decorative items are everyday office objects, not monument artwork.</p>
       </section>
       <section id="player-personal" class="hidden">
         <h3 id="personal-name"></h3>
+        <p id="player-hint-text" class="muted small"></p>
         <div class="personal-layout">
-          <section><h4>My wishlist</h4><p class="muted small">Add a separate item for each wish. Your Santa can read these.</p><div id="wishlist-items" class="personal-list"></div>
-            <form id="wishlist-form" class="form-row"><label class="grow"><input id="wishlist-input" placeholder="Add a wish..." maxlength="240" required/></label><button class="primary" type="submit">＋</button></form></section>
-          <section><h4>Tasks from my Santa</h4><p class="muted small">Your anonymous Santa decides when each task is completed.</p><div id="received-tasks" class="personal-list"></div></section>
-          <section><h4>My Secret Child <button id="child-toggle" type="button" class="small-outline" aria-label="Show or hide secret child's name">◉ Reveal</button></h4>
-            <p id="child-name" class="child-name">Name hidden</p><h4>Their wishlist</h4><div id="child-wishlist" class="personal-list"></div>
-            <label class="personal-field">A heartfelt Christmas message<textarea id="santa-message" maxlength="5000" rows="3" placeholder="Write a message for the final reveal ceremony..."></textarea></label>
-            <button type="button" class="small-outline" id="save-message">Save message</button>
-            <label class="gift-check"><input id="gift-purchased" type="checkbox"/> I have purchased a gift for my Secret Child</label>
+          <section>
+            <h4>My wishlist</h4>
+            <p class="muted small">Your Santa can see these wishes.</p>
+            <div id="wishlist-items" class="personal-list"></div>
+            <form id="wishlist-form" class="form-row">
+              <label class="grow"><input id="wishlist-input" placeholder="Add a wish…" maxlength="240" required/></label>
+              <button class="primary" type="submit">＋</button>
+            </form>
           </section>
-          <section><h4>Tasks I assigned to my Secret Child</h4><p class="muted small">Only you can mark these tasks completed.</p><div id="assigned-tasks" class="personal-list"></div>
-            <form id="task-form" class="form-row"><label>Day<input id="task-date" type="date" required/></label><label class="grow">Task<input id="task-text" maxlength="1000" placeholder="A thoughtful little challenge..." required/></label><button class="primary" type="submit">＋</button></form>
+          <section>
+            <h4>Tasks from my anonymous Santa</h4>
+            <p class="muted small">Only your Santa marks tasks completed.</p>
+            <div id="received-tasks" class="personal-list"></div>
+          </section>
+          <section>
+            <h4>My Secret Child <button id="child-toggle" type="button" class="small-outline" aria-label="Privately reveal or hide Secret Child">◉ Reveal</button></h4>
+            <p id="child-name" class="child-name">Name hidden</p>
+            <h4>Their wishlist</h4>
+            <div id="child-wishlist" class="personal-list"></div>
+            <label class="personal-field">A heartfelt Christmas message<textarea id="santa-message" maxlength="5000" rows="3" placeholder="Write something meaningful for your Child…"></textarea></label>
+            <button type="button" id="save-message" class="small-outline">Save message</button>
+            <label class="gift-check"><input id="gift-purchased" type="checkbox"/> I purchased a gift for my Secret Child</label>
+          </section>
+          <section>
+            <h4>Tasks I assigned to my Secret Child</h4>
+            <div id="assigned-tasks" class="personal-list"></div>
+            <form id="task-form" class="form-row">
+              <label>Date<input id="task-date" type="date" required/></label>
+              <label class="grow">Task<input id="task-text" maxlength="1000" placeholder="A kind little challenge…" required/></label>
+              <button type="submit" class="primary">＋</button>
+            </form>
           </section>
         </div>
       </section>
@@ -119,6 +171,9 @@
     </div>
   </div>
   <div class="toast hidden" id="toast" role="status" aria-live="polite"></div>
-  <script type="module" src="./assets/app.js?v=20261120-links-progress-v2"></script>
+  <script type="importmap">
+    {"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js"}}
+  </script>
+  <script type="module" src="./assets/app.js?v=office2a1"></script>
 </body>
 </html>
