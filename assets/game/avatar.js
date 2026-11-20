@@ -192,6 +192,27 @@ export function createAvatar(input={},mini=false){
     return {pivot,lower,wrist};
   }
   const left=arm(-1),right=arm(1);
+  // Small real 3D props, rigged to the moving wrist. Only the active
+  // eat/drink prop is visible, avoiding per-frame geometry creation.
+  const coffeeProp=new THREE.Group();
+  coffeeProp.position.set(.03,-.12,.13);
+  const mugMat=mat(0xf0eee9,.63),drinkMat=mat(0x754b35,.92);
+  const mug=new THREE.Mesh(new THREE.CylinderGeometry(.108,.094,.20,10),mugMat);
+  mug.position.y=.09;coffeeProp.add(mug);
+  const rim=new THREE.Mesh(new THREE.TorusGeometry(.105,.016,6,16),mat(0xd4b27d,.42));
+  rim.rotation.x=Math.PI/2;rim.position.y=.195;coffeeProp.add(rim);
+  const drinkSurface=new THREE.Mesh(new THREE.CylinderGeometry(.08,.08,.008,10),drinkMat);
+  drinkSurface.position.y=.195;coffeeProp.add(drinkSurface);
+  const handle=new THREE.Mesh(new THREE.TorusGeometry(.065,.019,6,12),mugMat);
+  handle.position.set(.137,.11,0);coffeeProp.add(handle);
+  const appleProp=new THREE.Group();appleProp.position.set(.01,-.11,.13);
+  const apple=new THREE.Mesh(new THREE.SphereGeometry(.125,10,8),mat(0xd1494e,.70));
+  apple.scale.set(.96,.92,.98);apple.position.y=.105;appleProp.add(apple);
+  const stem=new THREE.Mesh(new THREE.CylinderGeometry(.012,.015,.065,5),mat(0x58432c));
+  stem.position.y=.247;appleProp.add(stem);
+  const leaf=new THREE.Mesh(new THREE.BoxGeometry(.11,.024,.055),mat(0x438b54));
+  leaf.position.set(.047,.25,0);leaf.rotation.z=.35;appleProp.add(leaf);
+  right.wrist.add(coffeeProp,appleProp);coffeeProp.visible=appleProp.visible=false;
   function leg(side){
     const pivot=new THREE.Group();pivot.position.set(side*.17,-.18,0);hips.add(pivot);
     const loose=p.bottom==="palazzo"||p.outfit==="salwar"&&p.bottom!=="leggings";
@@ -213,7 +234,7 @@ export function createAvatar(input={},mini=false){
     return pivot;
   }
   const lLeg=leg(-1),rLeg=leg(1);
-  const data={group:root,parameters:p,head:headPivot,hips,left,right,lLeg,rLeg,action:"",actionStart:0,actionDuration:0,seated:false};
+  const data={group:root,parameters:p,head:headPivot,hips,left,right,lLeg,rLeg,action:"",actionStart:0,actionDuration:0,seated:false,activity:"idle"};
   data.update=(time,moving=false)=>{
     const actionActive=data.action&&time-data.actionStart<data.actionDuration;
     const motion=time-data.actionStart;
@@ -237,7 +258,37 @@ export function createAvatar(input={},mini=false){
       left.lower.rotation.x=-.9;right.lower.rotation.x=-.9;
       headPivot.rotation.x=.06;
     }
+    coffeeProp.visible=data.activity==="coffee"&&!moving&&!actionActive;
+    appleProp.visible=data.activity==="apple"&&!moving&&!actionActive;
+    // Autonomous office routines use the same articulated skeleton as
+    // player animations. NPCs type, sip coffee, eat apples and converse.
+    if(!moving&&!actionActive){
+      const beat=Math.sin(time*8),slow=Math.sin(time*2.9);
+      if(data.activity==="typing"){
+        left.pivot.rotation.x=-.84+beat*.10;
+        right.pivot.rotation.x=-.86-beat*.10;
+        left.pivot.rotation.z=.14;right.pivot.rotation.z=-.14;
+        left.lower.rotation.x=-.63+beat*.07;
+        right.lower.rotation.x=-.63-beat*.07;
+        left.wrist.rotation.z=beat*.09;
+        right.wrist.rotation.z=-beat*.09;
+        headPivot.rotation.x=.15+Math.sin(time*.7)*.025;
+      }else if(data.activity==="coffee"||data.activity==="apple"){
+        right.pivot.rotation.x=-1.02+slow*.13;
+        right.pivot.rotation.z=-.58;
+        right.lower.rotation.x=-1.15+slow*.15;
+        right.wrist.rotation.z=-.15;
+        headPivot.rotation.x=-.03+slow*.028;
+      }else if(data.activity==="talk"){
+        left.pivot.rotation.x=-.25+Math.sin(time*3.4)*.23;
+        left.pivot.rotation.z=.33+Math.sin(time*2.4)*.18;
+        right.pivot.rotation.x=-.31+Math.sin(time*2.8)*.2;
+        right.pivot.rotation.z=-.18;
+        headPivot.rotation.y=Math.sin(time*2.1)*.08;
+      }
+    }
     if(actionActive){
+      coffeeProp.visible=false;appleProp.visible=false;
       const wave=Math.sin(motion*12);
       if(data.action==="hi"){
         // Positive shoulder Z raises the RIGHT arm OUTWARDS. Negative Z
@@ -275,6 +326,7 @@ export function createAvatar(input={},mini=false){
       }
     }else data.action="";
   };
+  data.setActivity=name=>{data.activity=["idle","typing","coffee","apple","talk"].includes(name)?name:"idle";};
   data.play=(name,time)=>{
     if(!["hi","dance","clap","cheer"].includes(name))return;
     data.action=name;data.actionStart=time;data.actionDuration=name==="dance"?3.7:2.2;
