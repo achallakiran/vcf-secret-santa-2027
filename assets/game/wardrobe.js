@@ -62,7 +62,31 @@ export function sculptWardrobe(hips,p,kit){
     shoulderDetail(gold);
   }else if(["jacket","bomber","blazer"].includes(p.outfit)){
     const bomber=p.outfit==="bomber",blazer=p.outfit==="blazer";
-    // Layered jackets: raised collar, offset lapels, pockets and metal hardware.
+    // Three visibly DIFFERENT coat silhouettes, not shirt decorations.
+    const jacketTrim=mat(bomber?0x313947:blazer?0xe8d6c0:0xc0d5df,.72);
+    if(bomber){
+      part(hips,.81,.31,.54,top,0,.50,-.004,.123);
+      part(hips,.79,.12,.56,jacketTrim,0,.035,.02,.045);
+      part(hips,.65,.13,.58,jacketTrim,0,.701,-.04,.056);
+    }else if(blazer){
+      for(const side of [-1,1]){
+        const tail=part(hips,.36,.44,.54,top,side*.18,-.17,-.03,.071);
+        tail.rotation.z=-side*.06;
+        const openLapel=part(hips,.205,.54,.087,jacketTrim,side*.16,.47,.360,.037);
+        openLapel.rotation.z=side*.31;
+      }
+      part(hips,.72,.055,.52,jacketTrim,0,-.38,-.04,.025);
+    }else{
+      // Denim jackets are cropped with a rigid, stepped yoke.
+      part(hips,.82,.12,.54,top,0,.667,-.022,.038);
+      part(hips,.80,.115,.56,jacketTrim,0,.065,-.022,.037);
+      for(const side of [-1,1]){
+        part(hips,.22,.22,.035,jacketTrim,side*.20,.445,.392,.012);
+        part(hips,.19,.022,.047,mat(0xf6e3c4),side*.20,.544,.411,.008);
+        for(let j=0;j<3;j++)orb(hips,.018,0xd4b07a,side*.13,.47-j*.16,.410);
+      }
+    }
+    // Raised collars and actual front panels over the contrasting shirt.
     for(const side of [-1,1]){
       const flap=part(hips,.27,blazer?.50:bomber?.42:.48,.076,top,side*.172,.38,.302,.038);
       flap.rotation.z=side*(blazer?.08:.03);
@@ -179,7 +203,23 @@ export function sculptWardrobe(hips,p,kit){
       part(hips,.022,.77,.027,j%2?gold:backDetail,-.31+j*.045,.20,-.417,.01);
   }else if(["jacket","bomber","blazer"].includes(p.outfit)){
     const bomber=p.outfit==="bomber",blazer=p.outfit==="blazer";
-    part(hips,.69*w,.57,.095,top,0,.325,-.276,.073);
+    part(hips,.78*w,bomber?.60:blazer?.78:.57,.15,top,0,
+      blazer?.23:.325,-.283,.071);
+    // Readable silhouette from behind: bomber balloon hem, denim yoke,
+    // and longer tailored blazer vents.
+    if(bomber){
+      part(hips,.82,.12,.20,mat(0x383e49),0,.045,-.32,.047);
+      for(const side of [-1,1])part(hips,.18,.12,.065,mat(0x3e444b),side*.26,.58,-.36,.027);
+    }else if(blazer){
+      part(hips,.73,.37,.11,top,0,-.20,-.317,.052);
+      for(const side of [-1,1]){
+        part(hips,.055,.35,.034,mat(0xd9c9bb),side*.22,-.24,-.375,.014);
+      }
+    }else{
+      part(hips,.76,.10,.12,mat(0xb3cbd9),0,.655,-.339,.031);
+      for(const side of [-1,1])part(hips,.035,.47,.034,mat(0xc7d5df),
+        side*.30,.32,-.357,.013);
+    }
     part(hips,.66*w,.09,.107,mat(bomber?0x2d3a4b:blazer?0xcdbeb4:0x8eafbe),0,.052,-.28,.029);
     for(const side of [-1,1]){
       part(hips,.16,.06,.045,mat(0xd0c4b7),side*.25,.628,-.29,.016);
