@@ -305,7 +305,7 @@ async function enterOffice(info){
   }
   $("office-loading").classList.remove("hidden");
   officeLoading=(async()=>{
-    const module=await import("./game/main.js?v=voxel-art-v5");
+    const module=await import("./game/main.js?v=mobile-fit-v1");
     officeRuntime=module.mountOffice($("office-canvas"),info,officeToast);
     let cam=null;
     try{cam=localStorage.getItem("vcf-ss-office-camera");}catch{}
@@ -652,7 +652,7 @@ $("auth-form").addEventListener("submit",run(async e=>{
   e.preventDefault();
   const result=await api("admin_login",{pin:$("admin-pin").value});
   setSession(result);$("admin-pin").value="";
-  await loadEvents();toast("Organizer console unlocked.");
+  await loadEvents();
 }));
 $("sign-out").addEventListener("click",()=>{endSession();toast("Admin session ended.");});
 $("refresh-events").addEventListener("click",run(loadEvents));
