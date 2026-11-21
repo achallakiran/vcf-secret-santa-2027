@@ -18,20 +18,20 @@ export function mountCeremonyStage(host,person){
   renderer.setClearColor(0x000000,0);
   renderer.shadowMap.enabled=true;
   renderer.shadowMap.type=THREE.PCFSoftShadowMap;
-  renderer.domElement.style.cssText="display:block;width:100%;height:100%;touch-action:none;cursor:grab";
+  renderer.domElement.style.cssText="display:block;width:100%;height:100%;touch-action:auto;cursor:default";
   host.replaceChildren(renderer.domElement);
-  scene.add(new THREE.HemisphereLight(0xffead8,0x52466e,2.8));
+  scene.add(new THREE.HemisphereLight(0xffecd1,0x2c5142,2.8));
   const key=new THREE.SpotLight(0xffe8c1,54,20,.63,.38,1.2);
   key.position.set(-2.7,7.5,5);key.target.position.set(0,1.35,0);
   scene.add(key,key.target);
-  const left=new THREE.PointLight(0xff5881,5,11);left.position.set(-2.3,2.8,.5);scene.add(left);
-  const right=new THREE.PointLight(0x66cbd7,4,10);right.position.set(2.1,3,-.7);scene.add(right);
+  const left=new THREE.PointLight(0x85c598,4.5,11);left.position.set(-2.3,2.8,.5);scene.add(left);
+  const right=new THREE.PointLight(0xffd29b,4,10);right.position.set(2.1,3,-.7);scene.add(right);
   const rim=new THREE.DirectionalLight(0xffdc87,2.2);rim.position.set(1.1,4.7,-3);scene.add(rim);
 
   const stand=new THREE.Group();scene.add(stand);
   const gold=new THREE.MeshStandardMaterial({color:0xeacb83,metalness:.48,roughness:.28});
-  const wood=new THREE.MeshStandardMaterial({color:0x513345,metalness:.16,roughness:.63});
-  const velvet=new THREE.MeshStandardMaterial({color:0x3e3048,roughness:.94});
+  const wood=new THREE.MeshStandardMaterial({color:0x284b37,metalness:.16,roughness:.63});
+  const velvet=new THREE.MeshStandardMaterial({color:0x163728,roughness:.94});
   const platform=new THREE.Mesh(new THREE.CylinderGeometry(1.57,1.74,.30,52),wood);
   platform.position.y=.075;platform.receiveShadow=true;stand.add(platform);
   const rimRing=new THREE.Mesh(new THREE.TorusGeometry(1.60,.043,8,68),gold);
@@ -114,7 +114,7 @@ export function mountCeremonyStage(host,person){
   function reveal(){
     revealed=true;
     resetConfetti();
-    const palette=[0xffcf75,0xff698b,0x70d5a9,0xffffff,0x8abde8];
+    const palette=[0xffcf75,0x72ba87,0xc6dd9f,0xffeee0,0xd9b781];
     for(let i=0;i<100;i++){
       const geo=new THREE.BoxGeometry(.036+(i%3)*.01,.09,.015);
       const mat=new THREE.MeshBasicMaterial({color:palette[i%palette.length],side:THREE.DoubleSide});
