@@ -1,9 +1,10 @@
 import * as THREE from "three";
-import {sculptHead,sculptFoot} from "./avatar-parts.js?v=studio-qa-v1";
+import {FACIAL_HAIR_OPTIONS,BINDI_STYLES,BINDI_COLORS} from "./facial-hair.js?v=face-refine-v4";
+import {sculptHead,sculptFoot} from "./avatar-parts.js?v=face-refine-v4-studio-qa-v1";
 import {sculptWardrobe} from "./wardrobe.js?v=studio-qa-v1";
 import {SKIN_COLORS as SKINS,HAIR_COLORS as HAIR,OUTFIT_COLORS as COLORS,FOOTWEAR_OPTIONS} from "./palette.js?v=visual-atelier-v3";
 import {clothMaterial} from "./visual-materials.js?v=visual-atelier-v3";
-import {sculptFaceVoxels,sculptHairVoxels,sculptGarmentVoxels,sculptSleeveVoxels,sculptShoeVoxels} from "./artisan-voxels.js?v=studio-qa-v1";
+import {sculptFaceVoxels,sculptHairVoxels,sculptGarmentVoxels,sculptSleeveVoxels,sculptShoeVoxels} from "./artisan-voxels.js?v=face-refine-v4-studio-qa-v1";
 /**
  * Hybrid voxel adults with modular, richly sculpted faces and contemporary Indian garments. No external or unverified character assets.
  * The body is rigged with real limb pivots and features layered face and hair meshes.
@@ -66,8 +67,9 @@ function resolve(opts={}){
     color:Number.isInteger(n.color)?Math.abs(n.color)%COLORS.length:0,
     bottomColor:Number.isInteger(n.bottomColor)&&n.bottomColor>=0?n.bottomColor%COLORS.length:-1,
     shoeColor:Number.isInteger(n.shoeColor)&&n.shoeColor>=0?n.shoeColor%COLORS.length:-1,
-    facialHair:["none","stubble-light","stubble-full","stubble-heavy","beard-short","beard-full","beard-ear","moustache-pencil","moustache-handlebar","combo-short","combo-full","combo-ear"].includes(n.facialHair)?
-      n.facialHair:(n.gender!=="female"&&[1,3].includes(n.hairstyle)?"combo-short":"none"),
+    facialHair:FACIAL_HAIR_OPTIONS.some(([key])=>key===n.facialHair)?n.facialHair:"none",
+    bindiStyle:BINDI_STYLES.some(([key])=>key===n.bindiStyle)?n.bindiStyle:"none",
+    bindiColor:Number.isInteger(n.bindiColor)&&n.bindiColor>=0?n.bindiColor%BINDI_COLORS.length:0,
     glassesStyle:["none","round","rectangle","square","aviator","cat-eye"].includes(n.glassesStyle)?n.glassesStyle:(n.glasses?"rectangle":"none"),
     glassesColor:Number.isInteger(n.glassesColor)?Math.abs(n.glassesColor)%COLORS.length:0,
     footwear:FOOTWEAR_OPTIONS.includes(n.footwear)?n.footwear:"auto",
@@ -178,7 +180,7 @@ export function createAvatar(input={},mini=false){
     for(const side of [-1,1])part(hips,.034,.25,.024,accent,side*.29,-.06,.269,.012);
   }
   // Premium garment overlays preserve the known animation skeleton and save schema.
-  const sculptParams={...p,skinHex:SKINS[p.skin],hairHex:HAIR[p.hair],colorHex:COLORS[p.color],shoeHex:p.shoeColor>=0?COLORS[p.shoeColor]:null,bottomHex:p.bottomColor>=0?COLORS[p.bottomColor]:null,glassesHex:COLORS[p.glassesColor]};
+  const sculptParams={...p,skinHex:SKINS[p.skin],hairHex:HAIR[p.hair],colorHex:COLORS[p.color],shoeHex:p.shoeColor>=0?COLORS[p.shoeColor]:null,bottomHex:p.bottomColor>=0?COLORS[p.bottomColor]:null,glassesHex:COLORS[p.glassesColor],bindiHex:BINDI_COLORS[p.bindiColor]};
   const kit={part,orb,mat};
   // Each outfit detail follows torso width and depth. Previously fixed-size
   // overlays looked identical and hid the changes made with the build slider.
