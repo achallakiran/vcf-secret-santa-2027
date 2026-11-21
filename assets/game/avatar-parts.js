@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import {facialHairShape} from "./facial-hair.js?v=face-refine-v4";
 
 /**
  * Art Hero v3 — sculpted storybook adults.
@@ -67,10 +68,12 @@ export function sculptHead(head,p,kit){
     catchlight.castShadow=false;
     const glimmer=part(head,.022,.025,.013,white,x+.063,.347,.465,.009);
     glimmer.castShadow=false;
-    const lid=part(head,.222,.020,.022,brow,x,.480,.405,.009);
-    lid.rotation.z=side*-.078;
-    const eyebrow=part(head,.19,.027,.026,mat(shade(p.hairHex,.13)),x,.547,.394,.013);
-    eyebrow.rotation.z=-side*.135;
+    // Eyebrows are fine individual strands instead of oversized dark blocks.
+    for(let j=0;j<4;j++){
+      const strand=part(head,.039,.010,.014,mat(shade(p.hairHex,.21)),
+        x+(j-1.5)*.046,.544+Math.sin(j*Math.PI/3)*.009,.395,.004);
+      strand.rotation.z=-side*.06;
+    }
     if(female){
       const lash=part(head,.070,.028,.029,brow,x+side*.137,.467,.409,.008);
       lash.rotation.z=side*.33;
@@ -89,54 +92,71 @@ export function sculptHead(head,p,kit){
   part(head,.14,.023,.019,mat(0xf5b0a0),0,.103,.436,.008).castShadow=false;
   for(const side of [-1,1])
     orb(head,.017,skinShade,side*.137,.171,.412,.75,.6,.6).castShadow=false;
-  // Optional facial hair is independent of head hairstyle. Ear-to-ear beards
-  // include real sideburns attached near each ear and a jaw-to-chin silhouette.
+  // Distinct cheek/jaw/chin/moustache components, independent of hairstyle.
   if(!female){
-    const face=p.facialHair||"none";
-    const beard=face.startsWith("beard")||face.startsWith("combo");
-    const moustache=face.startsWith("moustache")||face.startsWith("combo");
-    const stubble=face.startsWith("stubble");
-    const earBeard=face.endsWith("-ear");
-    const full=face.endsWith("full")||earBeard;
-    const handlebar=face==="moustache-handlebar";
-    if(beard){
-      for(const side of [-1,1]){
-        part(head,full?.17:.115,full?.28:.19,.088,deep,side*.392,.080,.280,.041);
-        part(head,.22,full?.15:.095,.082,hair,side*.20,full?-.065:-.018,.370,.036);
-        if(full)part(head,.115,.16,.065,deep,side*.35,-.076,.32,.026);
-        if(earBeard){
-          part(head,.145,.42,.146,deep,side*.484,.226,.138,.055);
-          part(head,.16,.21,.072,hair,side*.433,.08,.284,.037);
-          for(let i=0;i<4;i++){
-            const tuft=part(head,.10,.09,.071,i%2?hair:middle,
-              side*(.47-i*.011),.20-i*.082,.276,.026);
-            tuft.rotation.z=side*.08;
-          }
+    const beard=facialHairShape(p.facialHair);
+    if(beard.sideburns)for(const sign of [-1,1]){
+      part(head,.13,.15+.17*beard.sideburns,.10,deep,sign*.465,
+        .23-.04*beard.sideburns,.20,.031);
+    }
+    if(beard.cheeks)for(const sign of [-1,1]){
+      const cheek=part(head,.11+.065*beard.cheeks,.09+.21*beard.cheeks,.092,deep,
+        sign*.39,.115,.366,.034);cheek.rotation.z=sign*.08;
+      part(head,.10,.045+.065*beard.cheeks,.050,hair,sign*.327,-.016,.389,.020);
+    }
+    if(beard.jaw)for(const sign of [-1,1]){
+      part(head,.19,.07+.10*beard.jaw,.089,deep,sign*.23,-.06,.375,.033);
+      part(head,.14,.04+.04*beard.jaw,.056,hair,sign*.345,-.052,.335,.022);
+    }
+    if(beard.chin){
+      const length=beard.chin,extra=Math.max(0,length-1);
+      const core=part(head,.27+.18*Math.min(1,length),.085+.20*length,.127,deep,
+        0,-.10-.050*extra,.386,.040);
+      if(beard.pointed)core.scale.x=.74;
+      part(head,.19,.06+.15*extra,.071,hair,0,-.173-.099*extra,.449,.025);
+      if(extra>.10){
+        const tip=part(head,beard.pointed?.15:.245,.09+.25*extra,.14,
+          hair,0,-.265-.18*extra,.357,.040);
+        if(beard.pointed)tip.scale.x=.77;
+      }
+    }
+    if(beard.soul){
+      part(head,.060+.032*beard.soul,.042+.032*beard.soul,.028,hair,
+        0,.060,.467,.014);
+    }
+    if(beard.moustache){
+      for(const sign of [-1,1]){
+        const whisker=part(head,.12+.02*beard.moustache,.045+.026*beard.moustache,
+          .058,hair,sign*.085,.208,.480,.019);
+        whisker.rotation.z=sign*(beard.handlebar?.25:.09);
+        if(beard.handlebar){
+          const curl=part(head,.075,.035,.042,hair,sign*.211,.229,.459,.014);
+          curl.rotation.z=sign*.60;
         }
       }
-      part(head,.33,full?.18:.08,.082,deep,0,full?-.097:-.063,.346,.028);
     }
-    if(stubble){
-      const heavy=face==="stubble-heavy",coverage=face!=="stubble-light";
-      const haze=mat(shade(p.hairHex,heavy?.19:.28),.89);
-      for(const side of [-1,1]){
-        part(head,coverage?.135:.095,coverage?.19:.115,.019,haze,
-          side*.405,.08,.347,.023);
-        part(head,.17,heavy?.07:.035,.018,haze,
-          side*.20,-.048,.408,.012);
+    if(beard.stubble){
+      const tint=mat(shade(p.hairHex,.24));
+      for(const sign of [-1,1]){
+        part(head,.08+.054*beard.stubble,.12+.08*beard.stubble,.020,
+          tint,sign*.415,.075,.354,.014);
       }
-      part(head,.29,heavy?.07:.035,.021,haze,0,-.065,.388,.014);
+      part(head,.27,.024+.036*beard.stubble,.018,tint,0,-.069,.399,.009);
     }
-    if(moustache){
-      for(const side of [-1,1]){
-        const whisker=part(head,handlebar?.17:.14,handlebar?.075:.055,.072,
-          hair,side*.085,.194,.461,.025);
-        whisker.rotation.z=side*(handlebar?.25:.10);
-        if(handlebar){
-          const tip=part(head,.085,.042,.06,hair,side*.212,.215,.445,.021);
-          tip.rotation.z=side*.53;
-        }
-      }
+  }
+  // A selectable 3D bindi, with its own color and geometric shape.
+  if(p.bindiStyle&&p.bindiStyle!=="none"){
+    const jewel=mat(p.bindiHex??0xaa2439,.36,.05),s=p.bindiStyle;
+    if(s==="small-round")orb(head,.031,jewel,0,.644,.402,1,1,.5).castShadow=false;
+    else if(s==="medium-round")orb(head,.048,jewel,0,.644,.405,1,1,.5).castShadow=false;
+    else if(s==="oval")orb(head,.038,jewel,0,.644,.406,.78,1.72,.48).castShadow=false;
+    else if(s==="diamond"){
+      const diamond=part(head,.072,.072,.019,jewel,0,.646,.405,.008);
+      diamond.rotation.z=Math.PI/4;
+    }else if(s==="ornate"){
+      orb(head,.037,jewel,0,.644,.406,.95,1.32,.45).castShadow=false;
+      for(const dx of [-.062,.062])orb(head,.016,jewel,dx,.644,.406,1,1,.45).castShadow=false;
+      orb(head,.013,mat(0xeacc84),0,.704,.407,1,1,.45).castShadow=false;
     }
   }
   // Completely bald is a real hair-free head, not a skin-colored hair mesh.
