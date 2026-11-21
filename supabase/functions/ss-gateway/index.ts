@@ -204,7 +204,7 @@ async function adminLogin(pin:unknown,request:Request){
     admin:{id:account.id,name:account.display_name},expires_in:8*3600};
 }
 async function createAdminInvite(adminId:string){
-  const code=base64Url(String.fromCharCode(...crypto.getRandomValues(new Uint8Array(32))));
+  const code=toHex(crypto.getRandomValues(new Uint8Array(24)));
   const codeHash=await hmac("vcf-ss-admin-invite|"+code);
   const expiry=new Date(Date.now()+24*3600*1000).toISOString();
   await db("ss_admin_invites","POST",{
