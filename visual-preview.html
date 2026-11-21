@@ -84,7 +84,7 @@
     const profile={me:{id:"visual-review-guest",name:"Guest",avatar:{}},colleagues};
     let runtime=null,serial=0,current=null;
     async function show(version){
-      if(version===current)return;
+      if(version===current&&runtime)return;
       const id=++serial;
       before.disabled=true;after.disabled=true;
       info.style.display="block";
@@ -109,7 +109,12 @@
           "Previous: smaller desk-color and stationery refinements. Drag to explore.";
       }catch(error){
         console.error("Unable to render the selected comparison",error);
-        info.textContent="Unable to load the selected scene. The original game is available using Open game.";
+        if(runtime){
+          info.style.display="none";
+          notice.textContent="That comparison could not be loaded. The current scene is still available.";
+        }else{
+          info.textContent="Unable to load this scene. Use Open game or try reloading.";
+        }
       }finally{
         before.disabled=false;after.disabled=false;
       }
