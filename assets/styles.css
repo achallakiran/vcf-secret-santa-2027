@@ -1770,3 +1770,268 @@ body.office-playing #player-menu textarea{
     justify-self:stretch;
   }
 }
+
+
+/* Organizer interface alignment: evergreen console, warm gold accents.
+   These styles are scoped to admin surfaces and the organizer-only finale;
+   player studio and personal notebook retain their own look. */
+.admin,
+.admin-avatar-dialog,
+.ceremony-dialog {
+  --organizer-bg:#101e1b;
+  --organizer-panel:#172a23;
+  --organizer-panel-raised:#1d352c;
+  --organizer-border:#415b49;
+  --organizer-border-soft:#35493d;
+  --organizer-text:#f3f2e8;
+  --organizer-muted:#b7c9bd;
+  --organizer-gold:#e8cd90;
+  --organizer-green:#6cb38a;
+}
+.admin .assignment-box,
+.admin .admin-tool-card {
+  color:var(--organizer-text);
+  background:linear-gradient(145deg,#1c3429,#14251f);
+  border:1px solid var(--organizer-border);
+  border-radius:14px;
+  box-shadow:0 12px 30px #00000022;
+}
+.admin .assignment-box h3,
+.admin .admin-tool-card h3 {
+  color:var(--organizer-gold);
+}
+.admin .assignment-box .muted,
+.admin .admin-tool-card p:not(.eyebrow) {
+  color:var(--organizer-muted);
+}
+.admin .admin-tool-card .eyebrow {
+  color:var(--organizer-gold);
+}
+.admin .assignment-notice {
+  color:#d3e7da;
+  background:#21392d;
+  border:1px solid #41664c;
+}
+.admin .admin-tool-card.stage-tool-card {
+  background:radial-gradient(ellipse at 85% -20%,#2b573f,#1c3429 65%,#13241d);
+  border-color:#52745a;
+}
+.admin .admin-tool-card.redraw-tool-card {
+  background:linear-gradient(145deg,#202c27,#19241f);
+  border-color:#61514a;
+}
+.admin .admin-danger {
+  color:#ffd3cd!important;
+  border-color:#a55d59!important;
+  background:#573132!important;
+}
+.admin .admin-danger:hover {background:#77413b!important}
+.admin .roster-delete {
+  color:#f8c1b5!important;
+  border-color:#96605b!important;
+}
+.admin .roster-delete:hover {
+  color:white!important;background:#753b39!important;
+}
+.admin .participant-name-warning {color:#efd39b}
+.admin .participant-awaiting {color:#e7cb91}
+
+/* The admin's participant editor is a console tool, not a separate pink UI. */
+.admin-avatar-dialog {
+  color:var(--organizer-text);
+  border:1px solid #52674e;
+  background:linear-gradient(145deg,#1c3328,#111f1b);
+  box-shadow:0 25px 100px #030807ee;
+}
+.admin-avatar-dialog::backdrop {
+  background:#050b09dc;
+  backdrop-filter:blur(7px);
+}
+.admin-avatar-dialog .admin-avatar-header {
+  border-bottom:1px solid var(--organizer-border);
+}
+.admin-avatar-dialog .admin-avatar-header h3,
+.admin-avatar-dialog .admin-avatar-header .eyebrow,
+.admin-avatar-dialog .admin-character-details label {
+  color:var(--organizer-gold);
+}
+.admin-avatar-dialog .admin-avatar-header button {
+  border-color:#69856a;
+  background:#254335;
+  color:#fff0cb;
+}
+.admin-avatar-dialog .admin-character-details input {
+  color:#f3f2e8;background:#10231c;
+  border:1px solid #587260;
+  color-scheme:dark;
+}
+.admin-avatar-dialog .admin-character-details input:focus {
+  border-color:var(--organizer-gold);
+  outline:2px solid #e8cd902f;
+}
+.admin-avatar-dialog .admin-character-details button {
+  color:#fff8ea;
+  background:#347451;
+  border-color:#4d976a;
+}
+.admin-avatar-dialog .atelier-categories {
+  background:linear-gradient(160deg,#10231d,#1b3429);
+  border-color:#43644d;
+}
+.admin-avatar-dialog .atelier-side-brand {color:#e4c990}
+.admin-avatar-dialog .atelier-category {
+  background:#1d382e;border-color:#405f4b;color:#dae5d8;
+}
+.admin-avatar-dialog .atelier-category.active,
+.admin-avatar-dialog .atelier-category[aria-selected="true"] {
+  background:#315e44;border-color:#94b28b;color:#fff8df;
+}
+.admin-avatar-dialog .studio-workbench.atelier-options {
+  background:#182c23;
+  border-color:#46624d;
+}
+.admin-avatar-dialog .atelier-options .studio-eyebrow,
+.admin-avatar-dialog .atelier-options .studio-holiday-mark,
+.admin-avatar-dialog .atelier-options .studio-workbench-heading h4,
+.admin-avatar-dialog .atelier-option-heading {
+  color:var(--organizer-gold);
+}
+.admin-avatar-dialog .atelier-description,
+.admin-avatar-dialog .atelier-options .studio-save-bar p,
+.admin-avatar-dialog #avatar-preview-status {
+  color:var(--organizer-muted);
+}
+.admin-avatar-dialog .atelier-choice {
+  background:#233b30;
+  border:1px solid #4e6753;
+  color:var(--organizer-text);
+}
+.admin-avatar-dialog .atelier-choice:hover {background:#2d4b3a}
+.admin-avatar-dialog .atelier-choice.selected {
+  background:#2d553e;
+  border-color:#d6bd83;
+  box-shadow:0 0 0 2px #d6bd8344;
+}
+.admin-avatar-dialog .atelier-choice-label,
+.admin-avatar-dialog .atelier-options .avatar-slider-grid label,
+.admin-avatar-dialog .atelier-options .avatar-range-labels {
+  color:#e7e7db;
+}
+.admin-avatar-dialog .atelier-options .studio-save-bar {
+  background:#172b22;
+  border-top:1px solid #425b49;
+}
+.admin-avatar-dialog .atelier-options .studio-reset {
+  color:#e6d9ba;background:#273d32;border-color:#55715b;
+}
+.admin-avatar-dialog .atelier-options .studio-save {
+  color:#fff9e7;background:#377650;border-color:#4b9065;
+}
+.admin-avatar-dialog .studio-save-bar {background:#172b22}
+.admin-avatar-dialog .atelier-preview.character-preview-shell {
+  border-color:#627c5e;
+}
+
+/* The finale presents a theatrical avatar but still belongs to the same
+   dark evergreen and warm-gold organizer design language. */
+.ceremony-dialog {
+  background:#101e1b;
+  border:1px solid #5d704f;
+  color:var(--organizer-text);
+  box-shadow:0 30px 125px #020805e8;
+}
+.ceremony-dialog::backdrop {background:#020805eb}
+.ceremony-topbar {
+  background:linear-gradient(120deg,#1f4231,#17281f 64%,#14221f);
+  border-bottom:1px solid #5b745c;
+}
+.ceremony-super {color:var(--organizer-gold)}
+.ceremony-topbar h2 {color:#f7ead0}
+.ceremony-close {
+  background:#244332;color:#fff1d1;border-color:#638365;
+}
+.ceremony-theatre {
+  background:
+    radial-gradient(ellipse at 50% 73%,#a7834f43,transparent 56%),
+    linear-gradient(155deg,#254638,#172f27 50%,#101d1d);
+}
+.ceremony-theatre::before {
+  background:
+    conic-gradient(from 165deg at 33% 1%,transparent 0deg,#fff5ab12 16deg,transparent 34deg),
+    conic-gradient(from 164deg at 67% 1%,transparent 0deg,#ffe5b51a 21deg,transparent 44deg),
+    linear-gradient(180deg,#12291e8c,transparent 38%,#0e231899);
+}
+.ceremony-theatre::after {
+  background:linear-gradient(180deg,transparent,#10271ee8);
+}
+.ceremony-curtain {
+  background:repeating-linear-gradient(95deg,#1a432c,#397049 19%,#285d3c 34%,#153d2b 50%);
+  box-shadow:inset -12px 0 32px #091a10a6,12px 0 28px #03110ba0;
+}
+.ceremony-nameplate strong {color:#f3ddb0}
+.ceremony-nameplate span:last-child {color:#d8dabf}
+.ceremony-side {
+  color:var(--organizer-text);
+  background:linear-gradient(145deg,#1b3429,#13251e);
+}
+.ceremony-select-bar,
+.ceremony-controls {
+  background:#1a3126;
+  border-color:#3f5c48;
+}
+.ceremony-select-bar label,
+#ceremony-spotlight-state {color:#cfddc9}
+.ceremony-select-bar select,
+.ceremony-guess-panel input {
+  background:#10251d;color:var(--organizer-text);
+  border:1px solid #54715a;
+  color-scheme:dark;
+}
+.ceremony-story-card,
+.ceremony-side .ceremony-story-card,
+.ceremony-guess-panel,
+.ceremony-side .ceremony-guess-panel {
+  color:var(--organizer-text);
+  background:#20392d;
+  border-color:#45644f;
+  box-shadow:0 6px 15px #00000020;
+}
+.ceremony-side .ceremony-story-card h3,
+.ceremony-side .ceremony-guess-panel h3,
+.ceremony-story-card h3,
+.ceremony-guess-panel h3 {
+  color:var(--organizer-gold);
+}
+.ceremony-story-item,
+.ceremony-side .ceremony-story-item {
+  color:#e9eee1;background:#284737;
+  border-left-color:#cdb276;
+}
+.ceremony-story-empty,
+.ceremony-message,
+.ceremony-side .ceremony-message,
+.ceremony-guess-panel p {color:#c1d3c4}
+.ceremony-clue-heading .small-outline,
+.ceremony-controls .small-outline {
+  background:#254334;color:#f4e8c6;border-color:#627b59;
+}
+.ceremony-controls .primary {
+  color:#fff8e8;background:#367850;border-color:#62a277;
+}
+.ceremony-reveal-btn {
+  color:#1c3427;
+  background:linear-gradient(#f4dfad,#d3ac70);
+  border-color:#bb9963;
+}
+.ceremony-revealed {
+  background:radial-gradient(circle at top,#345b3e,#203d2d);
+  border-color:#bc9d67;
+}
+.ceremony-revealed span {color:#f1d69c}
+.ceremony-revealed strong {color:#fff0c8}
+.ceremony-revealed p {color:#d8e4d0}
+@media(max-width:750px){
+  .ceremony-dialog {border-radius:0}
+  .ceremony-story-card,
+  .ceremony-side .ceremony-story-card {box-shadow:none}
+}
