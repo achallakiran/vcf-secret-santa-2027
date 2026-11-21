@@ -5,9 +5,10 @@ import {createOfficeLife} from "./office-life.js?v=studio-qa-v1";
 
 /* A responsive office runtime. 3D art and camera are independent from the existing Supabase UI. */
 const UP=new THREE.Vector3(0,1,0);
-// The only camera preset matches the accepted After visual preview.
+// One slightly closer, lower overview: same visual language and orientation as
+// the approved After preview, but desk/character details read more clearly.
 const AFTER_OVERVIEW=Object.freeze({
-  yaw:2.63,pitch:.72,distance:46,focusX:0,focusY:1.4,focusZ:12.7
+  yaw:2.63,pitch:.66,distance:40.5,focusX:0,focusY:1.4,focusZ:12.7
 });
 const MODES={wide:{distance:AFTER_OVERVIEW.distance,
   pitch:AFTER_OVERVIEW.pitch,fov:50}};
@@ -295,12 +296,11 @@ export function mountOffice(host,profile,notice=()=>{}){
     viewWalls.south.visible=camera.position.z<room.back-.35;
   }
   function cameraGoal(){
-    // At four workstation bays these are the exact After-preview camera
-    // values. Larger offices extend the same view rather than switching
-    // to an alternate camera preset.
+    // Keep the approved wide After-style composition, 12% closer and lower.
+    // Larger offices extend that view without a separate camera preset.
     const extraBays=Math.max(0,office.bays-4);
     const distanceBase=AFTER_OVERVIEW.distance+extraBays*3.75;
-    const portraitScale=camera.aspect<.70?1.26:1;
+    const portraitScale=camera.aspect<.70?1.17:1;
     const distance=distanceBase*zoom*portraitScale;
     const focus=new THREE.Vector3(
       AFTER_OVERVIEW.focusX,
@@ -542,7 +542,7 @@ export function mountOffice(host,profile,notice=()=>{}){
     }
     renderer.render(scene,camera);
   }
-  // Open on the same wide overview as the user's accepted After preview.
+  // Open in the approved wide office composition, now modestly closer.
   if(hero){
     cameraPitch=targetCameraPitch=MODES[mode].pitch;
     const goal=cameraGoal();
