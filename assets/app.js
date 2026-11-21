@@ -1,6 +1,6 @@
 
 "use strict";
-import {createVisualAvatarEditor} from "./game/avatar-editor.js?v=studio-qa-v1";
+import {createVisualAvatarEditor} from "./game/avatar-editor.js?v=face-refine-v4-studio-qa-v1";
 import {createChristmasMusic} from "./game/christmas-music.js?v=jingle-bells-v1";
 const GATEWAY="https://fwrievuhudjkeffmszqf.supabase.co/functions/v1/ss-gateway";
 const PUBLIC_KEY="sb_publishable_SJo2kgXdHNFZI65iAvQmxw_q56zuVLO";
@@ -408,7 +408,7 @@ async function enterOffice(info){
   }
   $("office-loading").classList.remove("hidden");
   officeLoading=(async()=>{
-    const module=await import("./game/main.js?v=studio-qa-v1");
+    const module=await import("./game/main.js?v=face-refine-v4-studio-qa-v1");
     officeRuntime=module.mountOffice($("office-canvas"),info,officeToast);
     let cam=null;
     try{cam=localStorage.getItem("vcf-ss-office-camera");}catch{}
@@ -435,7 +435,7 @@ async function enterOffice(info){
     console.error("VCF office error:",error);
   }finally{officeLoading=null;}
 }
-const AVATAR_FIELDS=["gender","outfit","bottom","hairstyle","skin","hair","height","build","footwear","bottomColor","shoeColor","facialHair","glassesStyle","glassesColor"];
+const AVATAR_FIELDS=["gender","outfit","bottom","hairstyle","skin","hair","height","build","footwear","bottomColor","shoeColor","facialHair","glassesStyle","glassesColor","bindiStyle","bindiColor"];
 // 50 means natural proportions. Slider bounds are visual, not stored
 // percentages: existing profiles remain valid and keep their measurements.
 const SHAPE_BOUNDS={height:[.80,1.30],build:[.65,1.55]};
@@ -451,10 +451,10 @@ function syncShapeOutputs(){
   for(const field of ["height","build"])$("avatar-"+field+"-out").textContent=$("avatar-"+field).value+" / 100";
 }
 function readAvatarEditor(){
-  const result={schema_version:3};
+  const result={schema_version:4};
   for(const field of AVATAR_FIELDS){
     const input=$("avatar-"+field);
-    result[field]=["skin","hair","hairstyle","bottomColor","shoeColor","glassesColor"].includes(field)?Number(input.value):
+    result[field]=["skin","hair","hairstyle","bottomColor","shoeColor","glassesColor","bindiColor"].includes(field)?Number(input.value):
       ["height","build"].includes(field)?shapeFromSlider(field,input.value):input.value;
   }
   result.color=Number($("avatar-color").value);
@@ -463,7 +463,7 @@ function readAvatarEditor(){
 }
 function setAvatarEditor(values){
   const avatar=values&&typeof values==="object"?values:{};
-  const defaults={gender:"female",outfit:"salwar",bottom:"leggings",hairstyle:2,skin:2,hair:0,color:1,height:1,build:1,footwear:"auto",bottomColor:-1,shoeColor:-1,facialHair:"none",glassesStyle:"none",glassesColor:0,glasses:false};
+  const defaults={gender:"female",outfit:"salwar",bottom:"leggings",hairstyle:2,skin:2,hair:0,color:1,height:1,build:1,footwear:"auto",bottomColor:-1,shoeColor:-1,facialHair:"none",glassesStyle:"none",glassesColor:0,bindiStyle:"none",bindiColor:0,glasses:false};
   const settings={...defaults,...avatar};
   // Backward compatibility: pre-v3 stored profiles only had a glasses boolean.
   if(!Object.hasOwn(avatar,"glassesStyle") && avatar.glasses)settings.glassesStyle="rectangle";
@@ -610,7 +610,7 @@ async function ensureAvatarStudio(){
       &&!$("player-character").classList.contains("hidden"));
   if(!isVisible())return;
   avatarStudioLoading=(async()=>{
-    const module=await import("./game/studio.js?v=studio-qa-v1");
+    const module=await import("./game/studio.js?v=face-refine-v4-studio-qa-v1");
     if(!isVisible())return;
     avatarStudio=module.mountAvatarStudio($("avatar-studio-canvas"),readAvatarEditor());
     visualEditor?.refresh(activeStudioTab);
