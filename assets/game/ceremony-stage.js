@@ -56,6 +56,9 @@ export function mountCeremonyStage(host,person){
     orbit.remove(model.group);
     model.group.traverse(obj=>{
       if(!obj.isMesh)return;
+      // TubeGeometry is created per avatar; other meshes reuse shared
+      // geometry caches owned by the avatar factory.
+      if(obj.geometry?.type==="TubeGeometry")obj.geometry.dispose();
       for(const material of Array.isArray(obj.material)?obj.material:[obj.material]){
         if(material&&!material.userData?.sharedVoxelMaterial)
           disposable.add(material);
