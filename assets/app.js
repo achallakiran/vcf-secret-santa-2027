@@ -676,14 +676,6 @@ visualEditor=createVisualAvatarEditor({
   }
 });
 visualEditor.refresh(activeStudioTab);
-$("avatar-view").addEventListener("click",()=>{
-  if(adminEditingParticipant)return; // Admin never enters the game screen.
-  clearTimeout(avatarPreviewTimer);
-  previewAvatarNow();
-  officeRuntime?.focusAvatar();
-  closePlayerMenu();
-  officeToast("Inspect your avatar up close. Return to Pause to save this look.");
-});
 $("avatar-reset").addEventListener("click",()=>{
   clearTimeout(avatarPreviewTimer);
   if(!avatarBaseline)return;
@@ -747,11 +739,6 @@ function setStudioTab(name){
 document.querySelectorAll("[data-studio-tab]").forEach(button=>
   button.addEventListener("click",()=>setStudioTab(button.dataset.studioTab))
 );
-$("avatar-turn-left").addEventListener("click",()=>avatarStudio?.rotate(-Math.PI/5));
-$("avatar-turn-right").addEventListener("click",()=>avatarStudio?.rotate(Math.PI/5));
-$("avatar-zoom-out").addEventListener("click",()=>avatarStudio?.zoom(1.24));
-$("avatar-zoom-in").addEventListener("click",()=>avatarStudio?.zoom(.81));
-$("avatar-fit").addEventListener("click",()=>avatarStudio?.fit());
 async function ensureAvatarStudio(){
   if(avatarStudio||avatarStudioLoading)return;
   const isVisible=()=>adminEditingParticipant?
@@ -1073,10 +1060,6 @@ $("refresh-personal").addEventListener("click",run(async()=>{
   await loadPlayer();
   toast("Your private Santa notebook is up to date.");
 }));
-$("player-sign-out").addEventListener("click",()=>{
-  endSession();
-  toast("Exited the office.");
-});
 $("wishlist-form").addEventListener("submit",run(async e=>{
   e.preventDefault();
   const text=$("wishlist-input").value.trim();
