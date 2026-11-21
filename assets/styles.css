@@ -1648,3 +1648,54 @@ body.office-playing #player-menu textarea{
 @media(prefers-reduced-motion:reduce){
   .ceremony-revealed{animation:none}
 }
+
+
+/* Simplified cinematic stage: one front-facing guest, narrow concise notes
+   at the right. All participant-specific visual emphasis stays on the stage. */
+@media(min-width:751px){
+  .ceremony-layout{grid-template-columns:minmax(0,1.7fr) minmax(305px,.83fr)}
+}
+.ceremony-portrait-host canvas{cursor:default!important;touch-action:auto!important}
+.ceremony-side .ceremony-scroll{padding:11px 14px}
+.ceremony-side .ceremony-story-card{
+  padding:10px 12px;margin-bottom:8px;border-radius:9px;
+  background:#fffaf6;box-shadow:none;
+}
+.ceremony-side .ceremony-story-card h3{
+  font-size:12px;margin-bottom:6px;letter-spacing:.015em;
+}
+.ceremony-side .ceremony-story-item{
+  font-size:12px;padding:6px 8px;line-height:1.45;
+}
+.ceremony-side .ceremony-message{font-size:12px;line-height:1.5}
+.ceremony-side .ceremony-guess-panel{
+  padding:12px;margin-bottom:7px;box-shadow:none;
+}
+.ceremony-side .ceremony-guess-panel h3{font-size:13px}
+#player-menu #player-personal .environment-hint-card{
+  margin-top:16px;
+  padding:clamp(15px,2.2vw,22px);
+  border:1px solid #e8c6c8;border-radius:14px;
+  background:linear-gradient(135deg,#fffaf4,#f5e6eb);
+  box-shadow:0 9px 26px #a96b7730;
+}
+#player-menu #player-personal .environment-hint-card h4{
+  font-size:18px;margin:7px 0 11px;
+  color:#764459;
+}
+#player-menu #player-personal .environment-hint-card .personal-list{
+  margin-top:14px;max-width:620px;
+}
+#player-menu #player-personal .environment-hint-card .personal-item{
+  background:#fff7ee;border-left:3px solid #c88298;
+}
+#player-menu #player-personal .environment-hint-card #unlock-hint{
+  background:#fff5f2;border:1px solid #d8adb4;color:#754359;
+}
+#player-menu #player-personal .environment-hint-card #unlock-hint:disabled{
+  opacity:.46;cursor:default;
+}
+@media(max-width:750px){
+  .ceremony-layout{grid-template-columns:1fr}
+  .ceremony-side .ceremony-scroll{padding:10px}
+}
