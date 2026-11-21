@@ -141,23 +141,122 @@ async function guard(key:string,success:boolean,limit=6,lock=1200,windowSec=900)
   if(!Array.isArray(result)||!result.length)fail("Login limiter unavailable.",503);
   return result[0];
 }
-async function adminGuard(){
-  const rows=await db("ss_auth_guard?select=guard_key,pin_salt_hex,pin_hash_hex,pbkdf2_iterations,token_version,locked_until&guard_key=eq.admin&limit=1");
-  if(!rows?.length)fail("Admin credentials are not initialized.",503);
-  return rows[0];
+// Admin accounts are identified by a server-secret keyed fingerprint of
+// their PIN, never by the PIN itself or its slow salted verifier. PINs remain
+// private; the lookup is only used to select an individual account securely.
+async function adminPinLookup(pin:string):Promise<string>{
+  return hmac("vcf-ss-admin-pin-v2|"+pin);
 }
-async function adminLogin(pin:unknown){
+async function adminAccount(id:unknown):Promise<any>{
+  if(!validId(id))fail("Invalid administrator session.",401);
+  const rows=await db("ss_admin_accounts?select=id,display_name,pin_lookup,pin_salt_hex,pin_hash_hex,pbkdf2_iterations,token_version,is_active,legacy_owner&id=eq."+id+"&limit=1");
+  const row=rows?.[0];
+  if(!row?.is_active)fail("Administrator account disabled. Sign in again.",401);
+  return row;
+}
+async function originalAdminAccount():Promise<any>{
+  const rows=await db("ss_admin_accounts?select=id,display_name,pin_lookup,pin_salt_hex,pin_hash_hex,pbkdf2_iterations,token_version,is_active,legacy_owner&legacy_owner=eq.true&limit=1");
+  return rows?.[0]||null;
+}
+function adminSession(account:any){
+  return signToken({v:1,role:"admin",admin_id:account.id,
+    version:account.token_version,exp:Math.floor(Date.now()/1000)+8*3600});
+}
+async function adminLogin(pin:unknown,request:Request){
   const input=string(pin,12);
-  if(!/^\d{4,12}$/.test(input))fail("Enter the administrator PIN.",401);
-  const guardState=await adminGuard();
-  if(guardState.locked_until && Date.parse(guardState.locked_until)>Date.now())fail("Too many attempts. Try again later.",429);
-  const candidate=await pinHash(input,guardState.pin_salt_hex,guardState.pbkdf2_iterations);
-  const ok=equal(fromHex(candidate),fromHex(guardState.pin_hash_hex));
-  const result=await guard("admin",ok,5,1800,900);
-  if(!result.allowed)fail("Too many attempts. Try again later.",429);
-  if(!ok)fail("Incorrect admin PIN.",401);
-  const token=await signToken({v:1,role:"admin",version:guardState.token_version,exp:Math.floor(Date.now()/1000)+8*3600});
-  return {token,role:"admin",expires_in:8*3600};
+  if(!/^\d{4,12}$/.test(input))fail("Enter a valid administrator PIN.",401);
+  const lookup=await adminPinLookup(input);
+  // Limit brute-force guesses across different PINs. The source bucket
+  // derives from an infrastructure IP header and cannot reveal the address.
+  const ip=request.headers.get("cf-connecting-ip")||
+    request.headers.get("x-forwarded-for")?.split(",")[0]?.trim()||"unknown";
+  const ipKey="admin-ip:"+String(await hmac("source|"+ip)).slice(0,28);
+  const ipStatus=await db("ss_auth_guard?select=locked_until&guard_key=eq."+q(ipKey)+"&limit=1");
+  if(ipStatus?.[0]?.locked_until&&Date.parse(ipStatus[0].locked_until)>Date.now())
+    fail("Too many login attempts. Try again later.",429);
+  let rows=await db("ss_admin_accounts?select=id,display_name,pin_lookup,pin_salt_hex,pin_hash_hex,pbkdf2_iterations,token_version,is_active,legacy_owner&pin_lookup=eq."+lookup+"&limit=1");
+  let account=rows?.[0]||null;
+  // Copying the old PBKDF2 verifier during the migration means the original
+  // organizer can keep signing in with precisely the same PIN. We attach its
+  // deterministic lookup only after verifying it once.
+  if(!account){
+    const legacy=await originalAdminAccount();
+    if(legacy?.is_active&&!legacy.pin_lookup){
+      const trial=await pinHash(input,legacy.pin_salt_hex,legacy.pbkdf2_iterations);
+      if(equal(fromHex(trial),fromHex(legacy.pin_hash_hex))){
+        const updated=await db("ss_admin_accounts?id=eq."+legacy.id+"&pin_lookup=is.null",
+          "PATCH",{pin_lookup:lookup,updated_at:stamp()},true);
+        account=updated?.[0]||legacy;
+      }
+    }
+  }
+  let verified=false;
+  if(account?.is_active){
+    const candidate=await pinHash(input,account.pin_salt_hex,account.pbkdf2_iterations);
+    verified=equal(fromHex(candidate),fromHex(account.pin_hash_hex));
+  }
+  const attempts=await guard(ipKey,verified,24,900,900);
+  if(!attempts.allowed)fail("Too many login attempts. Try again later.",429);
+  const pinGuard=await guard("admin-pin:"+lookup.slice(0,32),verified,5,1800,900);
+  if(!pinGuard.allowed)fail("Too many attempts for this PIN. Try again later.",429);
+  if(!verified)fail("Incorrect administrator PIN.",401);
+  return {token:await adminSession(account),role:"admin",
+    admin:{id:account.id,name:account.display_name},expires_in:8*3600};
+}
+async function createAdminInvite(adminId:string){
+  const code=base64Url(String.fromCharCode(...crypto.getRandomValues(new Uint8Array(32))));
+  const codeHash=await hmac("vcf-ss-admin-invite|"+code);
+  const expiry=new Date(Date.now()+24*3600*1000).toISOString();
+  await db("ss_admin_invites","POST",{
+    code_hash:codeHash,created_by:adminId,expires_at:expiry
+  });
+  return {code,expires_at:expiry};
+}
+async function registerAdmin(data:any,request:Request){
+  const name=string(data.name,120);
+  const code=string(data.invite_code,150);
+  const pin=string(data.pin,12);
+  const confirm=string(data.confirm_pin,12);
+  if(name.length<2)fail("Enter your administrator name.");
+  if(!/^[a-zA-Z0-9_-]{40,80}$/.test(code))
+    fail("Enter the administrator registration code.");
+  if(!/^\d{8,12}$/.test(pin))fail("Choose an 8–12 digit administrator PIN.");
+  if(pin!==confirm)fail("The administrator PINs do not match.");
+  // Verify invitation before performing expensive PBKDF2 operations.
+  const inviteHash=await hmac("vcf-ss-admin-invite|"+code);
+  const ip=request.headers.get("cf-connecting-ip")||
+    request.headers.get("x-forwarded-for")?.split(",")[0]?.trim()||"unknown";
+  const ipKey="admin-reg:"+String(await hmac("source|"+ip)).slice(0,28);
+  const rate=await guard(ipKey,false,20,900,900);
+  if(!rate.allowed)fail("Too many registration attempts. Try later.",429);
+  const invite=await db("ss_admin_invites?select=id&code_hash=eq."+inviteHash+
+    "&redeemed_at=is.null&expires_at=gt."+q(stamp())+"&limit=1");
+  if(!invite?.length)fail("The registration code has expired or was already used.",403);
+  const lookup=await adminPinLookup(pin);
+  const existing=await db("ss_admin_accounts?select=id&pin_lookup=eq."+lookup+"&limit=1");
+  if(existing?.length)fail("Choose a different PIN; it is already registered.",409);
+  const legacy=await originalAdminAccount();
+  if(legacy?.is_active&&!legacy.pin_lookup){
+    const derived=await pinHash(pin,legacy.pin_salt_hex,legacy.pbkdf2_iterations);
+    if(equal(fromHex(derived),fromHex(legacy.pin_hash_hex)))
+      fail("Choose a different PIN; it is already registered.",409);
+  }
+  const salt=toHex(crypto.getRandomValues(new Uint8Array(16)));
+  const slowHash=await pinHash(pin,salt,210000);
+  let newId:string;
+  try{
+    newId=await db("rpc/ss_redeem_admin_invite","POST",{
+      p_code_hash:inviteHash,p_display_name:name,p_pin_lookup:lookup,
+      p_salt_hex:salt,p_hash_hex:slowHash,p_iterations:210000
+    });
+  }catch(e){
+    if(String(e).includes("Duplicate value"))
+      fail("PIN already registered. Choose another.",409);
+    throw e;
+  }
+  const account=await adminAccount(newId);
+  return {token:await adminSession(account),role:"admin",
+    admin:{id:account.id,name:account.display_name},expires_in:8*3600};
 }
 async function eventBySlug(slug:unknown){
   const s=string(slug,80);
@@ -194,9 +293,13 @@ async function playerLogin(eventSlug:unknown,code:unknown){
 async function authorize(request:Request):Promise<Record<string,any>>{
   const user=await unpackToken(request.headers.get("Authorization")||"");
   if(user.role==="admin"){
-    const state=await adminGuard();
-    if(user.version!==state.token_version)fail("Admin PIN has changed. Please sign in again.",401);
-    return user;
+    // Previously issued 8-hour organizer sessions predate admin IDs.
+    // They are scoped ONLY to the original migrated organizer.
+    const id=validId(user.admin_id)?user.admin_id:(await originalAdminAccount())?.id;
+    const account=await adminAccount(id);
+    if(user.version!==account.token_version)
+      fail("Admin PIN has changed. Please sign in again.",401);
+    return {...user,admin_id:account.id};
   }
   if(user.role==="player" && validId(user.event_id) && validId(user.participant_id)){
     const [codes,players]=await Promise.all([
@@ -210,10 +313,11 @@ async function authorize(request:Request):Promise<Record<string,any>>{
   fail("Invalid session.",401);
 }
 async function fingerprint(eventId:string,code:string){return hmac("vcf-ss-code|"+eventId+"|"+code);}
-async function ownerEvent(input:unknown){
-  if(!validId(input))fail("Invalid event ID.");
-  const list=await db("ss_events?select=id,slug,title,status,assignments_locked_at&"+"id=eq."+input+"&limit=1");
-  if(!list.length)fail("Event not found.",404);
+async function ownerEvent(input:unknown,adminId:string){
+  if(!validId(input)||!validId(adminId))fail("Invalid event access.",403);
+  const list=await db("ss_events?select=id,slug,title,status,assignments_locked_at,admin_id&"+
+    "id=eq."+input+"&admin_id=eq."+adminId+"&limit=1");
+  if(!list.length)fail("Event not found or access denied.",404);
   return list[0];
 }
 function safeWishlist(raw:unknown){
@@ -388,9 +492,9 @@ async function recoverLegacyOrganizerCodes(eventId:string,issued:any[],
     }));
   }
 }
-async function adminAction(action:string,data:any){
+async function adminAction(action:string,data:any,adminId:string){
   if(action==="list_events"){
-    const events=await db("ss_events?select=id,slug,title,status,starts_on,ends_on,reveal_at,assignments_locked_at,created_at&order=created_at.desc&limit=100");
+    const events=await db("ss_events?select=id,slug,title,status,starts_on,ends_on,reveal_at,assignments_locked_at,created_at&admin_id=eq."+adminId+"&order=created_at.desc&limit=100");
     return {events};
   }
   if(action==="create_event"){
@@ -398,31 +502,47 @@ async function adminAction(action:string,data:any){
     if(name.length<3)fail("Please enter a longer event title.");
     const slug=name.toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"").slice(0,48)+"-"+crypto.randomUUID().slice(0,6);
     const row=await db("ss_events","POST",{
-      title:name,slug,timezone:"Asia/Kolkata",
+      title:name,slug,admin_id:adminId,timezone:"Asia/Kolkata",
       gift_budget_recommendation_inr:500,
       rules:{budget_note:"We recommend keeping your gift within ₹500. Choose something thoughtful, and share warm wishes.",tasks_optional:true},
       office_layout:{version:1,far_end_window:true,walls:"white",workstation_banks:["single-sided-wall-row","double-sided-island"],spawn:"christmas-tree"}
     },true);
     return {event:row[0]};
   }
+  if(action==="create_admin_invite")return createAdminInvite(adminId);
   if(action==="change_admin_pin"){
     const current=string(data.current_pin,12);
     const next=string(data.new_pin,12);
-    if(!/^\d{4,12}$/.test(next))fail("New PIN must contain 4–12 digits.");
+    if(!/^\d{4,12}$/.test(current)||!/^\d{8,12}$/.test(next))
+      fail("New administrator PIN must be 8–12 digits.");
     if(current===next)fail("Choose a different PIN.");
-    const row=await adminGuard();
-    const prior=await pinHash(current,row.pin_salt_hex,row.pbkdf2_iterations);
-    if(!equal(fromHex(prior),fromHex(row.pin_hash_hex)))fail("Current PIN is incorrect.",401);
+    const account=await adminAccount(adminId);
+    const prior=await pinHash(current,account.pin_salt_hex,account.pbkdf2_iterations);
+    if(!equal(fromHex(prior),fromHex(account.pin_hash_hex)))
+      fail("Current PIN is incorrect.",401);
+    const lookup=await adminPinLookup(next);
+    const duplicate=await db("ss_admin_accounts?select=id&pin_lookup=eq."+lookup+"&limit=1");
+    if(duplicate?.length)fail("PIN already registered. Choose another.",409);
+    const legacy=await originalAdminAccount();
+    if(legacy?.is_active&&!legacy.pin_lookup&&legacy.id!==account.id){
+      const trial=await pinHash(next,legacy.pin_salt_hex,legacy.pbkdf2_iterations);
+      if(equal(fromHex(trial),fromHex(legacy.pin_hash_hex)))
+        fail("PIN already registered. Choose another.",409);
+    }
     const salt=toHex(crypto.getRandomValues(new Uint8Array(16)));
     const derived=await pinHash(next,salt,210000);
-    const updated=await db("ss_auth_guard?guard_key=eq.admin&token_version=eq."+row.token_version,"PATCH",{
-      pin_salt_hex:salt,pin_hash_hex:derived,pbkdf2_iterations:210000,token_version:row.token_version+1,
-      failures:0,locked_until:null,updated_at:stamp()
+    const updated=await db("ss_admin_accounts?id=eq."+account.id+
+      "&token_version=eq."+account.token_version,"PATCH",{
+      pin_lookup:lookup,pin_salt_hex:salt,pin_hash_hex:derived,
+      pbkdf2_iterations:210000,token_version:account.token_version+1,
+      updated_at:stamp()
     },true);
     if(updated.length!==1)fail("PIN changed elsewhere; please sign in again.",409);
-    return {token:await signToken({v:1,role:"admin",version:row.token_version+1,exp:Math.floor(Date.now()/1000)+8*3600}),role:"admin",expires_in:8*3600};
+    const nextAccount=updated[0];
+    return {token:await adminSession(nextAccount),role:"admin",
+      admin:{id:account.id,name:account.display_name},expires_in:8*3600};
   }
-  const event=await ownerEvent(data.event_id);
+  const event=await ownerEvent(data.event_id,adminId);
   if(action==="list_participants"){
     const [roster,pairs,issued]=await Promise.all([
       db("ss_participants?select=id,display_name,desk_key,is_active,avatar,avatar_version,created_at&event_id=eq."+event.id+"&order=created_at.asc"),
@@ -645,14 +765,15 @@ Deno.serve(async(req:Request)=>{
     const input=await req.json();
     if(!input || typeof input!=="object")fail("Invalid request");
     const action=string(input.action,48);
-    if(action==="admin_login")return json(await adminLogin(input.pin));
+    if(action==="admin_login")return json(await adminLogin(input.pin,req));
+    if(action==="admin_register")return json(await registerAdmin(input,req));
     if(action==="player_login")return json(await playerLogin(input.event_slug,input.code));
     if(action==="event_info"){
       const e=await eventBySlug(input.event_slug);
       return json({event:{title:e.title,slug:e.slug}});
     }
     const claims=await authorize(req);
-    if(claims.role==="admin")return json(await adminAction(action,input));
+    if(claims.role==="admin")return json(await adminAction(action,input,claims.admin_id));
     if(claims.role==="player")return json(await playerAction(action,claims,input));
     fail("Unauthorized",403);
   }catch(error){
