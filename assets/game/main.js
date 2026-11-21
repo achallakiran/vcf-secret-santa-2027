@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import {buildOffice} from "./office.js?v=visual-upgrade-p1";
+import {buildOffice} from "./office.js?v=grand-overhaul-v2";
 import {createAvatar,avatarFromPerson} from "./avatar.js?v=face-refine-v4-studio-qa-v1";
 import {createOfficeLife} from "./office-life.js?v=studio-qa-v1";
 
@@ -173,18 +173,23 @@ export function mountOffice(host,profile,notice=()=>{}){
   const renderer=new THREE.WebGLRenderer({antialias:true,alpha:false,powerPreference:"high-performance"});
   renderer.outputColorSpace=THREE.SRGBColorSpace;
   renderer.toneMapping=THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure=1.06;
+  // Balanced storybook lighting: readable characters, nuanced shadow depth,
+  // saturated Christmas installations and genuinely warm festive highlights.
+  renderer.toneMappingExposure=1.08;
   renderer.shadowMap.enabled=true;
   renderer.shadowMap.type=THREE.PCFSoftShadowMap;
   renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,1.5));
   const scene=new THREE.Scene();
-  scene.background=new THREE.Color(0xe1e7e4);
-  scene.fog=new THREE.Fog(0xe2e5e2,47,150);
-  scene.add(new THREE.HemisphereLight(0xe8efff,0xf3d8bc,1.75));
-  const coolFill=new THREE.DirectionalLight(0xc2deed,.55);
-  coolFill.position.set(6,7,3);scene.add(coolFill);
-  const sun=new THREE.DirectionalLight(0xffe2b9,2.15);
-  sun.position.set(-5,11,-6);sun.target.position.set(0,0,9);
+  scene.background=new THREE.Color(0xe5e5df);
+  scene.fog=new THREE.Fog(0xe8e4dc,55,165);
+  // Larger tonal separation than the original almost-flat flood lighting.
+  scene.add(new THREE.HemisphereLight(0xf7efe7,0xa8a29a,1.46));
+  const coolFill=new THREE.DirectionalLight(0x9ccee2,.72);
+  coolFill.position.set(8,8,5);scene.add(coolFill);
+  const sun=new THREE.DirectionalLight(0xffd4a1,2.22);
+  sun.position.set(-7,12,-5);sun.target.position.set(0,0,9);
+  const warmRim=new THREE.DirectionalLight(0xffcfa2,.45);
+  warmRim.position.set(2,5,22);scene.add(warmRim);
   sun.castShadow=true;
   sun.shadow.mapSize.set(window.innerWidth<760?1024:2048,window.innerWidth<760?1024:2048);
   sun.shadow.camera.left=-18;sun.shadow.camera.right=18;sun.shadow.camera.top=28;sun.shadow.camera.bottom=-28;
