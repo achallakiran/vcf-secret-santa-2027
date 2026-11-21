@@ -899,6 +899,37 @@ async function loadPlayer(){
   $("save-message").disabled=!child;
   $("gift-purchased").disabled=!child;
   $("task-form").querySelectorAll("input,button").forEach(x=>x.disabled=!child);
+
+  // Santa can draft three clues for their Child. Only the intended recipient
+  // ever sees clues and only after explicitly unlocking each one.
+  const savedHints=child?.hints||[];
+  for(let i=1;i<=3;i++){
+    const input=$("santa-hint-"+i);
+    input.value=String(savedHints[i-1]||"");
+    input.disabled=!child||(child?.hints_unlocked_count||0)>=i;
+  }
+  $("save-santa-hints").disabled=!child;
+
+  const mystery=player.mystery||null;
+  const revealed=(mystery?.hints||[]).filter(v=>typeof v==="string"&&v.trim());
+  const clueBox=$("mystery-hints");clueBox.replaceChildren();
+  if(!mystery)itemLine(clueBox,"Your Secret Santa has not been assigned yet.");
+  else if(!revealed.length)itemLine(clueBox,"No clues unlocked yet. Your Santa stays anonymous.");
+  else revealed.forEach((clue,i)=>itemLine(clueBox,"Clue "+(i+1)+" · "+clue));
+  const count=mystery?.unlocked||0;
+  const nextTime=mystery?.next_at?Date.parse(mystery.next_at):0;
+  const cooldown=nextTime>Date.now();
+  const nextReady=mystery?.can_unlock&&count<3;
+  $("unlock-hint").disabled=!mystery||!nextReady||cooldown;
+  $("unlock-hint").textContent=count>=3?"✓ All clues unlocked":
+    "✦ Unlock clue "+(count+1);
+  $("hint-unlock-status").textContent=!mystery?
+    "The organizer needs to draw Secret Santas first.":
+    count>=3?"All three clues have been unlocked.":
+    cooldown?"Next clue available after "+new Intl.DateTimeFormat("en-IN",
+      {dateStyle:"medium",timeStyle:"short"}).format(new Date(nextTime))+".":
+    nextReady?"The next clue is ready. Reveal it when you wish.":
+    "Your Santa has not written the next hint yet. Try refreshing later.";
   if(!child){
     itemLine(childWishes,"Your Secret Child's wishlist will appear after the draw.");
     itemLine(myTasks,"No assigned Secret Child yet. Tasks are optional.");
@@ -1083,6 +1114,20 @@ $("wishlist-form").addEventListener("submit",run(async e=>{
   if(player.me.wishlist.length>=25)throw Error("Your wishlist already has 25 wishes.");
   await saveWishlist([...player.me.wishlist,{id:crypto.randomUUID(),text}]);
   $("wishlist-form").reset();
+}));
+$("santa-hint-form").addEventListener("submit",run(async e=>{
+  e.preventDefault();
+  if(!player?.myChild)throw Error("Your Secret Child has not been assigned.");
+  const hints=[1,2,3].map(i=>$("santa-hint-"+i).value.trim());
+  await api("save_santa_hints",{hints});
+  await loadPlayer();
+  toast("Anonymous clues saved. Your Secret Child can unlock them gradually.");
+}));
+$("unlock-hint").addEventListener("click",run(async()=>{
+  if(!player?.mystery)throw Error("You do not have a Santa assignment yet.");
+  await api("unlock_santa_hint");
+  await loadPlayer();
+  toast("Your next Secret Santa clue is unlocked.");
 }));
 $("child-toggle").addEventListener("click",()=>{
   if(!player?.myChild)return;
