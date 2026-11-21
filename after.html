@@ -74,7 +74,7 @@
       // Supabase, participant models, logins, and old CDN module versions.
       const [{default:THREE},{buildOffice}]=await Promise.all([
         import("three").then(mod=>({default:mod})),
-        import("./assets/game/office.js?v=grand-overhaul-v3")
+        import("./assets/game/office.js?v=no-skyline-v1")
       ]);
       renderer=new THREE.WebGLRenderer({
         antialias:window.devicePixelRatio<=2,
@@ -110,7 +110,7 @@
       scene.add(office.root);
       const target=new THREE.Vector3(0,1.4,12.7);
       const camera=new THREE.PerspectiveCamera(50,1,.1,300);
-      let yaw=2.63,pitch=.72,distance=46;
+      let yaw=2.63,pitch=.66,distance=40.5;
       function positionCamera(){
         camera.position.set(
           target.x+Math.sin(yaw)*Math.cos(pitch)*distance,
