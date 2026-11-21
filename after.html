@@ -108,9 +108,9 @@
       rim.position.set(2,5,22);scene.add(rim);
       const office=buildOffice(12);
       scene.add(office.root);
-      const target=new THREE.Vector3(0,1.4,12.7);
+      const target=new THREE.Vector3(.8,1.4,11.3);
       const camera=new THREE.PerspectiveCamera(50,1,.1,300);
-      let yaw=2.63,pitch=.66,distance=38;
+      let yaw=2.63,pitch=.66,distance=35.5;
       function positionCamera(){
         camera.position.set(
           target.x+Math.sin(yaw)*Math.cos(pitch)*distance,
