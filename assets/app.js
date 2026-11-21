@@ -24,6 +24,9 @@ let officeRuntime=null,officeLoading=null,officeKey=null,officeNoticeTimer=null;
 let avatarBaseline=null,avatarPreviewTimer=null;
 let avatarStudio=null,avatarStudioLoading=null,activeStudioTab="look",visualEditor=null;
 let adminEditingParticipant=null;
+// The finale exists only in the organizer view and never opens automatically.
+let ceremonyRuntime=null,ceremonyPeople=[],ceremonyIndex=0,ceremonyData=null,
+    ceremonyRevealed=false,ceremonyCluesShown=0,ceremonySerial=0;
 const christmasMusic=createChristmasMusic();
 function syncChristmasMusic(){
   const button=$("player-music");
@@ -65,6 +68,12 @@ const ACTION_STEPS={
   edit_participant:"Saving participant changes",
   rotate_code:"Generating a replacement invitation code",
   assign_pending:"Assigning Santas to participants who are waiting",
+  delete_participant:"Deleting participant and repairing remaining Santa pairs",
+  reassign_all:"Resetting all Santa allocations",
+  ceremony_roster:"Preparing the Christmas stage",
+  ceremony_details:"Bringing the next participant to the stage",
+  save_santa_hints:"Saving clues for your Secret Child",
+  unlock_santa_hint:"Unlocking a mystery clue",
   change_admin_pin:"Updating administrator PIN",
   player_dashboard:"Loading personal dashboard",
   save_wishlist:"Saving wishlist",
@@ -395,7 +404,20 @@ function renderPeople(){
     }),"small-outline roster-icon-button");
     rotate.title=code?"Regenerate invitation code":"Issue readable invitation code";
     rotate.setAttribute("aria-label",rotate.title);
-    control.append(edit,rotate);tr.append(control);
+    const remove=button("🗑",run(async()=>{
+      if(!event)return;
+      const named=p.display_name+(p.desk_key?" ("+p.desk_key+")":"");
+      const typed=prompt("Delete "+named+"? This revokes the invitation and reconnects the Santa cycle when safe. Active gift messages, tasks, purchased-gift records and other personal work are protected.\n\nType DELETE to continue.");
+      if(typed!=="DELETE")return;
+      if(!confirm("Permanently delete "+named+" and repair remaining allocations? This cannot be undone."))return;
+      const res=await api("delete_participant",{event_id:event.id,participant_id:p.id});
+      await openEvent(event);
+      toast(named+" deleted"+(res?.rewired?" and Santa chain repaired.":"."));
+    }),"small-outline roster-icon-button roster-delete");
+    remove.title="Permanently delete "+p.display_name+" ("+(p.desk_key||p.id.slice(0,6))+")";
+    remove.setAttribute("aria-label",remove.title);
+    remove.disabled=!["draft","active"].includes(event.status);
+    control.append(edit,rotate,remove);tr.append(control);
     tbody.append(tr);
   }
 }
@@ -403,6 +425,98 @@ function renderPairs(){
   const list=$("pair-list");list.replaceChildren();
   $("assignment-details").classList.toggle("hidden",!assignments.length);
   assignments.forEach(a=>list.append(node("div","",namesById(a.santa_id)+" → "+namesById(a.child_id))));
+  $("reassign-all-btn").disabled=!["draft","active"].includes(event?.status)||!assignments.length;
+  $("ceremony-launch").disabled=!participants.some(p=>p.is_active);
+}
+
+function ceremonyLine(id,content,emptyText){
+  const parent=$(id);parent.replaceChildren();
+  if(!content.length){
+    parent.append(node("div","ceremony-story-empty",emptyText));
+    return;
+  }
+  content.forEach(value=>parent.append(node("div","ceremony-story-item",String(value))));
+}
+function ceremonyName(person){
+  return person?.display_name+(person?.desk_key?" · "+person.desk_key:"");
+}
+async function showCeremonyMember(index){
+  if(!ceremonyPeople.length)return;
+  const serial=++ceremonySerial;
+  ceremonyIndex=Math.max(0,Math.min(index,ceremonyPeople.length-1));
+  const person=ceremonyPeople[ceremonyIndex];
+  $("ceremony-select").value=person.id;
+  $("ceremony-person").textContent=person.display_name;
+  $("ceremony-person-desk").textContent=person.desk_key||"";
+  $("ceremony-progress").textContent="PARTICIPANT "+(ceremonyIndex+1)+" OF "+ceremonyPeople.length;
+  $("ceremony-spotlight-state").textContent="Preparing the spotlight…";
+  $("ceremony-prev").disabled=ceremonyIndex===0;
+  $("ceremony-next").disabled=ceremonyIndex===ceremonyPeople.length-1;
+  $("ceremony-revealed").classList.add("hidden");
+  $("ceremony-guess").value="";
+  $("ceremony-santa-name").textContent="";
+  $("ceremony-guess-result").textContent="";
+  $("ceremony-reveal-btn").disabled=true;
+  $("ceremony-next-clue").disabled=true;
+  ceremonyRevealed=false;ceremonyCluesShown=0;ceremonyData=null;
+  ceremonyLine("ceremony-wishlist",[],"Collecting their Christmas wishes…");
+  ceremonyLine("ceremony-tasks",[],"Collecting any Santa tasks…");
+  $("ceremony-message").textContent="Preparing the anonymous Santa's message…";
+  ceremonyLine("ceremony-clues",[],"The clues are coming…");
+  const data=await api("ceremony_details",{event_id:event.id,participant_id:person.id});
+  if(serial!==ceremonySerial||!$("ceremony-dialog").open)return;
+  ceremonyData=data;
+  $("ceremony-person").textContent=data.participant.display_name;
+  $("ceremony-person-desk").textContent=data.participant.desk_key||"";
+  $("ceremony-spotlight-state").textContent="ON STAGE · THE AUDIENCE IS WATCHING";
+  const wishes=(data.wishlist||[]).map(x=>typeof x==="string"?x:x?.text||"").filter(Boolean);
+  ceremonyLine("ceremony-wishlist",wishes,"No wishlist entries were added.");
+  const tasks=(data.tasks||[]).map(x=>
+    (x.task_date?niceDate(x.task_date)+" · ":"")+x.task_text+
+    (x.status==="completed"?" ✓":""));
+  ceremonyLine("ceremony-tasks",tasks,"Their Secret Santa did not set any tasks. Tasks are optional.");
+  $("ceremony-message").textContent=data.message||"No personal message has been written by their Santa yet.";
+  ceremonyLine("ceremony-clues",[],"No clues shown yet. Use Next hint to reveal them one by one.");
+  $("ceremony-next-clue").disabled=!(data.hints||[]).length;
+  $("ceremony-reveal-btn").disabled=!data.santa;
+  try{
+    if(!ceremonyRuntime){
+      const {mountCeremonyStage}=await import("./game/ceremony-stage.js?v=santa-finale-v1");
+      if(serial!==ceremonySerial||!$("ceremony-dialog").open)return;
+      ceremonyRuntime=mountCeremonyStage($("ceremony-avatar"),data.participant);
+    }else ceremonyRuntime.update(data.participant);
+  }catch(error){
+    console.warn("3D stage unavailable; showing accessible nameplate instead.",error);
+    $("ceremony-avatar").textContent="✦ "+data.participant.display_name+" ✦";
+  }
+}
+async function startCeremony(){
+  if(!event)return;
+  const response=await api("ceremony_roster",{event_id:event.id});
+  ceremonyPeople=response.people||[];
+  if(!ceremonyPeople.length)throw Error("Add at least one participant before opening the stage.");
+  const select=$("ceremony-select");select.replaceChildren();
+  ceremonyPeople.forEach(p=>{
+    const option=node("option","",ceremonyName(p));option.value=p.id;select.append(option);
+  });
+  const dialog=$("ceremony-dialog");
+  dialog.showModal();
+  try{await showCeremonyMember(0);}
+  catch(error){dialog.close();throw error;}
+}
+function revealCeremonySanta(){
+  if(!ceremonyData?.santa||ceremonyRevealed)return;
+  ceremonyRevealed=true;
+  $("ceremony-revealed").classList.remove("hidden");
+  $("ceremony-reveal-btn").disabled=true;
+  $("ceremony-santa-name").textContent=ceremonyName(ceremonyData.santa);
+  const guess=$("ceremony-guess").value.trim();
+  const matches=guess&&normalizedParticipantName(guess)===
+    normalizedParticipantName(ceremonyData.santa.display_name);
+  $("ceremony-guess-result").textContent=guess?
+    (matches?"🎉 The audience guessed correctly!":"The audience guessed: "+guess):"Christmas mystery solved! ✨";
+  $("ceremony-spotlight-state").textContent="THE SECRET SANTA IS REVEALED ✦";
+  ceremonyRuntime?.reveal();
 }
 function niceDate(value){
   const d=new Date(value+"T12:00:00Z");
@@ -870,6 +984,40 @@ $("participant-form").addEventListener("submit",run(async e=>{
   await openEvent(event);
   toast("Participant added. Use WhatsApp to share their invitation privately.");
 }));
+$("reassign-all-btn").addEventListener("click",run(async()=>{
+  if(!event||!assignments.length)return;
+  const text="This will permanently replace ALL "+assignments.length+
+    " Santa pairings and clear their existing gift flags, personal messages, hints and tasks. Participants may already know their original Secret Child.";
+  if(!confirm("DANGEROUS RESET\n\n"+text+"\n\nDo you want to continue?"))return;
+  if(prompt("For the final confirmation, type REASSIGN (uppercase):")!=="REASSIGN")return;
+  const result=await api("reassign_all",{event_id:event.id,confirmation:"REASSIGN"});
+  await openEvent(event);
+  toast(result.assigned+" new Santa pairs generated. Old pair-specific data was cleared.");
+}));
+$("ceremony-launch").addEventListener("click",run(startCeremony));
+$("ceremony-close").addEventListener("click",()=>$("ceremony-dialog").close());
+$("ceremony-dialog").addEventListener("close",()=>{
+  ceremonySerial++;ceremonyRuntime?.dispose();ceremonyRuntime=null;
+  ceremonyData=null;ceremonyRevealed=false;
+});
+$("ceremony-select").addEventListener("change",run(async e=>{
+  const index=ceremonyPeople.findIndex(p=>p.id===e.target.value);
+  if(index>=0)await showCeremonyMember(index);
+}));
+$("ceremony-next").addEventListener("click",run(async()=>{
+  if(ceremonyIndex<ceremonyPeople.length-1)await showCeremonyMember(ceremonyIndex+1);
+}));
+$("ceremony-prev").addEventListener("click",run(async()=>{
+  if(ceremonyIndex>0)await showCeremonyMember(ceremonyIndex-1);
+}));
+$("ceremony-next-clue").addEventListener("click",()=>{
+  if(!ceremonyData?.hints||ceremonyCluesShown>=ceremonyData.hints.length)return;
+  ceremonyCluesShown++;
+  ceremonyLine("ceremony-clues",ceremonyData.hints.slice(0,ceremonyCluesShown)
+    .map((h,i)=>"CLUE "+(i+1)+" · "+h),"No hints have been written.");
+  $("ceremony-next-clue").disabled=ceremonyCluesShown>=ceremonyData.hints.length;
+});
+$("ceremony-reveal-btn").addEventListener("click",revealCeremonySanta);
 $("assign-btn").addEventListener("click",run(async()=>{
   if(!event)return;
   const pending=pendingPeople();
