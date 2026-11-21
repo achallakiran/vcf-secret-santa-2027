@@ -562,7 +562,7 @@ async function enterOffice(info){
   }
   $("office-loading").classList.remove("hidden");
   officeLoading=(async()=>{
-    const module=await import("./game/main.js?v=grand-overhaul-v3");
+    const module=await import("./game/main.js?v=accepted-after-camera-v1");
     officeRuntime=module.mountOffice($("office-canvas"),info,officeToast);
     officeRuntime.setCamera("wide");
     officeKey=identity;
