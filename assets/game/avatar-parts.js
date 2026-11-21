@@ -161,16 +161,48 @@ export function sculptHead(head,p,kit){
   }
   // Completely bald is a real hair-free head, not a skin-colored hair mesh.
   if(cut!==20){
+    if(cut>=13&&cut<=19){
+      // Cropped haircuts are sculpted independently from the long-hair base.
+      const height={13:.12,14:.33,15:.27,16:.28,17:.26,18:.14,19:.07}[cut];
+      const crown=part(head,.94,height,.69,deep,0,.81+height*.40,-.05,.055);
+      if(cut===18)crown.position.z=-.15;
+      for(const sign of [-1,1]){
+        part(head,.067,cut===13?.13:.20,.48,mat(shade(p.skinHex,-.06)),
+          sign*.532,.66,-.04,.018);
+        part(head,.067,cut===19?.065:.11,.42,hair,
+          sign*.532,.75,-.04,.017);
+      }
+      const count=cut===19?5:cut===17?10:8;
+      for(let i=0;i<count;i++){
+        const u=(i-(count-1)/2)/(count/2),x=u*.44;
+        const lift=cut===14?.15*(1-u*u):cut===15?.09*(1-u):
+          cut===16?.13*Math.abs(Math.sin(i*2.5)):cut===17?.085*Math.sin(i*2):.012;
+        const y=.86+height*.36+lift;
+        if(cut===17)orb(head,.095+.015*(i%3),i%2?hair:high,x,y,
+          .23+Math.sin(i)*.035,.9,1,.95);
+        else {
+          const tuft=part(head,.105+.020*(i%3),.062+lift,.22,
+            i%2?high:hair,x+(cut===15?.045:0),y,.31,.025);
+          tuft.rotation.z=cut===15?-.42:cut===18?-.55:
+            cut===16?(i%2?.40:-.40):.07;
+        }
+      }
+      if(cut===18)for(let j=0;j<5;j++){
+        const swept=part(head,.16,.038,.33,j%2?high:hair,(j-2)*.19,.934,-.12,.016);
+        swept.rotation.x=-.21;
+      }
+    }else{
   // Hair is now constructed as a stepped crown with overlapping voxel
   // locks and *different length/volume silhouettes* for all four styles.
   const crown=part(head,cut>=13&&cut<20?1.08:1.12,cut>=13&&cut<20?.20:.29,.82,deep,0,.805,-.042,.082);
   part(head,1.045,.17,.74,hair,0,.907,-.025,.068);
   for(const side of [-1,1]){
-    part(head,.23,.33,.69,hair,side*.480,.640,-.012,.070);
-    for(let j=0;j<3;j++){
-      const lock=part(head,.192,.19+j*.026,.24,j%2?middle:high,
-        side*(.39-j*.052),.778-j*.066,.320-j*.026,.043);
-      lock.rotation.z=side*(.06+j*.055);
+    // Slim temple details replace the two oversized uniform dark slabs.
+    part(head,.14,.20,.41,hair,side*.479,.718,-.09,.044);
+    for(let j=0;j<2;j++){
+      const lock=part(head,.104,.10+j*.024,.12,j?middle:high,
+        side*(.40-j*.062),.847-j*.030,.30-j*.038,.024);
+      lock.rotation.z=side*.15;
     }
   }
   const fringeCount=parting>=0||cut>=13?0:style===0?5:style===3?4:5;
@@ -249,6 +281,21 @@ export function sculptHead(head,p,kit){
       part(head,.12,.18,.15,hair,center,tip-.12,startZ-.06,.038);
     }
   }
+  if(parting>=0){
+    const side=parting===0?1:parting===1?-1:0;
+    for(let j=0;j<(parting===2?6:5);j++){
+      const left=parting===2&&j<3;
+      const direction=parting===2?(left?-1:1):side;
+      const x=parting===2?(left?-.14:.14)+direction*(j%3)*.10:
+        -direction*.17+direction*j*.11;
+      const swept=part(head,.13,.11+(j%2)*.026,.20,j%2?high:hair,
+        x,.824-(j%3)*.018,.375,.026);
+      swept.rotation.z=-direction*.25;
+    }
+    if(parting===2)for(const sign of [-1,1]){
+      part(head,.12,.24,.14,hair,sign*.39,.700,.350,.030);
+    }
+  }
   // Visible three-dimensional scalp part, sweeping locks and short tapered sides.
   if(parting>=0){
     const partX=parting===0?-.22:parting===1?.22:0;
@@ -285,6 +332,7 @@ export function sculptHead(head,p,kit){
       }
     }
   }
+    } // Longer, parted and braided styles
   } // Hair finished; bald heads skip the entire scalp/hair sculpture.
   if(p.glassesStyle&&p.glassesStyle!=="none"){
     const kind=p.glassesStyle,frame=mat(p.glassesHex??0x644c40,.39,.17);
