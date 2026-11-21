@@ -2035,3 +2035,113 @@ body.office-playing #player-menu textarea{
   .ceremony-story-card,
   .ceremony-side .ceremony-story-card {box-shadow:none}
 }
+
+
+/* Simplified notebook shell. A single baseline for the title, Character,
+   Personal and Close, instead of stacked title and tabs with conflicting
+   margins. The hidden greeting/event metadata remains available to assistive
+   technology and the existing player state logic. */
+#player-menu .notebook-toolbar {
+  display:flex;
+  width:100%;
+  align-items:center;
+  justify-content:space-between;
+  gap:clamp(6px,1.5vw,18px);
+  margin:0 0 15px;
+  padding:0 0 12px;
+  border-bottom:1px solid #e2c7cc;
+}
+#player-menu .notebook-heading {
+  flex:0 1 auto;
+  min-width:0;
+  display:flex;
+  align-items:center;
+}
+#player-menu .notebook-heading .eyebrow {
+  margin:0;
+  line-height:1.2;
+  white-space:nowrap;
+  color:#92546e;
+  font-size:clamp(10px,1.25vw,12px);
+  letter-spacing:.095em;
+}
+#player-menu .notebook-accessible-meta{
+  position:absolute!important;
+  width:1px!important;
+  height:1px!important;
+  padding:0!important;
+  margin:-1px!important;
+  overflow:hidden!important;
+  clip:rect(0 0 0 0)!important;
+  white-space:nowrap!important;
+  border:0!important;
+}
+#player-menu .notebook-toolbar .menu-tabs {
+  display:flex;
+  flex:0 1 auto;
+  min-width:0;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+  margin:0;
+}
+#player-menu .notebook-toolbar .menu-tabs button {
+  box-sizing:border-box;
+  flex:0 1 auto;
+  min-width:clamp(71px,9vw,110px);
+  max-width:none;
+  height:42px;
+  min-height:42px;
+  padding:9px clamp(7px,1.1vw,14px);
+  line-height:1.2;
+  white-space:nowrap;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  margin:0;
+  font-size:12px;
+}
+#player-menu .notebook-toolbar #player-close {
+  flex:0 0 42px;
+  box-sizing:border-box;
+  width:42px;
+  height:42px;
+  padding:0;
+  margin:0;
+  display:grid;
+  place-items:center;
+  font-size:19px;
+  border-radius:11px;
+}
+#player-menu #player-character .atelier-preview .avatar-studio-canvas{
+  height:100%;
+  min-height:315px;
+}
+#player-menu #player-character .character-preview-shell{
+  overflow:hidden;
+}
+@media(max-width:560px){
+  #player-menu .notebook-toolbar{
+    gap:5px;
+    padding-bottom:10px;
+    margin-bottom:12px;
+  }
+  #player-menu .notebook-heading .eyebrow{
+    font-size:9px;
+    letter-spacing:.018em;
+  }
+  #player-menu .notebook-toolbar .menu-tabs{gap:4px}
+  #player-menu .notebook-toolbar .menu-tabs button{
+    min-width:61px;
+    height:39px;
+    min-height:39px;
+    font-size:10px;
+    padding:7px 5px;
+    border-radius:9px;
+  }
+  #player-menu .notebook-toolbar #player-close{
+    width:39px;
+    height:39px;
+    flex-basis:39px;
+  }
+}
