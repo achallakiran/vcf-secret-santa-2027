@@ -531,7 +531,7 @@ function officeToast(message){
   el.textContent=message;
   el.classList.remove("hidden");
   clearTimeout(officeNoticeTimer);
-  officeNoticeTimer=setTimeout(()=>el.classList.add("hidden"),3300);
+  officeNoticeTimer=setTimeout(()=>el.classList.add("hidden"),2200);
 }
 function avatarIdentity(info){
   const people=info.colleagues||[];
@@ -562,14 +562,14 @@ async function enterOffice(info){
   }
   $("office-loading").classList.remove("hidden");
   officeLoading=(async()=>{
-    const module=await import("./game/main.js?v=notebook-cleanup-v1");
+    const module=await import("./game/main.js?v=festive-speech-v1");
     officeRuntime=module.mountOffice($("office-canvas"),info,officeToast);
     officeRuntime.setCamera("wide");
     officeKey=identity;
     avatarBaseline=officeRuntime.getAvatar();
     setAvatarEditor(avatarBaseline);
     $("office-loading").classList.add("hidden");
-    officeToast("Tap the floor to move. Tap the hand to perform a random cheerful action.");
+    officeToast("Tap to walk · Tap the hand to celebrate!");
   })();
   try{await officeLoading;}
   catch(error){
