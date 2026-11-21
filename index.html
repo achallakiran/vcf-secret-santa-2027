@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#080d16"/>
   <meta name="description" content="Voxel Secret Santa — a thoughtful Christmas office mystery."/>
   <title>Voxel Secret Santa</title>
-  <link rel="stylesheet" href="./assets/styles.css?v=santa-finale-v1"/>
+  <link rel="stylesheet" href="./assets/styles.css?v=environment-mystery-v1"/>
 </head>
 <body>
   <div class="snow" id="snow" aria-hidden="true"></div>
@@ -240,16 +240,7 @@
             </form>
           </div>
         </div>
-        <div class="studio-camera-footer">
-          <span>CAMERA</span>
-          <div class="camera-options" role="group" aria-label="Camera perspective">
-            <button type="button" data-camera="three" class="camera-option selected">◈ Three-quarter</button>
-            <button type="button" data-camera="close" class="camera-option">◉ Close follow</button>
-            <button type="button" data-camera="wide" class="camera-option">▣ Wide overview</button>
-          </div>
-          <button id="camera-reset" type="button" class="studio-reset" title="Restore original camera angle">↺ Reset view</button>
-        </div>
-        <p class="camera-gesture-help">Tap floor to walk · Drag to rotate camera · Drag vertically to tilt · Pinch to zoom</p>
+        <p class="camera-gesture-help">Tap the floor to walk · Drag to look around · Pinch to zoom</p>
       </section>
       <section id="player-personal" class="hidden">
         <div class="personal-heading">
@@ -289,27 +280,14 @@
             </div>
           </section>
         </div>
-        <div class="personal-layout santa-hint-grid">
-          <section class="personal-card hint-card">
-            <span class="personal-card-kicker">03 · MY SECRET SANTA MYSTERY</span>
-            <h4>🎁 Hints about my Santa</h4>
-            <p class="muted small">Your Santa can leave up to three anonymous clues. Unlock the first as soon as it is written, then one additional clue every 24 hours.</p>
-            <div id="mystery-hints" class="personal-list" aria-live="polite"></div>
-            <p id="hint-unlock-status" class="muted small"></p>
-            <button type="button" id="unlock-hint" class="small-outline">✦ Unlock a clue</button>
-          </section>
-          <section class="personal-card hint-card">
-            <span class="personal-card-kicker">04 · SOMETHING TO GUESS</span>
-            <h4>✍️ Hints for my Secret Child</h4>
-            <p class="muted small">Write clues about yourself without giving away your name. Hints are revealed gradually; previously released clues cannot be edited.</p>
-            <form id="santa-hint-form" class="santa-hint-form">
-              <label>Clue 1 <input id="santa-hint-1" maxlength="180" placeholder="A small detail about me…" autocomplete="off"/></label>
-              <label>Clue 2 <input id="santa-hint-2" maxlength="180" placeholder="Something funny about me…" autocomplete="off"/></label>
-              <label>Clue 3 <input id="santa-hint-3" maxlength="180" placeholder="One final hint…" autocomplete="off"/></label>
-              <button type="submit" class="small-outline" id="save-santa-hints">✓ Save hints</button>
-            </form>
-          </section>
-        </div>
+        <section class="personal-card hint-card environment-hint-card">
+          <span class="personal-card-kicker">03 · THE OFFICE MYSTERY</span>
+          <h4>🔍 Find your Secret Santa</h4>
+          <p class="muted small">The game discovers clues from objects and decorations around your Santa's workstation. No one needs to write clues. Each hint reveals more of the office mystery.</p>
+          <div id="mystery-hints" class="personal-list" aria-live="polite"></div>
+          <p id="hint-unlock-status" class="muted small"></p>
+          <button type="button" id="unlock-hint" class="small-outline">✦ Reveal the next office clue</button>
+        </section>
         <details id="optional-tasks" class="personal-optional-tasks">
           <summary>✦ Optional festive tasks <span>Not needed for Santa allocation or gifting</span></summary>
           <div class="personal-layout">
@@ -390,27 +368,27 @@
         </div>
         <div class="ceremony-scroll">
           <div class="ceremony-story-card">
-            <h3>🎁 Their Christmas wishlist</h3>
+            <h3>🎁 Wishlist</h3>
             <div id="ceremony-wishlist" class="ceremony-story-list"></div>
           </div>
           <div class="ceremony-story-card">
-            <h3>✦ Tasks given by their Secret Santa</h3>
+            <h3>✦ Santa’s tasks</h3>
             <div id="ceremony-tasks" class="ceremony-story-list"></div>
           </div>
           <div class="ceremony-story-card">
-            <h3>💌 A message from their Santa</h3>
+            <h3>💌 Santa’s message</h3>
             <p id="ceremony-message" class="ceremony-message"></p>
           </div>
           <div class="ceremony-story-card">
             <div class="ceremony-clue-heading">
-              <h3>🔎 Clues to guess the Santa</h3>
+              <h3>🔎 Office clues</h3>
               <button id="ceremony-next-clue" type="button" class="small-outline">Next hint</button>
             </div>
             <div id="ceremony-clues" class="ceremony-story-list"></div>
           </div>
           <div class="ceremony-guess-panel">
             <h3>Who do you think your Santa is?</h3>
-            <p>Let the participant guess aloud. The organizer can note the guess before the reveal.</p>
+
             <input id="ceremony-guess" maxlength="160" placeholder="Optional audience guess" autocomplete="off"/>
             <button type="button" id="ceremony-reveal-btn" class="ceremony-reveal-btn">✨ Reveal the Secret Santa</button>
             <div class="ceremony-revealed hidden" id="ceremony-revealed" aria-live="polite">
@@ -437,6 +415,6 @@
   <script type="importmap">
     {"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js"}}
   </script>
-  <script type="module" src="./assets/app.js?v=santa-finale-v1"></script>
+  <script type="module" src="./assets/app.js?v=environment-mystery-v1"></script>
 </body>
 </html>
