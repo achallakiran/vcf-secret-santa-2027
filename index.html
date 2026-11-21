@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#080d16"/>
   <meta name="description" content="Voxel Secret Santa — a thoughtful Christmas office mystery."/>
   <title>Voxel Secret Santa</title>
-  <link rel="stylesheet" href="./assets/styles.css?v=organizer-evergreen-v1"/>
+  <link rel="stylesheet" href="./assets/styles.css?v=notebook-cleanup-v1"/>
 </head>
 <body>
   <div class="snow" id="snow" aria-hidden="true"></div>
@@ -113,18 +113,21 @@
       <div id="office-toast" class="office-toast hidden" role="status" aria-live="polite"></div>
     </div>
     <section id="player-menu" class="player-menu panel hidden" aria-label="Character studio and pause menu" role="dialog" aria-modal="true">
-      <div class="section-head">
-        <div><p class="eyebrow">CHRISTMAS NOTEBOOK</p><h3 id="player-greeting">SECRET SANTA</h3><p id="player-event-title" class="muted">Christmas office</p></div>
-        <button id="player-close" class="small-outline" type="button" aria-label="Resume game">✕</button>
-      </div>
-      <div class="menu-tabs">
-        <button type="button" class="tab active" id="player-tab-character">Character</button>
-        <button type="button" class="tab" id="player-tab-personal">Personal</button>
+      <div class="section-head notebook-toolbar">
+        <div class="notebook-heading">
+          <p class="eyebrow">CHRISTMAS NOTEBOOK</p>
+          <h3 id="player-greeting" class="notebook-accessible-meta">SECRET SANTA</h3>
+          <p id="player-event-title" class="notebook-accessible-meta">Christmas office</p>
+        </div>
+        <nav class="menu-tabs" aria-label="Notebook sections">
+          <button type="button" class="tab active" id="player-tab-character">Character</button>
+          <button type="button" class="tab" id="player-tab-personal">Personal</button>
+        </nav>
+        <button id="player-close" class="small-outline" type="button" aria-label="Close notebook and resume game" title="Close notebook">✕</button>
       </div>
       <section id="player-character" class="character-studio-section">
         <div class="avatar-atelier">
           <nav class="atelier-categories" aria-label="Character styling categories">
-            <div class="atelier-side-brand" aria-hidden="true">✦</div>
             <button type="button" data-studio-tab="look" class="atelier-category active" aria-selected="true"><span class="atelier-category-icon" aria-hidden="true">☺</span><span>Face</span></button>
             <button type="button" data-studio-tab="hair" class="atelier-category" aria-selected="false"><span class="atelier-category-icon" aria-hidden="true">✂</span><span>Hair</span></button>
             <button type="button" data-studio-tab="fashion" class="atelier-category" aria-selected="false"><span class="atelier-category-icon" aria-hidden="true">✿</span><span>Outfit</span></button>
@@ -133,25 +136,11 @@
             <button type="button" data-studio-tab="shape" class="atelier-category" aria-selected="false"><span class="atelier-category-icon" aria-hidden="true">↕</span><span>Body</span></button>
           </nav>
           <div class="character-preview-shell atelier-preview">
-            <div class="studio-brand">
-              <span class="studio-eyebrow">THE CHRISTMAS OFFICE</span>
-              <strong>YOUR VOXEL CHARACTER</strong>
-              <p>Drag to see every little detail</p>
-            </div>
-            <div id="avatar-studio-canvas" class="avatar-studio-canvas" aria-label="Rotatable full-body 3D voxel character preview"></div>
-            <div class="studio-rotate" aria-label="Rotate and zoom your avatar">
-              <button type="button" id="avatar-turn-left" aria-label="Turn character left">↶</button>
-              <button type="button" id="avatar-zoom-out" aria-label="Zoom out to see more of the character" title="Zoom out">−</button>
-              <button type="button" id="avatar-fit" class="studio-fit-control" aria-label="Fit entire character in preview" title="Fit full body">Fit</button>
-              <button type="button" id="avatar-zoom-in" aria-label="Zoom in on character" title="Zoom in">+</button>
-              <button type="button" id="avatar-turn-right" aria-label="Turn character right">↷</button>
-            </div>
-            <button id="avatar-view" type="button" class="studio-office-link">See in Office <span aria-hidden="true">↗</span></button>
+            <div id="avatar-studio-canvas" class="avatar-studio-canvas" aria-label="Interactive full-body character preview. Drag to rotate, pinch or scroll to zoom."></div>
           </div>
           <div class="studio-workbench atelier-options">
             <div class="studio-workbench-heading">
               <div><span class="studio-eyebrow">STYLE YOUR AVATAR</span><h4 id="atelier-category-title">Face & colors</h4></div>
-              <span class="studio-holiday-mark" aria-hidden="true">✧</span>
             </div>
             <form id="avatar-form" class="studio-avatar-form">
               <div class="atelier-hidden-values" aria-hidden="true">
@@ -240,7 +229,6 @@
             </form>
           </div>
         </div>
-        <p class="camera-gesture-help">Tap the floor to walk · Drag to look around · Pinch to zoom</p>
       </section>
       <section id="player-personal" class="hidden">
         <div class="personal-heading">
@@ -315,7 +303,6 @@
           </div>
         </details>
       </section>
-      <button type="button" id="player-sign-out" class="small-outline">Exit to Christmas title</button>
     </section>
   </main>
   <dialog id="admin-avatar-dialog" class="admin-avatar-dialog" aria-label="Edit participant avatar">
@@ -421,6 +408,6 @@
   <script type="importmap">
     {"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js"}}
   </script>
-  <script type="module" src="./assets/app.js?v=closer-office-camera-v1"></script>
+  <script type="module" src="./assets/app.js?v=notebook-cleanup-v1"></script>
 </body>
 </html>
