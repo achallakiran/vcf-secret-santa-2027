@@ -1,0 +1,191 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
+  <meta name="theme-color" content="#12201d"/>
+  <title>Secret Santa · After · Christmas Office Preview</title>
+  <style>
+    *{box-sizing:border-box}
+    html,body{margin:0;width:100%;height:100%;overflow:hidden;font-family:system-ui,-apple-system,sans-serif;background:#15211e;color:#fff3db}
+    #view{position:absolute;inset:0}
+    canvas{display:block;width:100%;height:100%;touch-action:none}
+    .top{position:absolute;top:max(9px,env(safe-area-inset-top));left:10px;right:10px;z-index:5;display:flex;align-items:start;justify-content:space-between;gap:10px;pointer-events:none}
+    .description{max-width:410px;padding:12px 16px;background:#112625e8;border:1px solid #efc68055;border-radius:12px;backdrop-filter:blur(8px)}
+    .caption{font-size:9px;letter-spacing:.16em;color:#e6c08c;font-weight:800;margin:0 0 5px}
+    h1{margin:0 0 4px;font:700 clamp(17px,2.6vw,26px) Georgia,serif}
+    p{margin:0;font-size:12px;line-height:1.5;color:#dcd7c8}
+    nav{display:flex;gap:6px;flex-wrap:wrap;justify-content:end;pointer-events:auto}
+    nav a{color:#142a26;background:#e8d19d;padding:10px 12px;text-decoration:none;border-radius:8px;font-weight:700;font-size:12px;white-space:nowrap}
+    nav a.secondary{color:#f5e7c9;background:#163535}
+    .bottom{position:absolute;bottom:max(12px,env(safe-area-inset-bottom));left:10px;right:10px;z-index:6;display:flex;justify-content:center;pointer-events:none}
+    .bottom span{padding:8px 14px;border:1px solid #e0bc7852;background:#152c2bcc;border-radius:18px;color:#eee5cc;text-align:center;font-size:11px;backdrop-filter:blur(6px)}
+    #status{position:absolute;inset:0;z-index:2;display:flex;align-items:center;justify-content:center;text-align:center;padding:22px;background:#17241e;font-size:15px;line-height:1.8}
+    #status[hidden]{display:none}
+    #error{display:none;position:absolute;inset:23% 6% auto;z-index:7;padding:18px;background:#382427;border-radius:12px;border:1px solid #db9e99;color:#fff1e5;white-space:pre-wrap;overflow-wrap:anywhere;font-size:12px}
+    #error button{display:block;margin-top:10px;padding:10px 14px;background:#f5ddc5;color:#32202b;border:0;border-radius:7px}
+    @media(max-width:600px){
+      .top{gap:5px}
+      .description{padding:9px 10px;max-width:63vw}
+      h1{font-size:17px}
+      .description p{font-size:10px}
+      nav a{font-size:10px;padding:8px}
+    }
+  </style>
+  <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js"}}</script>
+</head>
+<body>
+  <div id="view" aria-label="3D wide view of the upgraded Christmas office"></div>
+  <div id="status" role="status">Loading the renovated Christmas office…</div>
+  <div id="error" role="alert"></div>
+  <header class="top">
+    <section class="description">
+      <p class="caption">AFTER · NEW ENVIRONMENT</p>
+      <h1>Christmas Office Upgrade</h1>
+      <p>Explore the actual 3D office environment without needing an invitation code or loading participants.</p>
+    </section>
+    <nav aria-label="Preview navigation">
+      <a href="./visual-preview.html" class="secondary">Compare</a>
+      <a href="./">Open game</a>
+    </nav>
+  </header>
+  <footer class="bottom"><span>Drag to orbit · Pinch or scroll to zoom · One broad overview</span></footer>
+  <script type="module">
+    const view=document.getElementById("view");
+    const status=document.getElementById("status");
+    const error=document.getElementById("error");
+    let renderer=null,raf=0,observer=null;
+    const fail=err=>{
+      console.error("Christmas office preview failed:",err);
+      status.hidden=true;
+      error.style.display="block";
+      const detail=err?.message||String(err);
+      error.textContent="The office preview could not load.\n"+detail+"\n\nYou can still use the main Secret Santa game.";
+      const retry=document.createElement("button");
+      retry.textContent="Retry preview";
+      retry.onclick=()=>location.reload();
+      error.append(retry);
+    };
+    window.addEventListener("error",e=>{if(!renderer)fail(e.error||e.message)});
+    window.addEventListener("unhandledrejection",e=>{if(!renderer)fail(e.reason)});
+    try{
+      // Load the actual office builder, not the comparison page's previous
+      // dynamically swapped player runtime. This view is independent of
+      // Supabase, participant models, logins, and old CDN module versions.
+      const [{default:THREE},{buildOffice}]=await Promise.all([
+        import("three").then(mod=>({default:mod})),
+        import("./assets/game/office.js?v=grand-overhaul-v3")
+      ]);
+      renderer=new THREE.WebGLRenderer({
+        antialias:window.devicePixelRatio<=2,
+        alpha:false,powerPreference:"high-performance"
+      });
+      renderer.outputColorSpace=THREE.SRGBColorSpace;
+      renderer.toneMapping=THREE.ACESFilmicToneMapping;
+      renderer.toneMappingExposure=1.07;
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,1.35));
+      renderer.shadowMap.enabled=true;
+      renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+      view.append(renderer.domElement);
+      const scene=new THREE.Scene();
+      scene.background=new THREE.Color(0xe5e5df);
+      scene.fog=new THREE.Fog(0xe8e4dc,55,165);
+      scene.add(new THREE.HemisphereLight(0xf7efe7,0xa8a29a,1.46));
+      const fill=new THREE.DirectionalLight(0x9ccee2,.72);
+      fill.position.set(8,8,5);scene.add(fill);
+      const sun=new THREE.DirectionalLight(0xffd4a1,2.22);
+      sun.position.set(-7,12,-5);
+      sun.target.position.set(0,0,9);
+      sun.castShadow=true;
+      const small=window.innerWidth<760;
+      sun.shadow.mapSize.set(small?768:1536,small?768:1536);
+      sun.shadow.camera.left=-18;sun.shadow.camera.right=18;
+      sun.shadow.camera.top=28;sun.shadow.camera.bottom=-28;
+      sun.shadow.camera.near=.5;sun.shadow.camera.far=70;
+      sun.shadow.bias=-.0007;sun.shadow.normalBias=.024;
+      scene.add(sun,sun.target);
+      const rim=new THREE.DirectionalLight(0xffcfa2,.45);
+      rim.position.set(2,5,22);scene.add(rim);
+      const office=buildOffice(12);
+      scene.add(office.root);
+      const target=new THREE.Vector3(0,1.4,12.7);
+      const camera=new THREE.PerspectiveCamera(50,1,.1,300);
+      let yaw=2.63,pitch=.72,distance=46;
+      function positionCamera(){
+        camera.position.set(
+          target.x+Math.sin(yaw)*Math.cos(pitch)*distance,
+          target.y+Math.sin(pitch)*distance,
+          target.z+Math.cos(yaw)*Math.cos(pitch)*distance
+        );
+        camera.lookAt(target);
+        // Keep walls from obscuring the visual overview, like the game.
+        office.viewWalls.west.visible=camera.position.x>office.room.left+.35;
+        office.viewWalls.east.visible=camera.position.x<office.room.right-.35;
+        office.viewWalls.north.visible=camera.position.z>office.room.front+.35;
+        office.viewWalls.south.visible=camera.position.z<office.room.back-.35;
+      }
+      function resize(){
+        const w=Math.max(1,view.clientWidth),h=Math.max(1,view.clientHeight);
+        camera.aspect=w/h;camera.updateProjectionMatrix();
+        renderer.setSize(w,h,false);positionCamera();
+      }
+      observer=new ResizeObserver(resize);observer.observe(view);
+      resize();
+      let moving=false,startX=0,startY=0,pinchStart=null;
+      const pointers=new Map();
+      const canvas=renderer.domElement;
+      canvas.addEventListener("pointerdown",e=>{
+        pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
+        canvas.setPointerCapture(e.pointerId);moving=true;
+        startX=e.clientX;startY=e.clientY;
+        if(pointers.size===2){
+          const p=[...pointers.values()];
+          pinchStart=Math.hypot(p[0].x-p[1].x,p[0].y-p[1].y);
+        }
+      });
+      canvas.addEventListener("pointermove",e=>{
+        if(!pointers.has(e.pointerId))return;
+        const prev=pointers.get(e.pointerId);
+        pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
+        if(pointers.size===2){
+          const p=[...pointers.values()];
+          const next=Math.hypot(p[0].x-p[1].x,p[0].y-p[1].y);
+          if(pinchStart&&next>0)distance=Math.max(18,Math.min(75,distance*pinchStart/next));
+          pinchStart=next;
+        }else if(moving){
+          yaw+=(e.clientX-prev.x)*.008;
+          pitch=Math.max(.25,Math.min(1.35,pitch+(e.clientY-prev.y)*.006));
+        }
+      });
+      const stop=e=>{
+        pointers.delete(e.pointerId);moving=pointers.size>0;
+        pinchStart=null;
+      };
+      canvas.addEventListener("pointerup",stop);
+      canvas.addEventListener("pointercancel",stop);
+      canvas.addEventListener("wheel",e=>{
+        e.preventDefault();
+        distance=Math.max(18,Math.min(75,distance*Math.exp(e.deltaY*.0009)));
+      },{passive:false});
+      let last=0;
+      function frame(time){
+        raf=requestAnimationFrame(frame);
+        if(time-last<22)return;
+        last=time;
+        positionCamera();
+        for(let i=0;i<office.twinkle.length;i++){
+          const material=office.twinkle[i].material;
+          material.emissiveIntensity=.72+Math.sin(time*.0025+i*1.8)*.35;
+        }
+        renderer.render(scene,camera);
+      }
+      raf=requestAnimationFrame(frame);
+      status.hidden=true;
+      window.addEventListener("pagehide",()=>{
+        cancelAnimationFrame(raf);observer?.disconnect();
+        renderer?.dispose();
+      },{once:true});
+    }catch(err){fail(err)}
+  </script>
+</body>
+</html>
