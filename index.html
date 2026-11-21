@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#080d16"/>
   <meta name="description" content="Voxel Secret Santa — a thoughtful Christmas office mystery."/>
   <title>Voxel Secret Santa</title>
-  <link rel="stylesheet" href="./assets/styles.css?v=environment-mystery-v2"/>
+  <link rel="stylesheet" href="./assets/styles.css?v=task-layout-v1"/>
 </head>
 <body>
   <div class="snow" id="snow" aria-hidden="true"></div>
@@ -300,10 +300,16 @@
               <h4>Challenges I send to my Secret Child</h4>
               <p class="muted small">Entirely optional. You can give a gift without assigning a single task.</p>
               <div id="assigned-tasks" class="personal-list"></div>
-              <form id="task-form" class="form-row">
-                <label>Date<input id="task-date" type="date" required/></label>
-                <label class="grow">Kind task<input id="task-text" maxlength="1000" placeholder="Something fun or thoughtful…" required/></label>
-                <button type="submit" class="primary" aria-label="Add optional task">＋</button>
+              <form id="task-form" class="task-entry-form">
+                <label class="task-field task-date-field" for="task-date">
+                  <span>Date</span>
+                  <input id="task-date" type="date" required/>
+                </label>
+                <label class="task-field task-description-field" for="task-text">
+                  <span>Task</span>
+                  <textarea id="task-text" rows="2" maxlength="1000" placeholder="A thoughtful or fun challenge…" required></textarea>
+                </label>
+                <button type="submit" class="primary task-submit">＋ Add task</button>
               </form>
             </section>
           </div>
