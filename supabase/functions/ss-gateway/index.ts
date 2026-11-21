@@ -263,14 +263,52 @@ function today(tz:string){
   try{return new Intl.DateTimeFormat("sv-SE",{timeZone:tz||"Asia/Kolkata",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date());}
   catch{return new Date().toISOString().slice(0,10);}
 }
+// Authoritative desk inventory: the office renderer uses these same props.
+// Ordering follows ss_participants.created_at ASC (also used for fixed seats).
+const DESK_OBJECTS=[
+  "apple","coffee","mini-tree","gift","succulent","coffee",
+  "apple","ornament","mini-tree","books","lantern","candy-cane"
+] as const;
+function deskDecorForIndex(index:number){
+  return {
+    kind:DESK_OBJECTS[index%DESK_OBJECTS.length],
+    bank:index%3,
+    row:Math.floor(index/3)
+  };
+}
+function officeEnvironmentClues(santaId:string,roster:any[]):string[]{
+  const seatIndex=roster.findIndex((p:any)=>p.id===santaId);
+  if(seatIndex<0)return [];
+  const decor=deskDecorForIndex(seatIndex);
+  const bank=decor.bank===0?"near the west wall":
+    "in the central workstations";
+  const objects:Record<string,string>={
+    apple:"a red apple with a tiny green leaf",
+    coffee:"a steaming coffee cup",
+    "mini-tree":"a miniature decorated Christmas tree",
+    gift:"a red-and-gold wrapped present",
+    succulent:"a small potted succulent",
+    ornament:"a bright Christmas ornament",
+    books:"a neat pile of colorful books",
+    lantern:"a glowing little lantern",
+    "candy-cane":"a striped candy cane"
+  };
+  const bankName=["west-wall desk","left desk of the central island",
+    "right desk of the central island"][decor.bank];
+  return [
+    "Your Santa's workstation is "+bank+".",
+    "Look for "+objects[decor.kind]+" on your Santa's desk.",
+    "Their desk is in workstation row "+(decor.row+1)+", at the "+bankName+"."
+  ];
+}
 async function dashboard(claims:any){
   const eventId=claims.event_id,pid=claims.participant_id;
   const [event,roster,priv,asSanta,asChild]=await Promise.all([
     db("ss_events?select=id,slug,title,status,timezone,gift_budget_recommendation_inr&"+"id=eq."+eventId+"&limit=1"),
     db("ss_participants?select=id,display_name,desk_key,avatar,avatar_version&event_id=eq."+eventId+"&is_active=eq.true&order=created_at.asc"),
     db("ss_participant_private?select=wishlist,wishlist_version&participant_id=eq."+pid+"&event_id=eq."+eventId+"&limit=1"),
-    db("ss_assignments?select=id,child_id,santa_message,gift_purchased,santa_hints,hints_unlocked_count&event_id=eq."+eventId+"&santa_id=eq."+pid+"&limit=1"),
-    db("ss_assignments?select=id,santa_hints,hints_unlocked_count,hint_last_unlocked_at&event_id=eq."+eventId+"&child_id=eq."+pid+"&limit=1")
+    db("ss_assignments?select=id,child_id,santa_message,gift_purchased&event_id=eq."+eventId+"&santa_id=eq."+pid+"&limit=1"),
+    db("ss_assignments?select=id,santa_id,hints_unlocked_count,hint_last_unlocked_at&event_id=eq."+eventId+"&child_id=eq."+pid+"&limit=1")
   ]);
   const eventObj=event[0];if(!eventObj)fail("Event not found.",404);
   const isMine=roster.find((p:any)=>p.id===pid);if(!isMine)fail("Participant missing.",404);
@@ -291,13 +329,13 @@ async function dashboard(claims:any){
   return {
     event:{title:eventObj.title,slug:eventObj.slug,status:eventObj.status,timezone:eventObj.timezone,budget:eventObj.gift_budget_recommendation_inr},
     me:{id:pid,display_name:isMine.display_name,avatar:isMine.avatar,avatar_version:isMine.avatar_version||1,wishlist:priv[0]?.wishlist||[],wishlist_version:priv[0]?.wishlist_version||1},
-    colleagues:roster.map((p:any)=>({id:p.id,name:p.display_name,desk_key:p.desk_key,avatar:p.avatar})),
-    myChild:outgoing?{id:outgoing.child_id,name:roster.find((p:any)=>p.id===outgoing.child_id)?.display_name||"Secret Child",wishlist:ownChildWishlist?.[0]?.wishlist||[],gift_purchased:outgoing.gift_purchased,message:outgoing.santa_message||"",tasks:ownTasks,hints:outgoing.santa_hints||["","",""],hints_unlocked_count:outgoing.hints_unlocked_count||0}:null,
+    colleagues:roster.map((p:any,i:number)=>({id:p.id,name:p.display_name,desk_key:p.desk_key,avatar:p.avatar,deskDecor:deskDecorForIndex(i)})),
+    myChild:outgoing?{id:outgoing.child_id,name:roster.find((p:any)=>p.id===outgoing.child_id)?.display_name||"Secret Child",wishlist:ownChildWishlist?.[0]?.wishlist||[],gift_purchased:outgoing.gift_purchased,message:outgoing.santa_message||"",tasks:ownTasks}:null,
     mystery:incoming?{
       unlocked:incoming.hints_unlocked_count||0,
-      hints:(incoming.santa_hints||[]).slice(0,incoming.hints_unlocked_count||0),
+      hints:officeEnvironmentClues(incoming.santa_id,roster).slice(0,incoming.hints_unlocked_count||0),
       can_unlock:incoming.hints_unlocked_count<3 &&
-        !!(incoming.santa_hints||[])[incoming.hints_unlocked_count||0],
+        officeEnvironmentClues(incoming.santa_id,roster).length===3,
       next_at:incoming.hint_last_unlocked_at?
         new Date(Date.parse(incoming.hint_last_unlocked_at)+24*3600*1000).toISOString():null
     }:null,
@@ -410,23 +448,25 @@ async function adminAction(action:string,data:any){
         "&id=eq."+pid+"&is_active=eq.true&limit=1"),
       db("ss_participant_private?select=wishlist&event_id=eq."+event.id+
         "&participant_id=eq."+pid+"&limit=1"),
-      db("ss_assignments?select=id,santa_id,santa_message,santa_hints&event_id=eq."+event.id+
+      db("ss_assignments?select=id,santa_id,santa_message&event_id=eq."+event.id+
         "&child_id=eq."+pid+"&limit=1")
     ]);
     if(!people.length)fail("Participant is no longer active",404);
     const assignment=incoming[0]||null;
-    const [tasks,santas]=await Promise.all([
+    const [tasks,santas,wholeRoster]=await Promise.all([
       assignment?db("ss_santa_tasks?select=task_date,task_text,status&event_id=eq."+event.id+
         "&assignment_id=eq."+assignment.id+"&order=task_date.asc"):Promise.resolve([]),
       assignment?db("ss_participants?select=id,display_name,desk_key,avatar&event_id=eq."+event.id+
-        "&id=eq."+assignment.santa_id+"&limit=1"):Promise.resolve([])
+        "&id=eq."+assignment.santa_id+"&limit=1"):Promise.resolve([]),
+      db("ss_participants?select=id,display_name&event_id=eq."+event.id+
+        "&is_active=eq.true&order=created_at.asc")
     ]);
     return {
       participant:people[0],
       wishlist:privateRows?.[0]?.wishlist||[],
       tasks,
       message:assignment?.santa_message||"",
-      hints:(assignment?.santa_hints||[]).filter((v:any)=>typeof v==="string"&&!!v.trim()),
+      hints:assignment?officeEnvironmentClues(assignment.santa_id,wholeRoster):[],
       santa:santas?.[0]||null
     };
   }
@@ -555,14 +595,6 @@ async function playerAction(action:string,claims:any,data:any){
   const rows=await db("ss_assignments?select=id,child_id&event_id=eq."+eventId+"&santa_id=eq."+pid+"&limit=1");
   const assignment=rows[0];
   if(!assignment)fail("Assignments haven't been generated yet.");
-  if(action==="save_santa_hints"){
-    if(!Array.isArray(data.hints)||data.hints.length!==3 ||
-      !data.hints.every((v:any)=>typeof v==="string"&&v.length<=180))
-      fail("Enter up to three hints, each no more than 180 characters");
-    return {saved:await db("rpc/ss_save_santa_hints","POST",{
-      p_event_id:eventId,p_santa_id:pid,p_hints:data.hints
-    })};
-  }
   if(action==="add_task"){
     const eventRow=await db("ss_events?select=timezone&"+"id=eq."+eventId+"&limit=1");
     const date=string(data.task_date,10);
