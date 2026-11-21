@@ -211,9 +211,13 @@ export function mountOffice(host,profile,notice=()=>{}){
     // Stable roster-index seating; filtering out the viewer must never shift
     // other colleagues' physical workstations or their hint objects.
     const allMembers=(next?.colleagues||[]).slice(0,150);
-    const roster=allMembers.map((p,seatIndex)=>({...p,seatIndex}))
-      .filter(p=>p.id!==next?.me?.id);
-    const total=Math.max(1,allMembers.length);
+    const roster=allMembers.map((p,index)=>({
+      ...p,seatIndex:Number.isInteger(p.officeSeat)?p.officeSeat:index
+    })).filter(p=>p.id!==next?.me?.id);
+    // Empty desk slots left by deleted participants stay empty: no colleague
+    // moves and previously issued physical-desk clues remain truthful.
+    const total=Math.max(1,...allMembers.map((p,i)=>
+      (Number.isInteger(p.officeSeat)?p.officeSeat:i)+1));
     const newBays=Math.max(4,Math.ceil(total/3));
     if(!office || newBays!==office.bays){
       if(office)scene.remove(office.root);
