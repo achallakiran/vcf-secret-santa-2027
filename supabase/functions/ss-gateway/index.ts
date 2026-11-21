@@ -195,6 +195,11 @@ async function adminLogin(pin:unknown,request:Request){
     const candidate=await pinHash(input,account.pin_salt_hex,account.pbkdf2_iterations);
     verified=equal(fromHex(candidate),fromHex(account.pin_hash_hex));
   }
+  // Without a username, a guessed PIN can belong to ANY administrator.
+  // Keep one small system-wide throttle, even when an attacker spoofs their
+  // claimed IP address. Individual IP/PIN guards remain additional layers.
+  const globalAttempt=await guard("admin-login-global",verified,30,900,900);
+  if(!globalAttempt.allowed)fail("Too many login attempts. Try again later.",429);
   const attempts=await guard(ipKey,verified,24,900,900);
   if(!attempts.allowed)fail("Too many login attempts. Try again later.",429);
   const pinGuard=await guard("admin-pin:"+lookup.slice(0,32),verified,5,1800,900);
