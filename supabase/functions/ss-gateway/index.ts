@@ -284,7 +284,7 @@ function officeEnvironmentClues(santaId:string,roster:any[]):string[]{
     "in the central workstations";
   const objects:Record<string,string>={
     apple:"a red apple with a tiny green leaf",
-    coffee:"a steaming coffee cup",
+    coffee:"a coffee mug",
     "mini-tree":"a miniature decorated Christmas tree",
     gift:"a red-and-gold wrapped present",
     succulent:"a small potted succulent",
