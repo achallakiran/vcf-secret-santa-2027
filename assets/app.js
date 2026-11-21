@@ -24,6 +24,7 @@ let officeRuntime=null,officeLoading=null,officeKey=null,officeNoticeTimer=null;
 let avatarBaseline=null,avatarPreviewTimer=null;
 let avatarStudio=null,avatarStudioLoading=null,activeStudioTab="look",visualEditor=null;
 let adminEditingParticipant=null;
+let latestAdminInvitation=null;
 // The finale exists only in the organizer view and never opens automatically.
 let ceremonyRuntime=null,ceremonyPeople=[],ceremonyIndex=0,ceremonyData=null,
     ceremonyRevealed=false,ceremonyCluesShown=0,ceremonySerial=0;
@@ -60,6 +61,8 @@ function toast(message,error=false){
 let progressTimer=null;
 const ACTION_STEPS={
   admin_login:"Unlocking organizer console",
+  admin_register:"Creating administrator account",
+  create_admin_invite:"Generating organizer invitation",
   player_login:"Verifying your invitation code",
   list_events:"Loading events",
   create_event:"Creating Christmas event",
@@ -149,6 +152,10 @@ function endSession(){
   clearTimeout(avatarPreviewTimer);
   avatarBaseline=null;officeLoading=null;officeKey=null;
   setSession(null);player=null;event=null;participants=[];assignments=[];events=[];codes.clear();
+  latestAdminInvitation=null;
+  $("admin-invite-result").classList.add("hidden");
+  $("admin-register-form").classList.add("hidden");
+  $("admin-register-toggle").textContent="New organizer? Create account";
   $("player").classList.add("hidden");
   $("welcome").classList.toggle("hidden",ADMIN);
   $("admin").classList.toggle("hidden",!ADMIN);
@@ -159,8 +166,9 @@ function paintLogin(){
   $("auth-area").classList.toggle("hidden",yes);
   $("dashboard").classList.toggle("hidden",!yes);
   $("sign-out").classList.toggle("hidden",!yes);
-  $("signed-in-user").textContent="";
+  $("signed-in-user").textContent=yes?(session.admin?.name||"Organizer"):"";
   if(!yes)$("event-workspace").classList.add("hidden");
+  if(yes)$("admin-register-form").classList.add("hidden");
 }
 function snowfall(){
   const count=matchMedia("(max-width:650px)").matches?38:72;
@@ -955,6 +963,54 @@ $("auth-form").addEventListener("submit",run(async e=>{
   const result=await api("admin_login",{pin:$("admin-pin").value});
   setSession(result);$("admin-pin").value="";
   await loadEvents();
+}));
+$("admin-register-toggle").addEventListener("click",()=>{
+  const form=$("admin-register-form");
+  form.classList.toggle("hidden");
+  const active=!form.classList.contains("hidden");
+  $("auth-form").classList.toggle("hidden",active);
+  $("admin-register-toggle").textContent=active?"Already an organizer? Sign in":"New organizer? Create account";
+});
+$("admin-register-cancel").addEventListener("click",()=>{
+  $("admin-register-form").reset();
+  $("admin-register-form").classList.add("hidden");
+  $("auth-form").classList.remove("hidden");
+  $("admin-register-toggle").textContent="New organizer? Create account";
+});
+$("admin-register-form").addEventListener("submit",run(async e=>{
+  e.preventDefault();
+  const pin=$("admin-reg-pin").value;
+  const confirm_pin=$("admin-reg-pin-confirm").value;
+  if(pin!==confirm_pin)throw Error("PIN confirmation does not match.");
+  const result=await api("admin_register",{
+    name:$("admin-reg-name").value.trim(),
+    invite_code:$("admin-reg-code").value.trim(),
+    pin,confirm_pin
+  });
+  $("admin-register-form").reset();
+  $("admin-register-form").classList.add("hidden");
+  $("auth-form").classList.remove("hidden");
+  setSession(result);
+  await loadEvents();
+  toast("Organizer account created. Your events are private to this PIN.");
+}));
+$("admin-invite-create").addEventListener("click",run(async()=>{
+  if(!session?.token)throw Error("Sign in as an organizer first.");
+  const invitation=await api("create_admin_invite");
+  latestAdminInvitation=invitation;
+  $("admin-invite-code").textContent=invitation.code;
+  $("admin-invite-result").classList.remove("hidden");
+  toast("One-time registration code created.");
+}));
+$("admin-invite-copy").addEventListener("click",run(async()=>{
+  if(!latestAdminInvitation?.code)throw Error("Generate a registration code first.");
+  const url=location.origin+location.pathname+"?admin=1";
+  const text="Secret Santa Admin Console: "+url+
+    "\nRegistration code: "+latestAdminInvitation.code+
+    "\nExpires: "+new Date(latestAdminInvitation.expires_at).toLocaleString()+
+    "\nOpen the console and choose New organizer? Create account.";
+  const copied=await copyTextWithFallback(text);
+  if(copied)toast("Organizer invitation details copied.");
 }));
 $("sign-out").addEventListener("click",()=>{endSession();toast("Admin session ended.");});
 $("refresh-events").addEventListener("click",run(loadEvents));
