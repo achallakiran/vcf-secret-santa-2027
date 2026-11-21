@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import {buildOffice} from "./office.js?v=braid-camera-v1";
-import {createAvatar,avatarFromPerson} from "./avatar.js?v=studio-qa-v1";
+import {createAvatar,avatarFromPerson} from "./avatar.js?v=face-refine-v4-studio-qa-v1";
 import {createOfficeLife} from "./office-life.js?v=studio-qa-v1";
 
 /* A responsive office runtime. 3D art and camera are independent from the existing Supabase UI. */
