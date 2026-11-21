@@ -277,8 +277,10 @@ function deskDecorForIndex(index:number){
   };
 }
 function officeEnvironmentClues(santaId:string,roster:any[]):string[]{
-  const seatIndex=roster.findIndex((p:any)=>p.id===santaId);
-  if(seatIndex<0)return [];
+  const person=roster.find((p:any)=>p.id===santaId);
+  if(!person)return [];
+  const seatIndex=Number.isInteger(person.office_seat_index)?
+    person.office_seat_index:roster.findIndex((p:any)=>p.id===santaId);
   const decor=deskDecorForIndex(seatIndex);
   // These context objects are placed by buildOffice(): a west-wall wreath
   // for every fifth row, and planted aisle edges for every third row.
@@ -312,7 +314,7 @@ async function dashboard(claims:any){
   const eventId=claims.event_id,pid=claims.participant_id;
   const [event,roster,priv,asSanta,asChild]=await Promise.all([
     db("ss_events?select=id,slug,title,status,timezone,gift_budget_recommendation_inr&"+"id=eq."+eventId+"&limit=1"),
-    db("ss_participants?select=id,display_name,desk_key,avatar,avatar_version&event_id=eq."+eventId+"&is_active=eq.true&order=created_at.asc"),
+    db("ss_participants?select=id,display_name,desk_key,avatar,avatar_version,office_seat_index&event_id=eq."+eventId+"&is_active=eq.true&order=created_at.asc"),
     db("ss_participant_private?select=wishlist,wishlist_version&participant_id=eq."+pid+"&event_id=eq."+eventId+"&limit=1"),
     db("ss_assignments?select=id,child_id,santa_message,gift_purchased&event_id=eq."+eventId+"&santa_id=eq."+pid+"&limit=1"),
     db("ss_assignments?select=id,santa_id,hints_unlocked_count,hint_last_unlocked_at&event_id=eq."+eventId+"&child_id=eq."+pid+"&limit=1")
@@ -336,7 +338,7 @@ async function dashboard(claims:any){
   return {
     event:{title:eventObj.title,slug:eventObj.slug,status:eventObj.status,timezone:eventObj.timezone,budget:eventObj.gift_budget_recommendation_inr},
     me:{id:pid,display_name:isMine.display_name,avatar:isMine.avatar,avatar_version:isMine.avatar_version||1,wishlist:priv[0]?.wishlist||[],wishlist_version:priv[0]?.wishlist_version||1},
-    colleagues:roster.map((p:any,i:number)=>({id:p.id,name:p.display_name,desk_key:p.desk_key,avatar:p.avatar,deskDecor:deskDecorForIndex(i)})),
+    colleagues:roster.map((p:any,i:number)=>({id:p.id,name:p.display_name,desk_key:p.desk_key,avatar:p.avatar,officeSeat:p.office_seat_index,deskDecor:deskDecorForIndex(p.office_seat_index??i)})),
     myChild:outgoing?{id:outgoing.child_id,name:roster.find((p:any)=>p.id===outgoing.child_id)?.display_name||"Secret Child",wishlist:ownChildWishlist?.[0]?.wishlist||[],gift_purchased:outgoing.gift_purchased,message:outgoing.santa_message||"",tasks:ownTasks}:null,
     mystery:incoming?{
       unlocked:incoming.hints_unlocked_count||0,
@@ -465,7 +467,7 @@ async function adminAction(action:string,data:any){
         "&assignment_id=eq."+assignment.id+"&order=task_date.asc"):Promise.resolve([]),
       assignment?db("ss_participants?select=id,display_name,desk_key,avatar&event_id=eq."+event.id+
         "&id=eq."+assignment.santa_id+"&limit=1"):Promise.resolve([]),
-      db("ss_participants?select=id,display_name&event_id=eq."+event.id+
+      db("ss_participants?select=id,display_name,office_seat_index&event_id=eq."+event.id+
         "&is_active=eq.true&order=created_at.asc")
     ]);
     return {
