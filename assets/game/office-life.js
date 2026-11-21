@@ -136,7 +136,7 @@ export function createOfficeLife(people,hero,nav,announce=()=>{}){
     a.setActivity("talk");b.setActivity("talk");
     face(a,b);face(b,a);
     a.play("hi",time);b.play("hi",time+.06);
-    announce(other.person,"Hello!",time);
+    announce(other.person,"Merry Christmas!",time);
   }
   function resumeDesk(st,time){
     st.mode="desk";st.partner=null;st.route=[];
@@ -222,7 +222,7 @@ export function createOfficeLife(people,hero,nav,announce=()=>{}){
       st.person.detailed.play("hi",time);
     }
   }
-  function interruptForHero(target,action,time,facePlayer=true){
+  function interruptForHero(target,action,time,facePlayer=true,showGreeting=true){
     const st=lookup.get(target?.id);if(!st)return;
     const actor=st.person.detailed;
     motions.delete(st);
@@ -232,8 +232,8 @@ export function createOfficeLife(people,hero,nav,announce=()=>{}){
     if(facePlayer)face(hero,actor);
     const gesture=ACTIONS.includes(action)?action:"hi";
     actor.play(gesture,time+.02);
-    const responses={hi:"Hi there!",dance:"Let's dance!",clap:"Bravo!",cheer:"Merry Christmas!"};
-    announce(st.person,responses[gesture],time);
+    const responses={hi:"Hello!",dance:"Let's dance!",clap:"Bravo!",cheer:"Merry Christmas!"};
+    if(showGreeting)announce(st.person,responses[gesture],time);
   }
   function mimicNearby(action,time,range=5.4){
     const candidates=states.filter(st=>
@@ -244,7 +244,7 @@ export function createOfficeLife(people,hero,nav,announce=()=>{}){
     // Nearby coworkers acknowledge the same action: one responds directly
     // while the next two can join without rotating the player repeatedly.
     for(const [i,st] of candidates.slice(0,3).entries()){
-      interruptForHero(st.person,action,time,i===0);
+      interruptForHero(st.person,action,time,i===0,i===0);
       proximityGreeted.set(st.person.id,time);
     }
     lastAmbientGreeting=time;
