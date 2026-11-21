@@ -91,7 +91,7 @@
       info.textContent=version==="after"?"Loading the visual overhaul…":"Loading the previous office…";
       try{
         const url=version==="after"?
-          "./assets/game/main.js?v=grand-overhaul-v2":
+          "./assets/game/main.js?v=grand-overhaul-v3":
           "https://cdn.jsdelivr.net/gh/achallakiran/vcf-secret-santa-2027@56172c941983c0c79ec89846f10096c2c760b707/assets/game/main.js";
         const {mountOffice}=await import(url);
         if(id!==serial)return;
