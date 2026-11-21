@@ -10,6 +10,37 @@ A holiday office Secret Santa experience, hosted as a static GitHub Pages fronte
 - PINs are low entropy; this prototype uses server-side PBKDF2 verification for the administrator, keyed HMAC fingerprints for invitations, attempt lockouts, and expiring signed sessions. **Change the default PIN before inviting real colleagues.** Do not use this prototype to handle confidential company data.
 - The administrator PIN is **global** for this initial single-organizer prototype: anyone with it can access all events. Future multi-office independent administrators will need per-event credentials and authorization.
 
+## November 21, 2026 — major office visual overhaul
+
+A markedly larger visual update than the earlier desk-color refresh, integrated
+into the playable GitHub Pages game (no Santa assignments or database changed).
+
+- **Architectural statement:** four color-coded, full-height feature wall bay palettes,
+  a broad green/gold carpet procession along the main walking aisle, stronger
+  north-window frames, sculpted wall medallions, and simulated glowing sconces.
+  These are large enough to read from the single existing wide camera.
+- **Workstation silhouettes:** more visible upper partition caps and four distinct
+  raised rear-screen profiles, with decorated dividers. All original desk
+  positions, dimensions, navigation colliders, and clue props are preserved.
+- **Celebration area:** bigger gold stage-portal frame, wine-red sculpted curtain
+  folds, marquee-style bulbs, additional built-in alcoves, display medallions,
+  and a decorative tree-zone floor. These sit on the existing non-walkable stage
+  and back wall. The admin-controlled reveal scene remains separate.
+- **Cinematic lighting:** warm key sunlight, cool fill, warm rear rim, enhanced
+  shadow-depth contrast, neutral fog, and existing animated festive bulbs.
+- **Performance:** removable cutaway walls now instance repeated static
+  details as InstancedMeshes without losing wall visibility; twinkling bulbs
+  remain independently animated.
+- **Visual comparison:** Open ./visual-preview.html to compare the previous
+  office (Before) against the new overhaul (After) using the same fictional
+  participants and actual game renderer. No real Santa/event data is exposed.
+
+**Verification scope:** JavaScript syntax checked, synthetic geometry tested
+with 4, 12, 27, and 150 participant capacities and 48 sample workstations.
+New visible geometry was checked for clue-corner isolation and absence of
+standing aisle obstructions. GitHub Pages deployment checks publishing; actual
+browser rendering and device performance still require visual QA.
+
 ## November 21, 2026 — office clues and wide-view cleanup
 
 - Stabilized attendee-to-desk mapping across all players and added modeled objects to each desk that match the generated clues.
