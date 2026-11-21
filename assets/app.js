@@ -480,7 +480,7 @@ async function showCeremonyMember(index){
   $("ceremony-reveal-btn").disabled=!data.santa;
   try{
     if(!ceremonyRuntime){
-      const {mountCeremonyStage}=await import("./game/ceremony-stage.js?v=front-facing-stage-v2");
+      const {mountCeremonyStage}=await import("./game/ceremony-stage.js?v=evergreen-stage-v1");
       if(serial!==ceremonySerial||!$("ceremony-dialog").open)return;
       ceremonyRuntime=mountCeremonyStage($("ceremony-avatar"),data.participant);
     }else ceremonyRuntime.update(data.participant);
@@ -562,7 +562,7 @@ async function enterOffice(info){
   }
   $("office-loading").classList.remove("hidden");
   officeLoading=(async()=>{
-    const module=await import("./game/main.js?v=accepted-after-camera-v1");
+    const module=await import("./game/main.js?v=closer-office-camera-v1");
     officeRuntime=module.mountOffice($("office-canvas"),info,officeToast);
     officeRuntime.setCamera("wide");
     officeKey=identity;
