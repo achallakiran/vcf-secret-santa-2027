@@ -481,7 +481,7 @@ async function showCeremonyMember(index){
   $("ceremony-reveal-btn").disabled=!data.santa;
   try{
     if(!ceremonyRuntime){
-      const {mountCeremonyStage}=await import("./game/ceremony-stage.js?v=santa-finale-v1");
+      const {mountCeremonyStage}=await import("./game/ceremony-stage.js?v=front-facing-stage-v2");
       if(serial!==ceremonySerial||!$("ceremony-dialog").open)return;
       ceremonyRuntime=mountCeremonyStage($("ceremony-avatar"),data.participant);
     }else ceremonyRuntime.update(data.participant);
@@ -563,7 +563,7 @@ async function enterOffice(info){
   }
   $("office-loading").classList.remove("hidden");
   officeLoading=(async()=>{
-    const module=await import("./game/main.js?v=environment-mystery-v1");
+    const module=await import("./game/main.js?v=environment-mystery-v2");
     officeRuntime=module.mountOffice($("office-canvas"),info,officeToast);
     officeRuntime.setCamera("wide");
     officeKey=identity;
