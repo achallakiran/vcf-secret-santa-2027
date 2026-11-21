@@ -49,7 +49,7 @@ export function mountCeremonyStage(host,person){
 
   const orbit=new THREE.Group();orbit.position.y=.34;scene.add(orbit);
   let model=null,personInfo=null,confetti=[],animation=0,disposed=false,revealed=false,
-      drag=false,lastX=0,angle=0,lastFrame=performance.now();
+      lastFrame=performance.now();
   const disposable=new Set();
   function clearAvatar(){
     if(!model)return;
@@ -75,7 +75,7 @@ export function mountCeremonyStage(host,person){
       id:p.id,name:p.display_name,avatar:p.avatar
     }));
     orbit.add(model.group);
-    angle=0;revealed=false;
+    orbit.rotation.y=0;revealed=false;
     resetConfetti();
     fit();
   }
@@ -93,7 +93,7 @@ export function mountCeremonyStage(host,person){
     const distance=Math.max(span/(2*Math.tan(fov/2)),
       1.65/(2*Math.tan(fov/2)*Math.max(camera.aspect,.45)))*1.2;
     const target=new THREE.Vector3(0,Math.max(1.8,(top+bottom)/2)+.18,0);
-    camera.position.set(.27*distance,target.y+.11*distance,.962*distance);
+    camera.position.set(0,target.y+.06*distance,distance);
     camera.lookAt(target);
     camera.updateProjectionMatrix();
   }
@@ -130,9 +130,13 @@ export function mountCeremonyStage(host,person){
     animation=requestAnimationFrame(render);
     if(host.getClientRects().length===0)return;
     const dt=Math.min(.06,(now-lastFrame)/1000);lastFrame=now;
-    if(!drag)angle+=dt*.12;
-    orbit.rotation.y+=((angle)-orbit.rotation.y)*Math.min(1,dt*6);
-    model?.update(now*.001,false);
+    // A quiet, consistently front-facing guest on stage. No rotating,
+    // pointer orbit, head sway or procedural movement.
+    if(model){
+      model.group.rotation.y=0;
+      model.head.rotation.y=0;
+      model.head.rotation.x=0;
+    }
     key.intensity=52+Math.sin(now*.0016)*4;
     stars.rotation.y+=dt*.017;
     if(revealed){
@@ -145,13 +149,6 @@ export function mountCeremonyStage(host,person){
     }
     renderer.render(scene,camera);
   }
-  function down(e){if(e.pointerType==="touch")return;drag=true;lastX=e.clientX;renderer.domElement.setPointerCapture?.(e.pointerId)}
-  function move(e){if(!drag)return;angle+=(e.clientX-lastX)*.007;lastX=e.clientX;}
-  function up(e){drag=false;try{renderer.domElement.releasePointerCapture?.(e.pointerId)}catch{}}
-  renderer.domElement.addEventListener("pointerdown",down);
-  renderer.domElement.addEventListener("pointermove",move);
-  renderer.domElement.addEventListener("pointerup",up);
-  renderer.domElement.addEventListener("pointercancel",up);
   let resizeObserver=null;
   if(typeof ResizeObserver!=="undefined"){resizeObserver=new ResizeObserver(()=>fit());resizeObserver.observe(host)}
   window.addEventListener("resize",fit);
@@ -164,10 +161,6 @@ export function mountCeremonyStage(host,person){
       disposed=true;
       cancelAnimationFrame(animation);
       resizeObserver?.disconnect();window.removeEventListener("resize",fit);
-      renderer.domElement.removeEventListener("pointerdown",down);
-      renderer.domElement.removeEventListener("pointermove",move);
-      renderer.domElement.removeEventListener("pointerup",up);
-      renderer.domElement.removeEventListener("pointercancel",up);
       clearAvatar();resetConfetti();
       platform.geometry.dispose();rimRing.geometry.dispose();podiumTop.geometry.dispose();
       footlights.forEach(x=>x.geometry.dispose());
