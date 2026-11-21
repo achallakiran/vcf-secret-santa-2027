@@ -562,7 +562,7 @@ async function enterOffice(info){
   }
   $("office-loading").classList.remove("hidden");
   officeLoading=(async()=>{
-    const module=await import("./game/main.js?v=closer-office-camera-v1");
+    const module=await import("./game/main.js?v=notebook-cleanup-v1");
     officeRuntime=module.mountOffice($("office-canvas"),info,officeToast);
     officeRuntime.setCamera("wide");
     officeKey=identity;
@@ -747,7 +747,7 @@ async function ensureAvatarStudio(){
       &&!$("player-character").classList.contains("hidden"));
   if(!isVisible())return;
   avatarStudioLoading=(async()=>{
-    const module=await import("./game/studio.js?v=face-refine-v4-studio-qa-v1");
+    const module=await import("./game/studio.js?v=clean-avatar-preview-v1");
     if(!isVisible())return;
     avatarStudio=module.mountAvatarStudio($("avatar-studio-canvas"),readAvatarEditor());
     visualEditor?.refresh(activeStudioTab);
