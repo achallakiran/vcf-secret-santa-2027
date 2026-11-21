@@ -1278,3 +1278,115 @@ body.office-playing #player-menu textarea{
   #player-menu #avatar-hairstyle-options .atelier-choice-art{height:100px}
   #player-menu #avatar-facialHair-options .atelier-choice-art{height:70px}
 }
+
+
+/* Santa allocation: roster stays open after the first draw. */
+.santa-metrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.santa-metrics>div{min-width:0}
+.assignment-box{
+  display:flex;align-items:center;justify-content:space-between;
+  flex-wrap:wrap;gap:18px;padding:22px;
+  border:1px solid #dcbeaa;border-radius:16px;
+  background:linear-gradient(130deg,#fff8ef,#f7e9e4);
+  color:#422a39;
+}
+.assignment-box h3{margin:0 0 7px;color:#653b4c}
+.assignment-box .muted{color:#745668}
+.assignment-box>div{flex:1 1 280px;max-width:720px}
+.assignment-box .primary{flex:0 1 auto;min-height:44px;white-space:normal}
+.assignment-notice{
+  color:#713d53;font-size:13px;line-height:1.5;font-weight:750;
+  background:#fffdf9;border:1px solid #efd8d4;border-radius:10px;
+  padding:10px 12px;margin:12px 0;
+}
+.participant-awaiting{display:block;color:#9d6742;font-size:10px;margin-top:4px}
+
+/* Personal notebook — the same warm visual theme as Character Studio. */
+#player-menu #player-personal .personal-heading{
+  display:flex;align-items:center;justify-content:space-between;
+  flex-wrap:wrap;gap:12px;margin:2px 0 14px;
+}
+#player-menu #player-personal .personal-heading h3{
+  font-size:clamp(23px,3.2vw,34px);margin:5px 0 6px;letter-spacing:-.035em;
+}
+#player-menu #player-personal .personal-heading .studio-eyebrow{color:#aa5976}
+#player-menu #player-personal .personal-heading .muted{margin:0}
+#player-menu #player-personal .personal-heading .small-outline{
+  min-height:38px;border-radius:11px;
+}
+#player-menu #player-personal .personal-assignment-status{
+  padding:15px 17px;border:1px solid #e6c8be;
+  background:linear-gradient(115deg,#fff9ef,#f5e5e8);
+  color:#683d53;border-radius:13px;
+  font-size:13px;line-height:1.5;margin:5px 0 17px;font-weight:670;
+}
+#player-menu #player-personal .personal-card-kicker{
+  display:block;color:#a55f7b;letter-spacing:.14em;
+  font-size:10px;font-weight:850;margin-bottom:10px;
+}
+#player-menu #player-personal .personal-main-cards{
+  gap:16px;align-items:start;
+}
+#player-menu #player-personal .personal-main-cards>section{
+  padding:clamp(16px,2vw,23px);border-radius:15px;
+  min-width:0;box-shadow:0 12px 25px #995e7930;
+}
+#player-menu #player-personal .personal-main-cards h4{
+  font-size:19px;display:flex;gap:8px;justify-content:space-between;
+  align-items:center;flex-wrap:wrap;line-height:1.25;
+}
+#player-menu #player-personal .personal-child-card{
+  background:linear-gradient(145deg,#fffaf4,#fff0ec);
+}
+#player-menu #player-personal .child-name{
+  color:#793b58;font-size:23px;font-weight:850;line-height:1.25;
+  margin:12px 0 10px;word-break:break-word;
+}
+#player-menu #player-personal .personal-budget{
+  color:#735263;font-size:12px;font-weight:700;margin:4px 0 15px;
+}
+#player-menu #player-personal .personal-main-cards h5{
+  font-size:13px;color:#754558;margin:15px 0 9px;
+}
+#player-menu #player-personal .personal-action-row{
+  display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin-top:12px;
+}
+#player-menu #player-personal .personal-action-row .gift-check{
+  margin:0;min-height:37px;padding:6px 10px;
+  background:#fbe9eb;border-radius:9px;
+}
+#player-menu #player-personal .personal-optional-tasks{
+  margin-top:20px;border:1px solid #edd2cb;border-radius:14px;
+  background:#fffaf6;overflow:hidden;
+}
+#player-menu #player-personal .personal-optional-tasks>summary{
+  color:#75425b;font-size:14px;font-weight:780;
+  padding:17px 18px;cursor:pointer;list-style-position:inside;
+}
+#player-menu #player-personal .personal-optional-tasks>summary span{
+  display:block;font-size:11px;font-weight:550;color:#947787;
+  margin:5px 0 0 23px;
+}
+#player-menu #player-personal .personal-optional-tasks[open]>summary{
+  border-bottom:1px solid #efd8d2;
+}
+#player-menu #player-personal .personal-optional-tasks .personal-layout{
+  padding:15px;gap:12px;
+}
+#player-menu #player-personal .personal-optional-tasks .personal-layout section{
+  min-width:0;background:#fff4ef;border:1px solid #efd9d2;
+}
+@media(max-width:760px){
+  .santa-metrics{gap:8px}
+  .assignment-box{padding:14px;gap:12px}
+  #player-menu #player-personal .personal-main-cards{grid-template-columns:1fr}
+  #player-menu #player-personal .personal-heading{align-items:flex-start}
+}
+@media(max-width:460px){
+  .santa-metrics>div strong{font-size:23px}
+  .santa-metrics>div span{font-size:9px}
+  #player-menu #player-personal .personal-main-cards h4{font-size:18px}
+  #player-menu #player-personal .personal-optional-tasks .personal-layout{
+    grid-template-columns:1fr;padding:9px;
+  }
+}
