@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#080d16"/>
   <meta name="description" content="Voxel Secret Santa — a thoughtful Christmas office mystery."/>
   <title>Voxel Secret Santa</title>
-  <link rel="stylesheet" href="./assets/styles.css?v=santa-name-guard-v2"/>
+  <link rel="stylesheet" href="./assets/styles.css?v=santa-finale-v1"/>
 </head>
 <body>
   <div class="snow" id="snow" aria-hidden="true"></div>
@@ -78,6 +78,20 @@
           <button class="primary" id="assign-btn" type="button">🎁 Assign Secret Santas</button>
         </div>
         <details id="assignment-details" class="hidden"><summary>Organizer-only pairings</summary><div id="pair-list"></div></details>
+        <div class="admin-event-tools">
+          <section class="admin-tool-card stage-tool-card">
+            <p class="eyebrow">THE GRAND FINALE</p>
+            <h3>🎭 Christmas Stage Show</h3>
+            <p>Bring one colleague to the spotlight, show wishes and Santa's tasks and message, invite a guess, then reveal who their Secret Santa really is.</p>
+            <button type="button" class="primary" id="ceremony-launch">✦ Open Stage Show</button>
+          </section>
+          <section class="admin-tool-card redraw-tool-card">
+            <p class="eyebrow">ORGANIZER · RESET</p>
+            <h3>↻ Reassign All Santas</h3>
+            <p>This replaces every existing pair and permanently clears their old tasks, messages, hints and gift-purchase flags. Do this only before invitations have been acted upon.</p>
+            <button type="button" class="small-outline admin-danger" id="reassign-all-btn">↻ Reassign All Santas</button>
+          </section>
+        </div>
       </section>
     </section>
   </main>
@@ -275,6 +289,27 @@
             </div>
           </section>
         </div>
+        <div class="personal-layout santa-hint-grid">
+          <section class="personal-card hint-card">
+            <span class="personal-card-kicker">03 · MY SECRET SANTA MYSTERY</span>
+            <h4>🎁 Hints about my Santa</h4>
+            <p class="muted small">Your Santa can leave up to three anonymous clues. Unlock the first as soon as it is written, then one additional clue every 24 hours.</p>
+            <div id="mystery-hints" class="personal-list" aria-live="polite"></div>
+            <p id="hint-unlock-status" class="muted small"></p>
+            <button type="button" id="unlock-hint" class="small-outline">✦ Unlock a clue</button>
+          </section>
+          <section class="personal-card hint-card">
+            <span class="personal-card-kicker">04 · SOMETHING TO GUESS</span>
+            <h4>✍️ Hints for my Secret Child</h4>
+            <p class="muted small">Write clues about yourself without giving away your name. Hints are revealed gradually; previously released clues cannot be edited.</p>
+            <form id="santa-hint-form" class="santa-hint-form">
+              <label>Clue 1 <input id="santa-hint-1" maxlength="180" placeholder="A small detail about me…" autocomplete="off"/></label>
+              <label>Clue 2 <input id="santa-hint-2" maxlength="180" placeholder="Something funny about me…" autocomplete="off"/></label>
+              <label>Clue 3 <input id="santa-hint-3" maxlength="180" placeholder="One final hint…" autocomplete="off"/></label>
+              <button type="submit" class="small-outline" id="save-santa-hints">✓ Save hints</button>
+            </form>
+          </section>
+        </div>
         <details id="optional-tasks" class="personal-optional-tasks">
           <summary>✦ Optional festive tasks <span>Not needed for Santa allocation or gifting</span></summary>
           <div class="personal-layout">
@@ -327,6 +362,71 @@
     </div>
     <p class="muted small whatsapp-send-note">WhatsApp opens with the recipient and invitation ready. Review the message and tap Send there.</p>
   </dialog>
+  <dialog id="ceremony-dialog" class="ceremony-dialog" aria-label="Organizer's Christmas stage show">
+    <header class="ceremony-topbar">
+      <div><span class="ceremony-super">✦ THE CHRISTMAS FINALE ✦</span><h2 id="ceremony-title">Secret Santa Stage</h2></div>
+      <button type="button" id="ceremony-close" class="ceremony-close" aria-label="Close stage show">✕</button>
+    </header>
+    <div class="ceremony-layout">
+      <section class="ceremony-theatre">
+        <div class="ceremony-curtain ceremony-curtain-left" aria-hidden="true"></div>
+        <div class="ceremony-curtain ceremony-curtain-right" aria-hidden="true"></div>
+        <div class="ceremony-stage-lights" aria-hidden="true">✦　✧　✦　✧　✦</div>
+        <div class="ceremony-portrait-host" id="ceremony-avatar" aria-label="Animated three-dimensional close-up of the current participant">
+          <p class="ceremony-avatar-fallback">✦ A star takes the stage ✦</p>
+        </div>
+        <div class="ceremony-nameplate">
+          <span id="ceremony-progress">Participant 1 of 1</span>
+          <strong id="ceremony-person">Christmas Guest</strong>
+          <span id="ceremony-person-desk"></span>
+        </div>
+      </section>
+      <section class="ceremony-side">
+        <div class="ceremony-select-bar">
+          <label>Choose a colleague
+            <select id="ceremony-select" aria-label="Select participant to bring on stage"></select>
+          </label>
+          <span id="ceremony-spotlight-state">Spotlight is ready</span>
+        </div>
+        <div class="ceremony-scroll">
+          <div class="ceremony-story-card">
+            <h3>🎁 Their Christmas wishlist</h3>
+            <div id="ceremony-wishlist" class="ceremony-story-list"></div>
+          </div>
+          <div class="ceremony-story-card">
+            <h3>✦ Tasks given by their Secret Santa</h3>
+            <div id="ceremony-tasks" class="ceremony-story-list"></div>
+          </div>
+          <div class="ceremony-story-card">
+            <h3>💌 A message from their Santa</h3>
+            <p id="ceremony-message" class="ceremony-message"></p>
+          </div>
+          <div class="ceremony-story-card">
+            <div class="ceremony-clue-heading">
+              <h3>🔎 Clues to guess the Santa</h3>
+              <button id="ceremony-next-clue" type="button" class="small-outline">Next hint</button>
+            </div>
+            <div id="ceremony-clues" class="ceremony-story-list"></div>
+          </div>
+          <div class="ceremony-guess-panel">
+            <h3>Who do you think your Santa is?</h3>
+            <p>Let the participant guess aloud. The organizer can note the guess before the reveal.</p>
+            <input id="ceremony-guess" maxlength="160" placeholder="Optional audience guess" autocomplete="off"/>
+            <button type="button" id="ceremony-reveal-btn" class="ceremony-reveal-btn">✨ Reveal the Secret Santa</button>
+            <div class="ceremony-revealed hidden" id="ceremony-revealed" aria-live="polite">
+              <span>YOUR SECRET SANTA IS…</span>
+              <strong id="ceremony-santa-name"></strong>
+              <p id="ceremony-guess-result"></p>
+            </div>
+          </div>
+        </div>
+        <footer class="ceremony-controls">
+          <button type="button" class="small-outline" id="ceremony-prev">← Previous</button>
+          <button type="button" class="primary" id="ceremony-next">Next participant →</button>
+        </footer>
+      </section>
+    </div>
+  </dialog>
   <div id="action-progress" class="action-progress hidden" role="status" aria-live="polite" aria-atomic="true">
     <div class="progress-card">
       <div class="progress-head"><span class="progress-spinner" aria-hidden="true"></span><div><strong id="progress-title">Working…</strong><p id="progress-detail">Saving your changes securely. Please keep this page open.</p></div></div>
@@ -337,6 +437,6 @@
   <script type="importmap">
     {"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js"}}
   </script>
-  <script type="module" src="./assets/app.js?v=santa-name-guard-v2"></script>
+  <script type="module" src="./assets/app.js?v=santa-finale-v1"></script>
 </body>
 </html>
