@@ -6,9 +6,9 @@ import {createOfficeLife} from "./office-life.js?v=studio-qa-v1";
 /* A responsive office runtime. 3D art and camera are independent from the existing Supabase UI. */
 const UP=new THREE.Vector3(0,1,0);
 // One slightly closer, lower overview: same visual language and orientation as
-// the approved After preview, with a small additional zoom toward the character and nearby desks.
+// the approved After preview, with a gentle 6.6% zoom and a focus biased slightly toward the player's starting area.
 const AFTER_OVERVIEW=Object.freeze({
-  yaw:2.63,pitch:.66,distance:38,focusX:0,focusY:1.4,focusZ:12.7
+  yaw:2.63,pitch:.66,distance:35.5,focusX:.8,focusY:1.4,focusZ:11.3
 });
 const MODES={wide:{distance:AFTER_OVERVIEW.distance,
   pitch:AFTER_OVERVIEW.pitch,fov:50}};
@@ -310,7 +310,7 @@ export function mountOffice(host,profile,notice=()=>{}){
     viewWalls.south.visible=camera.position.z<room.back-.35;
   }
   function cameraGoal(){
-    // Keep the approved wide After-style composition, 12% closer and lower.
+    // Keep the approved wide composition, now a little closer to the player.
     // Larger offices extend that view without a separate camera preset.
     const extraBays=Math.max(0,office.bays-4);
     const distanceBase=AFTER_OVERVIEW.distance+extraBays*3.75;
