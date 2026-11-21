@@ -64,7 +64,7 @@ const ACTION_STEPS={
   add_participant:"Registering participant and generating code",
   edit_participant:"Saving participant changes",
   rotate_code:"Generating a replacement invitation code",
-  lock_assignments:"Assigning each Santa to a Child",
+  assign_pending:"Assigning Santas to participants who are waiting",
   change_admin_pin:"Updating administrator PIN",
   player_dashboard:"Loading personal dashboard",
   save_wishlist:"Saving wishlist",
@@ -271,6 +271,10 @@ $("whatsapp-open-link").addEventListener("click",e=>{
 });
 
 function namesById(id){return participants.find(p=>p.id===id)?.display_name||"Unknown";}
+function pendingPeople(){
+  const taken=new Set(assignments.flatMap(a=>[a.santa_id,a.child_id]));
+  return participants.filter(p=>p.is_active&&!taken.has(p.id));
+}
 async function loadEvents(){
   const result=await api("list_events");
   events=result.events||[];
@@ -303,13 +307,30 @@ async function openEvent(e){
   }
   $("workspace-title").textContent=event.title;
   $("workspace-slug").textContent=eventUrl();
-  $("workspace-state").textContent=event.assignments_locked_at?"LOCKED":"OPEN";
-  $("people-count").textContent=participants.length;
+  const open=["draft","active"].includes(event.status);
+  const pending=pendingPeople();
+  $("workspace-state").textContent=!open?"CLOSED":assignments.length?"DRAWN · OPEN":"OPEN";
+  $("people-count").textContent=participants.filter(p=>p.is_active).length;
   $("assignment-count").textContent=assignments.length;
+  $("pending-count").textContent=pending.length;
   $("event-workspace").classList.remove("hidden");
-  const locked=!!event.assignments_locked_at;
-  $("participant-form").querySelectorAll("input,button").forEach(el=>el.disabled=locked);
-  $("assign-btn").disabled=locked||participants.filter(p=>p.is_active).length<2;
+  // Drawing is not a registration lock. Newcomers can join after existing
+  // Santas have already received their private Secret Child.
+  $("participant-form").querySelectorAll("input,button").forEach(el=>el.disabled=!open);
+  $("assign-btn").disabled=!open||pending.length<2;
+  $("assign-btn").textContent=assignments.length?"🎁 Assign newcomers":"🎁 Draw Secret Santas";
+  const notice=$("assignment-notice");
+  if(!open)notice.textContent="This event is closed to new assignments.";
+  else if(!pending.length)notice.textContent=assignments.length?
+    "Everyone is assigned. Add newcomers here at any time; existing Santa–Child pairs will stay unchanged.":
+    "Add two or more colleagues before the first draw.";
+  else if(pending.length===1)notice.textContent=
+    "1 participant is waiting. Add at least one more newcomer before drawing; previously assigned pairs will not change.";
+  else if(pending.length===2)notice.textContent=
+    "2 participants are ready. They would be paired with each other and may infer their Santa's identity. For better secrecy, wait until at least 3 are available.";
+  else notice.textContent=pending.length+
+    " participants are ready for "+(assignments.length?"an additional":"the first")+
+    " draw. No tasks are necessary.";
   renderPeople();renderPairs();
 }
 function renderPeople(){
@@ -325,6 +346,8 @@ function renderPeople(){
     name.title=p.display_name;
     name.append(node("strong","participant-full-name",p.display_name));
     if(!p.is_active)name.append(node("small","participant-inactive","Inactive"));
+    else if(pendingPeople().some(q=>q.id===p.id))
+      name.append(node("small","participant-awaiting","Awaiting Santa draw"));
     tr.append(name);
     const desk=node("td","participant-desk-cell",p.desk_key||"—");
     desk.dataset.label="Desk";tr.append(desk);
@@ -643,7 +666,7 @@ async function openAdminCharacterEditor(person){
   $("admin-avatar-name").textContent=p.display_name;
   $("admin-character-name").value=p.display_name;
   $("admin-character-desk").value=p.desk_key||"";
-  const detailsLocked=!!event.assignments_locked_at;
+  const detailsLocked=assignments.some(a=>a.santa_id===p.id||a.child_id===p.id)||!["draft","active"].includes(event.status);
   $("admin-character-name").disabled=detailsLocked;
   $("admin-character-desk").disabled=detailsLocked;
   $("admin-character-save-details").disabled=detailsLocked;
@@ -694,17 +717,27 @@ function showPlayerTab(name){
   }
 }
 async function loadPlayer(){
+  const firstEntry=!player||$("player").classList.contains("hidden");
   player=await api("player_dashboard");
   $("player-hint-text").textContent=player.hint?"Daily office hint: "+player.hint:"Daily office clues will be available when the organizer publishes the office scene.";
-  $("welcome").classList.add("hidden");
-  $("admin").classList.add("hidden");
-  $("player").classList.remove("hidden");
-  document.body.classList.add("office-playing");
-  christmasMusic.enter();
-  void enterOffice(player);
+  if(firstEntry){
+    $("welcome").classList.add("hidden");
+    $("admin").classList.add("hidden");
+    $("player").classList.remove("hidden");
+    document.body.classList.add("office-playing");
+    christmasMusic.enter();
+    void enterOffice(player);
+  }
   $("player-greeting").textContent="✦ "+player.me.display_name;
   $("player-event-title").textContent=player.event.title;
   $("personal-name").textContent=player.me.display_name;
+  const child=player.myChild;
+  $("my-assignment-status").textContent=child?
+    "🎁 You have a Secret Child! Use Reveal privately, check their wishes and prepare your gift. Tasks are optional.":
+    "⏳ Waiting for the organizer's Santa draw. You can prepare your wishlist now; no tasks are required.";
+  const budget=Number(player.event?.budget);
+  $("personal-budget").textContent=Number.isFinite(budget)&&budget>0?
+    "Suggested gift budget: ₹"+budget.toLocaleString("en-IN"):"";
   $("task-date").min=player.today;
   if(!$("task-date").value||$("task-date").value<player.today)$("task-date").value=player.today;
   const wished=$("wishlist-items");wished.replaceChildren();
@@ -716,13 +749,12 @@ async function loadPlayer(){
     })));
   }
   const incoming=$("received-tasks");incoming.replaceChildren();
-  if(!player.receivedTasks.length)itemLine(incoming,"No tasks from your anonymous Santa yet.");
+  if(!player.receivedTasks.length)itemLine(incoming,"No optional challenges have been set. That is perfectly fine.");
   for(const t of player.receivedTasks){
     itemLine(incoming,niceDate(t.task_date)+" · "+(t.status==="completed"?"✓ ":"○ ")+t.task_text);
   }
-  const child=player.myChild;
   const label=$("child-name");
-  label.textContent=child&&childVisible?child.name:"Name hidden";
+  label.textContent=child?(childVisible?child.name:"Identity hidden · tap Reveal"):"Awaiting assignment";
   $("child-toggle").textContent=childVisible?"◉ Hide":"◉ Reveal";
   $("child-toggle").disabled=!child;
   const childWishes=$("child-wishlist");childWishes.replaceChildren();
@@ -732,8 +764,8 @@ async function loadPlayer(){
   $("gift-purchased").disabled=!child;
   $("task-form").querySelectorAll("input,button").forEach(x=>x.disabled=!child);
   if(!child){
-    itemLine(childWishes,"Santa–Child assignments are not yet published.");
-    itemLine(myTasks,"The organizer hasn't generated assignments yet.");
+    itemLine(childWishes,"Your Secret Child's wishlist will appear after the draw.");
+    itemLine(myTasks,"No assigned Secret Child yet. Tasks are optional.");
     $("santa-message").value="";
     $("gift-purchased").checked=false;
     return;
@@ -742,7 +774,7 @@ async function loadPlayer(){
   else child.wishlist.forEach(w=>itemLine(childWishes,w.text));
   $("santa-message").value=child.message||"";
   $("gift-purchased").checked=!!child.gift_purchased;
-  if(!child.tasks.length)itemLine(myTasks,"You haven't assigned any tasks.");
+  if(!child.tasks.length)itemLine(myTasks,"No optional challenges. You can give a thoughtful gift without any tasks.");
   for(const task of child.tasks){
     const row=node("label","personal-item");
     const box=node("input");box.type="checkbox";box.checked=task.status==="completed";
@@ -817,10 +849,16 @@ $("participant-form").addEventListener("submit",run(async e=>{
   toast("Participant added. Use WhatsApp to share their invitation privately.");
 }));
 $("assign-btn").addEventListener("click",run(async()=>{
-  if(!event||!confirm("Lock Santa–Child assignments? You cannot change the roster afterward."))return;
-  const res=await api("lock_assignments",{event_id:event.id});
-  await loadEvents();
-  toast(res.assigned+" Secret Santa pairs created.");
+  if(!event)return;
+  const pending=pendingPeople();
+  if(pending.length<2)return;
+  const warning=pending.length===2?
+    "Only two participants are awaiting allocation. They will be each other's Santa and could infer the sender. Assign them anyway?":
+    "Assign "+pending.length+" participants now? Everyone will give to one person and receive from someone else. No tasks will be created. Existing pairs will never change.";
+  if(!confirm(warning))return;
+  const res=await api("assign_pending",{event_id:event.id});
+  await openEvent(event);
+  toast(res.assigned+" Santa–Child pairs assigned privately. No tasks created.");
 }));
 $("player-pause").addEventListener("click",()=>{
   christmasMusic.unlock();
@@ -860,6 +898,10 @@ $("camera-reset").addEventListener("click",()=>{
 });
 $("player-tab-character").addEventListener("click",()=>showPlayerTab("character"));
 $("player-tab-personal").addEventListener("click",()=>showPlayerTab("personal"));
+$("refresh-personal").addEventListener("click",run(async()=>{
+  await loadPlayer();
+  toast("Your private Santa notebook is up to date.");
+}));
 $("player-sign-out").addEventListener("click",()=>{
   endSession();
   toast("Exited the office.");
@@ -875,14 +917,14 @@ $("wishlist-form").addEventListener("submit",run(async e=>{
 $("child-toggle").addEventListener("click",()=>{
   if(!player?.myChild)return;
   childVisible=!childVisible;
-  $("child-name").textContent=childVisible?player.myChild.name:"Name hidden";
+  $("child-name").textContent=childVisible?player.myChild.name:"Identity hidden · tap Reveal";
   $("child-toggle").textContent=childVisible?"◉ Hide":"◉ Reveal";
 });
 $("task-form").addEventListener("submit",run(async e=>{
   e.preventDefault();
   await api("add_task",{task_date:$("task-date").value,task_text:$("task-text").value});
   $("task-text").value="";
-  await loadPlayer();toast("Task assigned.");
+  await loadPlayer();toast("Optional task saved.");
 }));
 $("gift-purchased").addEventListener("change",run(async e=>{
   await api("gift_status",{purchased:e.target.checked});
