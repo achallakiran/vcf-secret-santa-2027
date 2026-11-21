@@ -56,8 +56,8 @@ export function mountAvatarStudio(host,appearance){
   const touches=new Map();
   const createdMaterials=new Set();
 
-  // Reserve room above the head for the title and below the shoes for the
-  // rotation/zoom toolbar. The model always fits when the canvas resizes.
+  // Preview has no overlapping title, icon toolbar, or action button.
+  // Fit the model to the available canvas while leaving a small safe margin.
   function frameAvatar(){
     if(!model)return;
     orbit.updateMatrixWorld(true);
@@ -66,7 +66,7 @@ export function mountAvatarStudio(host,appearance){
     const size=bounds.getSize(new THREE.Vector3());
     fitTarget=bounds.getCenter(new THREE.Vector3());
     const width=Math.max(host.clientWidth,1),height=Math.max(host.clientHeight,1);
-    const reserved=height<390?92:112;
+    const reserved=height<390?28:44;
     const usableHeight=Math.max(150,height-reserved);
     const vfov=THREE.MathUtils.degToRad(camera.fov);
     const aspect=Math.max(.45,width/height);
