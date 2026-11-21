@@ -1253,3 +1253,28 @@ body.office-playing #player-menu textarea{
 #player-menu #avatar-hairstyle-options .atelier-choice-art img{
   object-fit:contain;object-position:center center;
 }
+
+/* Full heads stay visible in gender / hairstyle preview tiles. */
+#player-menu #avatar-gender-options .atelier-choice-art,
+#player-menu #avatar-hairstyle-options .atelier-choice-art{
+  background:linear-gradient(165deg,#faf0e7,#e8d9dd);height:118px;
+}
+#player-menu #avatar-gender-options .atelier-choice-art img,
+#player-menu #avatar-hairstyle-options .atelier-choice-art img{
+  width:100%;height:100%;object-fit:contain;object-position:center center;
+}
+#player-menu #avatar-facialHair-options .atelier-choice-art,
+#player-menu #avatar-bindiStyle-options .atelier-choice-art{
+  background:#fff5eb;height:82px;
+}
+#player-menu #avatar-facialHair-options .atelier-choice,
+#player-menu #avatar-bindiStyle-options .atelier-choice{min-height:120px}
+#player-menu #avatar-facialHair-options .atelier-choice-art img,
+#player-menu #avatar-bindiStyle-options .atelier-choice-art img{
+  object-fit:contain;
+}
+@media(max-width:620px){
+  #player-menu #avatar-gender-options .atelier-choice-art,
+  #player-menu #avatar-hairstyle-options .atelier-choice-art{height:100px}
+  #player-menu #avatar-facialHair-options .atelier-choice-art{height:70px}
+}
