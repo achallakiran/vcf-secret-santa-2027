@@ -129,12 +129,24 @@ function makeGreetingBubble(scene){
   // allocate a texture for each coworker in a 150-person event.
   const canvas=document.createElement("canvas");canvas.width=240;canvas.height=96;
   const context=canvas.getContext("2d");
-  context.fillStyle="#fff8e9";context.fillRect(12,10,216,67);
-  context.lineWidth=5;context.strokeStyle="#ba7d91";
-  context.strokeRect(12,10,216,67);
-  context.font="bold 35px sans-serif";context.fillStyle="#65425d";
-  context.textAlign="center";context.textBaseline="middle";
-  context.fillText("Hello! 👋",120,43);
+  function draw(text){
+    // Repaint the same texture with a short greeting, without allocating
+    // separate canvases for every colleague.
+    const phrase=String(text||"Hello!").slice(0,36);
+    context.clearRect(0,0,240,96);
+    context.fillStyle="#fff8e9";context.fillRect(12,10,216,67);
+    context.lineWidth=4;context.strokeStyle="#ba7d91";
+    context.strokeRect(12,10,216,67);
+    context.fillStyle="#65425d";
+    context.textAlign="center";context.textBaseline="middle";
+    context.font="bold 26px sans-serif";
+    while(context.measureText(phrase).width>193&&
+          Number.parseInt(context.font,10)>16){
+      context.font="bold "+(Number.parseInt(context.font,10)-1)+"px sans-serif";
+    }
+    context.fillText(phrase,120,44,196);
+  }
+  draw("Hello!");
   const texture=new THREE.CanvasTexture(canvas);
   texture.colorSpace=THREE.SRGBColorSpace;
   const material=new THREE.SpriteMaterial({map:texture,transparent:true,
@@ -145,7 +157,9 @@ function makeGreetingBubble(scene){
   return {sprite,material,texture,target:null,until:0,
     say(person,text,time){
       this.target=person?.detailed?.group||person?.group||null;
-      this.until=time+2.35;
+      draw(text);
+      texture.needsUpdate=true;
+      this.until=time+1.8;
       sprite.visible=!!this.target;
     },
     update(time){
@@ -268,7 +282,7 @@ export function mountOffice(host,profile,notice=()=>{}){
     });
     officeLife=createOfficeLife(people,hero,nav,(person,text,time)=>{
       speech.say(person,text,time);
-      if(text)notice("👋 "+(person.name||"Colleague")+": "+text);
+      if(text)notice((person.name||"Friend")+" · "+text);
     });
   }
   function setCamera(){
@@ -331,7 +345,7 @@ export function mountOffice(host,profile,notice=()=>{}){
   function moveTo(x,z){
     const target={x,z};
     const next=nav.find({x:hero.group.position.x,z:hero.group.position.z},target);
-    if(!next.length){notice("That spot isn't reachable. Try another place on the floor.");return;}
+    if(!next.length){notice("Can't reach there.");return;}
     path=next;
     cameraTravelEnabled=true;
     clickMarker.group.visible=true;clickMarker.group.position.set(next.at(-1).x,0,next.at(-1).z);
@@ -369,10 +383,10 @@ export function mountOffice(host,profile,notice=()=>{}){
         cameraTravelEnabled=true;
         clickMarker.group.visible=true;
         clickMarker.group.position.set(approach.end.x,0,approach.end.z);
-        notice("Going to greet "+hit.name);
+        notice("Walking to "+hit.name);
       }else{
         interactTarget=null;
-        notice("Can't approach "+hit.name+" safely from here.");
+        notice("Can't reach "+hit.name);
       }
       return;
     }
@@ -602,9 +616,9 @@ export function mountOffice(host,profile,notice=()=>{}){
       hero.play(name,clock.elapsedTime);
       const responder=officeLife?.mimicNearby(name,clock.elapsedTime,5.4);
       selectedAction=name;
-      const messages={hi:"👋 Hello!",dance:"🕺 Time for a little dance!",clap:"👏 A round of applause!",cheer:"🎉 Merry Christmas!"};
-      notice(responder?messages[name]+" "+responder.name+" and coworkers respond!":
-        messages[name]+" Move closer to a coworker to get a response.");
+      const messages={hi:"Hello!",dance:"Let's dance!",clap:"Time to celebrate!",cheer:"Merry Christmas!"};
+      // A nearby colleague will speak through their own bubble.
+      if(!responder)notice(messages[name]);
       return true;
     },
     goHome(){
