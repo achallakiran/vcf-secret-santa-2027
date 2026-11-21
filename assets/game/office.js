@@ -3,6 +3,7 @@ import {decorateWorkstation,addWarmOfficeDetails} from "./environment-art.js?v=v
 import {officeTileMaterial,applyOfficeTileRepeat,addOfficeLounge} from "./art-surfaces.js?v=visual-sculpt-v3";
 import {getInteriorFinishes} from "./interior-finishes.js?v=visual-upgrade-p1";
 import {deskThemeForSeat,dressWorkstation,dressOfficeArchitecture} from "./office-visual-style.js?v=visual-upgrade-p1";
+import {buildArchitecturalBays,sculptWorkstationSilhouette,sculptCelebrationStage} from "./office-cinematic-design.js?v=grand-overhaul-v2";
 // Fully procedural office furniture, lights and festive scenery; no external models.
 const boxGeo=new THREE.BoxGeometry(1,1,1);
 boxGeo.userData.officeInstancing=true;
@@ -498,6 +499,7 @@ function workstation(parent,x,z,i,row,colliders){
   // Art direction lives in a reusable appearance layer and never moves the
   // Santa hint prop in the far desk corner at z=1.29.
   dressWorkstation(g,{seatIndex,chairSide,finish},{block,softBlock,ball,mat});
+  sculptWorkstationSilhouette(g,{seatIndex,chairSide,style},{block,softBlock,ball,mat});
   decorateClueDesk(g,seatIndex,chairSide);
   chair(parent,chairX,z,facing,seatIndex);
   colliders.push({x,z,hx:.57,hz:1.79});
@@ -825,6 +827,11 @@ export function buildOffice(count=12){
   // Wall/floor visual dressing never changes seats, clues or walkable space.
   dressOfficeArchitecture(root,{left,right,front,partyStart,bays,rowZ,viewWalls},
     {softBlock,block,ball,mat});
+  // Major high-contrast feature walls, green/gold promenade and sculpted
+  // Christmas stage. All are presentational and leave nav colliders untouched.
+  buildArchitecturalBays(root,{left,right,front,partyStart,bays,rowZ,viewWalls,twinkle},
+    {softBlock,block,ball,mat});
+  sculptCelebrationStage(party,{twinkle},{softBlock,block,ball,mat});
   const optimizedBatches=batchOfficeStaticGeometry(root,twinkle,viewWalls);
   return {root,colliders,seats,spawn,bays,optimizedBatches,
     // Structural wall passages are not additional explorable rooms.
