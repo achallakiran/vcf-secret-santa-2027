@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#080d16"/>
   <meta name="description" content="Voxel Secret Santa — a thoughtful Christmas office mystery."/>
   <title>Voxel Secret Santa</title>
-  <link rel="stylesheet" href="./assets/styles.css?v=notebook-cleanup-v2"/>
+  <link rel="stylesheet" href="./assets/styles.css?v=multi-admin-v1"/>
 </head>
 <body>
   <div class="snow" id="snow" aria-hidden="true"></div>
@@ -31,17 +31,40 @@
         <label>Administrator PIN<input type="password" id="admin-pin" inputmode="numeric" pattern="[0-9]{4,12}" minlength="4" maxlength="12" autocomplete="off" placeholder="••••" required/></label>
         <button type="submit" class="primary" id="login-btn">Unlock organizer console →</button>
       </form>
-      <p class="muted">Enter your organizer PIN to manage the event.</p>
+      <p class="muted">Enter your PIN to manage your Christmas events.</p>
+      <button type="button" id="admin-register-toggle" class="small-outline">New organizer? Create account</button>
+      <form id="admin-register-form" class="stack hidden" autocomplete="off" aria-label="Register new organizer">
+        <p class="muted">Use the one-time registration code shared by an organizer.</p>
+        <label>Your name<input id="admin-reg-name" maxlength="120" autocomplete="name" required placeholder="Organizer name"/></label>
+        <label>Registration code<input id="admin-reg-code" maxlength="80" autocomplete="off" autocapitalize="off" spellcheck="false" required placeholder="Invitation code"/></label>
+        <label>Create PIN<input id="admin-reg-pin" type="password" inputmode="numeric" minlength="8" maxlength="12" pattern="[0-9]{8,12}" autocomplete="new-password" required placeholder="8–12 digits"/></label>
+        <label>Confirm PIN<input id="admin-reg-pin-confirm" type="password" inputmode="numeric" minlength="8" maxlength="12" pattern="[0-9]{8,12}" autocomplete="new-password" required placeholder="Repeat PIN"/></label>
+        <div class="admin-register-buttons">
+          <button type="submit" class="primary">Create my organizer account</button>
+          <button type="button" id="admin-register-cancel" class="small-outline">Cancel</button>
+        </div>
+      </form>
     </section>
     <section id="dashboard" class="hidden">
-      <div class="dashboard-row"><span id="signed-in-user" class="hidden" aria-hidden="true"></span><button id="refresh-events" class="small-outline">↻ Refresh</button></div>
+      <div class="dashboard-row"><span id="signed-in-user" aria-live="polite"></span><button id="refresh-events" class="small-outline">↻ Refresh</button></div>
+      <section class="admin-invite-panel panel" aria-label="Invite an organizer">
+        <div class="admin-invite-intro">
+          <div><h3>Invite an organizer</h3><p class="muted">Generate a one-time registration code. Everyone uses this same Admin Console URL.</p></div>
+          <button id="admin-invite-create" type="button" class="small-outline">+ Generate code</button>
+        </div>
+        <div id="admin-invite-result" class="hidden admin-invite-result" role="status">
+          <p class="muted">Share this code privately. Valid for 24 hours and usable once.</p>
+          <code id="admin-invite-code"></code>
+          <button id="admin-invite-copy" class="small-outline" type="button">Copy invitation details</button>
+        </div>
+      </section>
       <details class="panel pin-settings"><summary>Change administrator PIN</summary>
         <form id="pin-change-form" class="form-row">
           <label>Current PIN<input id="current-pin" type="password" maxlength="12" inputmode="numeric" autocomplete="off" required/></label>
-          <label>New PIN<input id="new-pin" type="password" minlength="4" maxlength="12" inputmode="numeric" autocomplete="off" required/></label>
+          <label>New PIN<input id="new-pin" type="password" minlength="8" maxlength="12" pattern="[0-9]{8,12}" inputmode="numeric" autocomplete="off" required/></label>
           <button class="primary" type="submit">Change PIN</button>
         </form>
-        <p class="muted">The replacement PIN takes effect immediately and invalidates older administrator sessions. A longer, less predictable PIN is safer.</p>
+        <p class="muted">The replacement PIN takes effect immediately and invalidates older administrator sessions. New PINs must have 8–12 digits. Existing PINs remain valid until changed.</p>
       </details>
       <section class="panel"><div class="section-head"><h3>Christmas events</h3><span class="chip">MULTI-EVENT</span></div>
         <form id="event-form" class="form-row"><label class="grow">Event name<input id="event-name" maxlength="160" required placeholder="VCF Secret Santa 2026"/></label><button class="primary" type="submit">+ Create event</button></form>
@@ -408,6 +431,6 @@
   <script type="importmap">
     {"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js"}}
   </script>
-  <script type="module" src="./assets/app.js?v=camera-nearer-v1"></script>
+  <script type="module" src="./assets/app.js?v=multi-admin-v1"></script>
 </body>
 </html>
