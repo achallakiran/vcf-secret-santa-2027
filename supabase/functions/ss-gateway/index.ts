@@ -269,8 +269,8 @@ async function dashboard(claims:any){
     db("ss_events?select=id,slug,title,status,timezone,gift_budget_recommendation_inr&"+"id=eq."+eventId+"&limit=1"),
     db("ss_participants?select=id,display_name,desk_key,avatar,avatar_version&event_id=eq."+eventId+"&is_active=eq.true&order=created_at.asc"),
     db("ss_participant_private?select=wishlist,wishlist_version&participant_id=eq."+pid+"&event_id=eq."+eventId+"&limit=1"),
-    db("ss_assignments?select=id,child_id,santa_message,gift_purchased&event_id=eq."+eventId+"&santa_id=eq."+pid+"&limit=1"),
-    db("ss_assignments?select=id&event_id=eq."+eventId+"&child_id=eq."+pid+"&limit=1")
+    db("ss_assignments?select=id,child_id,santa_message,gift_purchased,santa_hints&event_id=eq."+eventId+"&santa_id=eq."+pid+"&limit=1"),
+    db("ss_assignments?select=id,santa_hints,hints_unlocked_count,hint_last_unlocked_at&event_id=eq."+eventId+"&child_id=eq."+pid+"&limit=1")
   ]);
   const eventObj=event[0];if(!eventObj)fail("Event not found.",404);
   const isMine=roster.find((p:any)=>p.id===pid);if(!isMine)fail("Participant missing.",404);
@@ -292,7 +292,15 @@ async function dashboard(claims:any){
     event:{title:eventObj.title,slug:eventObj.slug,status:eventObj.status,timezone:eventObj.timezone,budget:eventObj.gift_budget_recommendation_inr},
     me:{id:pid,display_name:isMine.display_name,avatar:isMine.avatar,avatar_version:isMine.avatar_version||1,wishlist:priv[0]?.wishlist||[],wishlist_version:priv[0]?.wishlist_version||1},
     colleagues:roster.map((p:any)=>({id:p.id,name:p.display_name,desk_key:p.desk_key,avatar:p.avatar})),
-    myChild:outgoing?{id:outgoing.child_id,name:roster.find((p:any)=>p.id===outgoing.child_id)?.display_name||"Secret Child",wishlist:ownChildWishlist?.[0]?.wishlist||[],gift_purchased:outgoing.gift_purchased,message:outgoing.santa_message||"",tasks:ownTasks}:null,
+    myChild:outgoing?{id:outgoing.child_id,name:roster.find((p:any)=>p.id===outgoing.child_id)?.display_name||"Secret Child",wishlist:ownChildWishlist?.[0]?.wishlist||[],gift_purchased:outgoing.gift_purchased,message:outgoing.santa_message||"",tasks:ownTasks,hints:outgoing.santa_hints||["","",""]}:null,
+    mystery:incoming?{
+      unlocked:incoming.hints_unlocked_count||0,
+      hints:(incoming.santa_hints||[]).slice(0,incoming.hints_unlocked_count||0),
+      can_unlock:incoming.hints_unlocked_count<3 &&
+        !!(incoming.santa_hints||[])[incoming.hints_unlocked_count||0],
+      next_at:incoming.hint_last_unlocked_at?
+        new Date(Date.parse(incoming.hint_last_unlocked_at)+24*3600*1000).toISOString():null
+    }:null,
     receivedTasks,office:day?.[0]?.scene||null,hint,today:date
   };
 }
@@ -389,6 +397,51 @@ async function adminAction(action:string,data:any){
     }
     return {event,participants:roster,assignments:pairs,codes};
   }
+  if(action==="ceremony_roster"){
+    const roster=await db("ss_participants?select=id,display_name,desk_key,avatar,is_active&event_id=eq."+
+      event.id+"&is_active=eq.true&order=created_at.asc");
+    return {people:roster};
+  }
+  if(action==="ceremony_details"){
+    if(!validId(data.participant_id))fail("Invalid participant");
+    const pid=data.participant_id;
+    const [people,privateRows,incoming]=await Promise.all([
+      db("ss_participants?select=id,display_name,desk_key,avatar&event_id=eq."+event.id+
+        "&id=eq."+pid+"&is_active=eq.true&limit=1"),
+      db("ss_participant_private?select=wishlist&event_id=eq."+event.id+
+        "&participant_id=eq."+pid+"&limit=1"),
+      db("ss_assignments?select=id,santa_id,santa_message,santa_hints&event_id=eq."+event.id+
+        "&child_id=eq."+pid+"&limit=1")
+    ]);
+    if(!people.length)fail("Participant is no longer active",404);
+    const assignment=incoming[0]||null;
+    const [tasks,santas]=await Promise.all([
+      assignment?db("ss_santa_tasks?select=task_date,task_text,status&event_id=eq."+event.id+
+        "&assignment_id=eq."+assignment.id+"&order=task_date.asc"):Promise.resolve([]),
+      assignment?db("ss_participants?select=id,display_name,desk_key,avatar&event_id=eq."+event.id+
+        "&id=eq."+assignment.santa_id+"&limit=1"):Promise.resolve([])
+    ]);
+    return {
+      participant:people[0],
+      wishlist:privateRows?.[0]?.wishlist||[],
+      tasks,
+      message:assignment?.santa_message||"",
+      hints:(assignment?.santa_hints||[]).filter((v:any)=>typeof v==="string"&&!!v.trim()),
+      santa:santas?.[0]||null
+    };
+  }
+  if(action==="delete_participant"){
+    if(!validId(data.participant_id))fail("Invalid participant");
+    return await db("rpc/ss_delete_participant","POST",{
+      p_event_id:event.id,p_participant_id:data.participant_id
+    });
+  }
+  if(action==="reassign_all"){
+    if(data.confirmation!=="REASSIGN")fail("Type REASSIGN to confirm reset");
+    return {assigned:await db("rpc/ss_reassign_all","POST",{
+      p_event_id:event.id,p_confirmation:"REASSIGN"
+    })};
+  }
   if(action==="add_participant"){
     if(!["draft","active"].includes(event.status))
       fail("Participant registration is closed for this event.");
@@ -484,6 +537,11 @@ async function playerAction(action:string,claims:any,data:any){
     if(!result?.length)fail("Your avatar changed on another device. Refresh and try again.",409);
     return {avatar,version:version+1};
   }
+  if(action==="unlock_santa_hint"){
+    return {unlocked:await db("rpc/ss_unlock_hint","POST",{
+      p_event_id:eventId,p_child_id:pid
+    })};
+  }
   if(action==="save_wishlist"){
     const items=safeWishlist(data.items);
     const version=Number(data.version);
@@ -497,6 +555,14 @@ async function playerAction(action:string,claims:any,data:any){
   const rows=await db("ss_assignments?select=id,child_id&event_id=eq."+eventId+"&santa_id=eq."+pid+"&limit=1");
   const assignment=rows[0];
   if(!assignment)fail("Assignments haven't been generated yet.");
+  if(action==="save_santa_hints"){
+    if(!Array.isArray(data.hints)||data.hints.length!==3 ||
+      !data.hints.every((v:any)=>typeof v==="string"&&v.length<=180))
+      fail("Enter up to three hints, each no more than 180 characters");
+    return {saved:await db("rpc/ss_save_santa_hints","POST",{
+      p_event_id:eventId,p_santa_id:pid,p_hints:data.hints
+    })};
+  }
   if(action==="add_task"){
     const eventRow=await db("ss_events?select=timezone&"+"id=eq."+eventId+"&limit=1");
     const date=string(data.task_date,10);
