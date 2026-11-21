@@ -2113,10 +2113,6 @@ body.office-playing #player-menu textarea{
   font-size:19px;
   border-radius:11px;
 }
-#player-menu #player-character .atelier-preview .avatar-studio-canvas{
-  height:100%;
-  min-height:315px;
-}
 #player-menu #player-character .character-preview-shell{
   overflow:hidden;
 }
