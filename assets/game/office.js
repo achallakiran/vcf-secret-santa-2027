@@ -300,6 +300,100 @@ function celebrationSofa(parent,x,z,mirror=false){
   }
   return g;
 }
+// Server and renderer use the same 12-item cycle, indexed by the stable
+// participant seat in event creation order. Every clue names a visible mesh.
+export const CLUE_PROPS=[
+  "apple","coffee","mini-tree","gift","succulent","coffee",
+  "apple","ornament","mini-tree","books","lantern","candy-cane"
+];
+export function deskClueForSeat(index){return CLUE_PROPS[index%CLUE_PROPS.length];}
+function decorateClueDesk(g,seatIndex,chairSide){
+  const kind=deskClueForSeat(seatIndex);
+  const stand=new THREE.Group();
+  // Near the user's edge of the oversized desk, clear of the rear divider,
+  // dual monitors and the lamp. The object is persistent, not a random NPC action.
+  stand.position.set(chairSide*.34,.84,1.29);
+  g.add(stand);
+  const b=(x,y,z,w,h,d,c)=>block(stand,x,y,z,w,h,d,c,false);
+  const ballPart=(x,y,z,r,c)=>ball(stand,x,y,z,r,c);
+  const cup=(color=0xf3ddc7)=>{
+    cyl(stand,0,.09,0,.105,.090,.18,color,12);
+    cyl(stand,0,.187,0,.086,.086,.015,0x5b372d,12);
+    b(.118,.10,0,.060,.027,.018,color);
+    b(.143,.12,0,.018,.07,.021,color);
+  };
+  switch(kind){
+    case "apple":{
+      const fruit=ballPart(0,.145,0,.12,0xdf4048);
+      fruit.scale.set(1,1.12,.93);
+      b(0,.282,0,.021,.068,.020,0x79512c);
+      const leaf=ballPart(.041,.295,0,.045,0x62ab5e);
+      leaf.scale.set(1.1,.25,.60);
+      break;
+    }
+    case "coffee": cup();break;
+    case "mini-tree":{
+      b(0,.055,0,.06,.11,.06,0x84613d);
+      const green=[0x347a59,0x3c9061,0x50a26a];
+      for(let level=0;level<3;level++){
+        const y=.13+level*.095,w=.28-level*.07;
+        b(0,y,0,w,.115,w,green[level]);
+        b(0,y+.036,0,w*.79,.075,w*.79,green[level]);
+      }
+      ballPart(0,.425,0,.052,0xffcf67);
+      ballPart(-.115,.19,.09,.026,0xd85b67);
+      ballPart(.078,.29,-.08,.024,0xffdfa0);break;
+    }
+    case "gift":{
+      b(0,.105,0,.27,.21,.26,0xb73554);
+      b(0,.218,0,.295,.035,.28,0xffd587);
+      b(0,.132,0,.052,.25,.275,0xeec888);
+      b(0,.13,0,.275,.25,.046,0xeec888);break;
+    }
+    case "succulent":{
+      cyl(stand,0,.075,0,.115,.10,.13,0xcba384,12);
+      for(let n=0;n<7;n++){
+        const phi=n*6.283/7;
+        const leaf=ballPart(Math.sin(phi)*.06,.205+Math.cos(phi)*.025,Math.cos(phi)*.06,.065,n%2?0x418b65:0x5fa976);
+        leaf.scale.set(.48,1.4,.55);
+      }
+      break;
+    }
+    case "ornament":{
+      ballPart(0,.175,0,.125,0xffcf6d);
+      b(0,.298,0,.065,.036,.065,0xb49a6a);
+      ballPart(-.03,.19,.101,.025,0xffffff);
+      ballPart(.068,.135,.072,.024,0xdf6071);break;
+    }
+    case "books":{
+      for(let n=0;n<4;n++){
+        const colors=[0x487e9a,0x9e576b,0x538872,0xcf9753];
+        b(0,.028+n*.064,0,.27,.054,.37,colors[n]);
+        b(0,.045+n*.064,.083,.20,.012,.22,0xf8e9d4);
+      }
+      break;
+    }
+    case "lantern":{
+      b(0,.036,0,.20,.043,.18,0x5c4655);
+      for(const dx of [-.09,.09])for(const dz of [-.079,.079])
+        b(dx,.16,dz,.018,.235,.018,0x6e5962);
+      b(0,.29,0,.23,.045,.21,0x845669);
+      const light=ballPart(0,.158,0,.074,mat(0xffdb86,{emissive:0xe7ac52}));
+      light.scale.set(.8,1.15,.7);
+      break;
+    }
+    case "candy-cane":{
+      b(0,.16,0,.064,.31,.06,0xfcf4e8);
+      for(let j=0;j<5;j++)b(0,.047+j*.064,.035,.067,.032,.015,0xcb4960);
+      b(.052,.305,0,.16,.057,.06,0xfcf4e8);
+      b(.116,.261,0,.060,.15,.06,0xfcf4e8);
+      b(.05,.335,.035,.068,.025,.014,0xcb4960);
+      break;
+    }
+  }
+  stand.userData.clueObject=kind;
+}
+
 function workstation(parent,x,z,i,row,colliders){
   // Width of the desk is along the row (z): its LONG EDGE faces the seated employee.
   // W and R sit east of their desks and face WEST; L sits west and faces EAST.
@@ -391,7 +485,9 @@ function workstation(parent,x,z,i,row,colliders){
   const lampNeck=cyl(g,-chairSide*.13,1.01,1.28,.020,.020,.29,0x847c70,8);
   lampNeck.rotation.z=.21;
   ball(g,-chairSide*.08,1.18,1.26,.09,mat(0xffe6b8,{emissive:0xe0ac6b}),1);
-  decorateWorkstation(g,{seatSide:chairSide,index:i*3+({W:0,L:1,R:2}[row]||0)}, {block,ball,cyl,mat});
+  const seatIndex=i*3+({W:0,L:1,R:2}[row]||0);
+  decorateWorkstation(g,{seatSide:chairSide,index:seatIndex}, {block,ball,cyl,mat});
+  decorateClueDesk(g,seatIndex,chairSide);
   chair(parent,chairX,z,facing,i);
   colliders.push({x,z,hx:.57,hz:1.79});
   colliders.push({x:chairX,z,hx:.36,hz:.43});
