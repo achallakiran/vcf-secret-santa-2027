@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import {facialHairShape} from "./facial-hair.js?v=face-refine-v4";
 
 /**
  * Full-resolution sculpted voxel detailing shared by the player, every
@@ -65,7 +66,7 @@ export function sculptFaceVoxels(head,p){
     for(let k=0;k<5;k++){
       const x=cx+(k-2)*.041;
       const y=.485+Math.sin(k/4*Math.PI)*.008;
-      b.voxel(x,y,.425,.036,.012,.016,colorHex(hair,.14));
+      b.voxel(x,y,.420,.029,.008,.011,colorHex(skin,-.13));
     }
     for(let k=0;k<5;k++){
       const x=cx+(k-2)*.038;
@@ -97,45 +98,76 @@ export function sculptFaceVoxels(head,p){
     .045-.004*k,.035,.024,k%2?skin:light);
   for(let k=-2;k<=2;k++)b.voxel(k*.036,.095+Math.abs(k)*.009,.452,
     .036,.018,.024,colorHex(lip,k===0?.07:0));
-  // Sculpted beard clumps and finely stippled stubble share the same
-  // instanced voxel brush as the face, avoiding hundreds of separate draw calls.
+  // Facial hair is selected independently of hairstyle. Draw distinct
+  // patterned cheeks, jaw, moustache and isolated soul patches; the full
+  // beard includes the moustache by definition.
   if(p.gender==="male"){
-    const facial=p.facialHair||"none",hasBeard=facial.startsWith("beard")||facial.startsWith("combo");
-    const stubble=facial.startsWith("stubble"),ear=facial.endsWith("-ear");
-    if(hasBeard){
-      const full=facial.endsWith("full")||ear;
-      for(let row=0;row<(full?6:4);row++)for(let col=-5;col<=5;col++){
-        if(Math.abs(col)<3&&row>1)continue;
-        const x=col*.067,y=.052-row*.035;
-        b.voxel(x,y,.36+(.03-Math.abs(col)*.02),
-          .065,.046,.042,colorHex(hair,seeded(row,col)*.10-.08));
-      }
-      if(ear)for(const sign of [-1,1])for(let row=0;row<10;row++){
-        const y=.43-row*.050;
-        for(let col=0;col<3;col++){
-          const x=sign*(.47-col*.046);
-          b.voxel(x,y,.27+col*.020,.044,.06,.043,
-            colorHex(hair,seeded(row,col)*.10-.09));
+    const facial=facialHairShape(p.facialHair);
+    const shadeHair=(r,c)=>colorHex(hair,seeded(r,c)*.13-.09);
+    if(facial.cheeks>0){
+      const rows=Math.max(2,Math.ceil(6*facial.cheeks));
+      for(const sign of [-1,1])for(let row=0;row<rows;row++){
+        for(let col=0;col<4;col++){
+          const x=sign*(.345+col*.040),y=.25-row*.048,
+            z=.41-col*.018;
+          b.voxel(x,y,z,.032,.046,.026,shadeHair(row,col));
         }
       }
     }
-    if(stubble){
-      const heavy=facial==="stubble-heavy",full=facial!=="stubble-light";
-      const total=heavy?11:full?8:5;
-      const tint=colorHex(hair,heavy?.15:.28);
-      // Sparse irregular pixels read as growth rather than a solid beard.
-      for(const sign of [-1,1])for(let row=0;row<total;row++)
-        for(let col=0;col<9;col++){
-          if((row*5+col*7)%4===(heavy?3:0))continue;
-          const x=sign*(.155+col*.033),y=.265-row*.035,
-                z=.414-Math.abs(x)*.12;
-          if(y>.15&&col<3)continue; // keep the upper lip clear
-          b.voxel(x,y,z,.014+(col%3)*.003,.015,.008,tint);
+    if(facial.sideburns>0){
+      for(const sign of [-1,1])for(let row=0;row<Math.ceil(6*facial.sideburns);row++){
+        b.voxel(sign*.474,.33-row*.049,.31,.045,.050,.026,
+          shadeHair(row,sign));
+      }
+    }
+    if(facial.jaw>0){
+      for(let row=0;row<Math.ceil(3+3*facial.jaw);row++)
+        for(let col=-7;col<=7;col++){
+          const x=col*.048;
+          const middleBias=Math.abs(x)<.14;
+          if(facial.chin<.15&&middleBias&&row>1)continue;
+          const y=.015-row*.039;
+          b.voxel(x,y,.414-Math.abs(x)*.12,.049,.041,.027,
+            shadeHair(row,col));
         }
-      for(let row=0;row<(heavy?6:4);row++)for(let col=-8;col<=8;col++){
-        if((row+col*3)%3===0)continue;
-        b.voxel(col*.039,.054-row*.023,.391-Math.abs(col)*.007,
-          .015,.016,.010,tint);
+    }
+    if(facial.chin>0){
+      const layers=Math.ceil(3+facial.chin*7);
+      for(let row=0;row<layers;row++){
+        const t=row/layers;
+        const width=(facial.pointed?.19:.24)*(1-(facial.pointed?.79:.38)*t);
+        for(let col=-3;col<=3;col++){
+          const x=col*width/3,y=-.115-row*.045;
+          b.voxel(x,y,.447-t*.05,.040+width/8,.052,.025,
+            shadeHair(row,col));
+        }
+      }
+    }
+    if(facial.soul>0){
+      for(let row=0;row<2;row++)for(let col=-1;col<=1;col++){
+        b.voxel(col*.024,.064-row*.025,.485,.023,.028,.019,
+          shadeHair(row,col));
+      }
+    }
+    if(facial.moustache>0){
+      for(const sign of [-1,1])for(let col=0;col<5;col++){
+        const x=sign*(.027+col*.038);
+        const y=.223-(col/5)*.019+(facial.handlebar?col*.009:0);
+        b.voxel(x,y,.506-Math.max(0,col-3)*.012,.042,
+          .030+.01*facial.moustache,.028,shadeHair(col,sign));
+      }
+    }
+    if(facial.stubble>0){
+      const total=Math.round(4+facial.stubble*12);
+      const tint=colorHex(hair,.22);
+      for(const sign of [-1,1])for(let row=0;row<total;row++){
+        for(let col=0;col<8;col++){
+          if((row*5+col*7)%4===0)continue;
+          const x=sign*(.15+col*.042),y=.20-row*.025;
+          if(y<-.11)continue;
+          b.voxel(x,y,.422-Math.abs(x)*.12,
+            .013,.015,.009,tint);
+        }
       }
     }
   }
@@ -152,6 +184,30 @@ export function sculptHairVoxels(head,p){
   const shades=[colorHex(base,-.10),colorHex(base,-.052),colorHex(base,0),
     colorHex(base,.055),colorHex(base,.095)];
   const pigment=(row,col)=>shades[(row*5+col*7+17)%shades.length];
+  // Cropped cuts have their own stepped hair volumes. A high quiff,
+  // asymmetric undercut, spiky silhouette, curly top and crew cut no longer
+  // inherit the same back curtain and helmet-shaped fringe as medium cuts.
+  if(cut>=13&&cut<=19){
+    const height={13:.09,14:.32,15:.25,16:.26,17:.28,18:.11,19:.06}[cut];
+    const thickness=cut===19?2:cut===13?3:5;
+    for(let row=0;row<thickness;row++)for(let col=0;col<11;col++){
+      const u=(col-5)/5,x=u*.492;
+      const swept=cut===15?(1-u)*.062:cut===18?(1-u)*.035:0;
+      const lift=cut===14?.115*(1-u*u):cut===16?.095*Math.abs(Math.sin(col*2.4)):
+        cut===17?.085*Math.sin(col*1.7):0;
+      const y=.94+row*.046+height*.23+lift;
+      const z=-.32+row*.140+swept;
+      if(cut===19&&Math.abs(u)>.75)continue;
+      b.voxel(x,y,z,.084,.047,.137,pigment(row,col),0,0,
+        cut===15?-.18:cut===18?-.32:cut===16?u*.22:0);
+    }
+    if(cut===17)for(let j=0;j<18;j++){
+      const u=(j%6-2.5)/2.5,z=(Math.floor(j/6)-1)*.18;
+      b.voxel(u*.38,1.052+.035*Math.sin(j*2.2),z,
+        .11,.10,.12,pigment(j,4),0,0,Math.sin(j*1.5)*.20);
+    }
+    return b.finish();
+  }
   // Crown: staggered tiles on a gently stepped dome. Visible across front,
   // rear and top; not a flat smooth helmet with a few lines.
   for(let row=0;row<5;row++){
