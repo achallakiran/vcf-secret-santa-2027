@@ -644,32 +644,10 @@ export function buildOffice(count=12){
   block(viewWalls.north,-2.6,.38,front-.09,10.9,.76,.2,0xe6d6cb,false);
   const glass=new THREE.Mesh(new THREE.PlaneGeometry(10.55,2.75),new THREE.MeshPhysicalMaterial({color:0xc6e8f2,metalness:.05,roughness:.07,transmission:.24,transparent:true,opacity:.47,side:THREE.DoubleSide}));
   glass.position.set(-2.72,2.24,front-.18);viewWalls.north.add(glass);
-  // Layered low-poly city skyline viewed through the finite office window:
-  // pastel towers with realistic window rhythm, treetops and warm sunlight.
-  // Kept outside the navigable office as pure environment art.
-  for(let j=0;j<19;j++){
-    const x=-8.05+j*.57,hh=1.25+((j*37)%11)*.22;
-    const z=front-3.55-(j%4)*.55;
-    const w=.48+(j%3)*.14;
-    const shell=[0xa1b8c7,0x8ca9bd,0xb1c0ce,0x93b6ba,0xa2adb8][j%5];
-    block(root,x,hh/2+.52,z,w,hh,.46,shell,false);
-    for(let row=0;row<Math.floor(hh/.33);row++){
-      const wy=.68+row*.33;
-      for(const side of [-1,1]){
-        block(root,x+side*w*.22,wy,z+.247,.08,.12,.015,
-          (j+row)%4===0?0xe6d3ab:0x6f93aa,false);
-      }
-    }
-    if(j%3===0){
-      const tx=x+.12;
-      cyl(root,tx,.65,front-1.75,.085,.09,.6,0x876f59);
-      for(let k=0;k<4;k++){
-        const foliage=ball(root,tx+(k-1.5)*.2,1.2+(k%2)*.12,
-          front-1.8,.39,(k+j)%2?0x6aa77b:0x83b98d);
-        foliage.scale.set(1.03,.76,.76);
-      }
-    }
-  }
+  // No modeled city/towers outside the north window. They clashed with the
+  // detailed hybrid-voxel office art direction and were hard to read from
+  // the elevated gameplay camera. The existing glass and window mullions
+  // remain, opening onto the neutral winter sky backdrop of the scene.
   for(let x=-7.95;x<2.5;x+=1.72)block(viewWalls.north,x,2.28,front-.04,.075,3.25,.11,0x686d7a,false);
   block(viewWalls.north,-2.65,3.55,front-.025,10.7,.10,.15,0x656a73,false);
   block(viewWalls.north,-2.65,.79,front-.025,10.7,.10,.15,0x656a73,false);
