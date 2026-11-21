@@ -560,6 +560,42 @@ function batchOfficeStaticGeometry(root,twinkle,viewWalls){
     root.add(mesh);
     batches++;
   }
+  // Wall decoration is kept in its owning removable wall group. Batch it
+  // independently so the game's wide-camera cutaway still hides the entire
+  // wall, while dozens of new architectural battens do not consume dozens
+  // of draw calls on phones. Twinkling bulbs remain independent.
+  for(const [side,wall] of Object.entries(viewWalls)){
+    const wallGroups=new Map(),wallInverse=wall.matrixWorld.clone().invert();
+    wall.traverse(object=>{
+      if(!object.isMesh||protectedObjects.has(object))return;
+      if(!object.geometry?.userData?.officeInstancing)return;
+      if(!object.material?.isMeshStandardMaterial)return;
+      const position=new THREE.Vector3().setFromMatrixPosition(object.matrixWorld);
+      const chunk=Math.floor(position.z/15);
+      const key=object.geometry.uuid+":"+object.material.uuid+":"+chunk+
+        ":"+(object.castShadow?1:0)+":"+(object.receiveShadow?1:0);
+      if(!wallGroups.has(key))wallGroups.set(key,[]);
+      wallGroups.get(key).push(object);
+    });
+    for(const objects of wallGroups.values()){
+      if(objects.length<3)continue;
+      const first=objects[0];
+      const mesh=new THREE.InstancedMesh(first.geometry,first.material,objects.length);
+      mesh.castShadow=first.castShadow;
+      mesh.receiveShadow=first.receiveShadow;
+      mesh.name="Cutaway "+side+" details x"+objects.length;
+      const matrix=new THREE.Matrix4();
+      objects.forEach((object,i)=>{
+        matrix.multiplyMatrices(wallInverse,object.matrixWorld);
+        mesh.setMatrixAt(i,matrix);
+        object.parent.remove(object);
+      });
+      mesh.instanceMatrix.needsUpdate=true;
+      mesh.computeBoundingSphere?.();
+      wall.add(mesh);
+      batches++;
+    }
+  }
   return batches;
 }
 export function buildOffice(count=12){
