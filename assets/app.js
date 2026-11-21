@@ -270,7 +270,25 @@ $("whatsapp-open-link").addEventListener("click",e=>{
   // window.open asynchronously, which mobile popup blockers can suppress.
 });
 
-function namesById(id){return participants.find(p=>p.id===id)?.display_name||"Unknown";}
+function normalizedParticipantName(name){
+  return String(name||"").trim().replace(/\s+/g," ").toLocaleLowerCase();
+}
+function namesById(id){
+  const p=participants.find(p=>p.id===id);
+  if(!p)return "Unknown";
+  const hasDuplicate=participants.some(other=>other.id!==p.id&&other.is_active&&
+    normalizedParticipantName(other.display_name)===normalizedParticipantName(p.display_name));
+  return hasDuplicate?p.display_name+" ("+(p.desk_key||"ID "+p.id.slice(0,6))+")":p.display_name;
+}
+function privateChildLabel(){
+  const child=player?.myChild;
+  if(!child)return "Awaiting assignment";
+  const peers=player.colleagues||[];
+  const duplicate=peers.some(p=>p.id!==child.id&&
+    normalizedParticipantName(p.name)===normalizedParticipantName(child.name));
+  const target=peers.find(p=>p.id===child.id);
+  return duplicate?child.name+" ("+(target?.desk_key||"ID "+child.id.slice(0,6))+")":child.name;
+}
 function pendingPeople(){
   const taken=new Set(assignments.flatMap(a=>[a.santa_id,a.child_id]));
   return participants.filter(p=>p.is_active&&!taken.has(p.id));
@@ -345,6 +363,10 @@ function renderPeople(){
     name.dataset.label="Name";
     name.title=p.display_name;
     name.append(node("strong","participant-full-name",p.display_name));
+    if(participants.some(other=>other.id!==p.id&&other.is_active&&
+      normalizedParticipantName(other.display_name)===normalizedParticipantName(p.display_name)))
+      name.append(node("small","participant-name-warning",
+        "Duplicate name · "+(p.desk_key||"ID "+p.id.slice(0,6))+" · verify person"));
     if(!p.is_active)name.append(node("small","participant-inactive","Inactive"));
     else if(pendingPeople().some(q=>q.id===p.id))
       name.append(node("small","participant-awaiting","Awaiting Santa draw"));
@@ -754,7 +776,7 @@ async function loadPlayer(){
     itemLine(incoming,niceDate(t.task_date)+" · "+(t.status==="completed"?"✓ ":"○ ")+t.task_text);
   }
   const label=$("child-name");
-  label.textContent=child?(childVisible?child.name:"Identity hidden · tap Reveal"):"Awaiting assignment";
+  label.textContent=child?(childVisible?privateChildLabel():"Identity hidden · tap Reveal"):"Awaiting assignment";
   $("child-toggle").textContent=childVisible?"◉ Hide":"◉ Reveal";
   $("child-toggle").disabled=!child;
   const childWishes=$("child-wishlist");childWishes.replaceChildren();
@@ -917,7 +939,7 @@ $("wishlist-form").addEventListener("submit",run(async e=>{
 $("child-toggle").addEventListener("click",()=>{
   if(!player?.myChild)return;
   childVisible=!childVisible;
-  $("child-name").textContent=childVisible?player.myChild.name:"Identity hidden · tap Reveal";
+  $("child-name").textContent=childVisible?privateChildLabel():"Identity hidden · tap Reveal";
   $("child-toggle").textContent=childVisible?"◉ Hide":"◉ Reveal";
 });
 $("task-form").addEventListener("submit",run(async e=>{
