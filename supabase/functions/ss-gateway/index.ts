@@ -390,7 +390,8 @@ async function adminAction(action:string,data:any){
     return {event,participants:roster,assignments:pairs,codes};
   }
   if(action==="add_participant"){
-    if(event.assignments_locked_at)fail("Assignments locked; participant registration is closed.");
+    if(!["draft","active"].includes(event.status))
+      fail("Participant registration is closed for this event.");
     const name=string(data.display_name,160);
     const desk=string(data.desk_key,30);
     if(!name)fail("Employee name required.");
@@ -425,8 +426,13 @@ async function adminAction(action:string,data:any){
     return {avatar,version:version+1};
   }
   if(action==="edit_participant"){
-    if(event.assignments_locked_at)fail("The roster is locked.");
+    if(!["draft","active"].includes(event.status))fail("The event is closed.");
     if(!validId(data.participant_id))fail("Invalid participant.");
+    // Protect revealed relationships. Newcomers without an assignment can
+    // still edit their own name/desk through the organizer before drawing.
+    const existing=await db("ss_assignments?select=id&event_id=eq."+event.id+
+      "&or=(santa_id.eq."+data.participant_id+",child_id.eq."+data.participant_id+")&limit=1");
+    if(existing?.length)fail("Existing assigned participants cannot be changed.");
     const name=string(data.display_name,160),desk=string(data.desk_key,30);
     if(!name)fail("Name required.");
     const updated=await db("ss_participants?id=eq."+data.participant_id+"&event_id=eq."+event.id,"PATCH",{
@@ -451,7 +457,15 @@ async function adminAction(action:string,data:any){
     }
     fail("No unique code could be generated.");
   }
+  if(action==="assign_pending"){
+    if(!["draft","active"].includes(event.status))fail("Assignments are closed for this event.");
+    // This RPC locks the event row and only draws an independent cycle among
+    // active participants who are neither assigned Santa nor assigned Child.
+    const assigned=await db("rpc/ss_assign_pending","POST",{p_event_id:event.id});
+    return {assigned};
+  }
   if(action==="lock_assignments"){
+    // Compatibility for older client versions. The latest UI never calls this.
     const assigned=await db("rpc/ss_lock_assignments","POST",{p_event_id:event.id});
     return {assigned};
   }
