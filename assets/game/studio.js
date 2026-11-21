@@ -194,22 +194,19 @@ export function mountAvatarStudio(host,appearance){
     const size=tb.getSize(new THREE.Vector3());
     thumbCamera.fov=portrait?36:38;
     if(portrait){
-      // The previous formula centered a portrait relative to the FULL BODY
-      // bounds, frequently cutting off the hairline, face, or both (especially
-      // for chotis). Instead frame around the true head pivot and reserve
-      // vertical space for its highest hair volume and both cheeks.
-      const headWorld=sample.head.getWorldPosition(new THREE.Vector3());
-      const headScale=sample.head.getWorldScale(new THREE.Vector3());
+      // Frame crown, jaw and upper braid without cutting the forehead.
+      const pivot=sample.head.getWorldPosition(new THREE.Vector3());
+      const scale=sample.head.getWorldScale(new THREE.Vector3());
       const headBox=new THREE.Box3().setFromObject(sample.head);
-      center.set(headWorld.x,headWorld.y+.38*headScale.y,headWorld.z);
-      const top=Math.max(1,headBox.max.y-center.y);
-      const bottom=Math.max(.72,center.y-headWorld.y+.24*headScale.y);
-      const visibleHeight=Math.max(1.95,2*Math.max(top,bottom)+.30);
-      const verticalDistance=visibleHeight/(2*Math.tan(THREE.MathUtils.degToRad(thumbCamera.fov)/2));
-      const horizontalDistance=(Math.max(1.35,headBox.max.x-headBox.min.x)+.30)/
-        (2*Math.tan(THREE.MathUtils.degToRad(thumbCamera.fov)/2)*(thumbWidth/thumbHeight));
-      const dist=Math.max(verticalDistance,horizontalDistance)*1.12;
-      thumbCamera.position.set(center.x+dist*.055,center.y+dist*.025,center.z+dist*.999);
+      const cut=Number(props.hairstyle)||0;
+      const top=headBox.max.y+.19*scale.y;
+      const bottom=pivot.y-(cut>=21&&cut<=23?.66:.48)*scale.y;
+      center.set(pivot.x,(top+bottom)/2,pivot.z);
+      const vfov=THREE.MathUtils.degToRad(thumbCamera.fov);
+      const dist=Math.max((top-bottom)*1.28/(2*Math.tan(vfov/2)),
+        (headBox.max.x-headBox.min.x+.26*scale.x)*1.23/
+        (2*Math.tan(vfov/2)*thumbCamera.aspect));
+      thumbCamera.position.set(center.x+dist*.022,center.y+dist*.012,center.z+dist);
     }else{
       const v=size.y/(2*Math.tan(THREE.MathUtils.degToRad(thumbCamera.fov)/2))*1.37;
       const h=Math.max(size.x,size.z)/(2*Math.tan(THREE.MathUtils.degToRad(thumbCamera.fov)/2)*(thumbWidth/thumbHeight))*1.32;
