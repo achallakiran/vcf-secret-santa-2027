@@ -1,19 +1,13 @@
 import * as THREE from "three";
-import {buildOffice} from "./office.js?v=braid-camera-v1";
+import {buildOffice} from "./office.js?v=real-desk-clues-v1";
 import {createAvatar,avatarFromPerson} from "./avatar.js?v=face-refine-v4-studio-qa-v1";
 import {createOfficeLife} from "./office-life.js?v=studio-qa-v1";
 
 /* A responsive office runtime. 3D art and camera are independent from the existing Supabase UI. */
 const UP=new THREE.Vector3(0,1,0);
-// User-orbitable camera presets. A mode changes radius/pitch/framing, not the
-// direction a user is looking; rotating never unexpectedly snaps on preset change.
-const MODES={
-  // Follow the player, not the distant workstations. The main camera is now
-  // an elevated three-quarter view with the full avatar near screen center.
-  three:{distance:10.1,pitch:1.04,ahead:.34,fov:47},
-  close:{distance:6.5,pitch:.88,ahead:.18,fov:50},
-  wide:{distance:17.5,pitch:1.17,ahead:.42,fov:50}
-};
+// Single wide, elevated overview. Drag/pinch still allow exploration,
+// without explicit camera perspective options.
+const MODES={wide:{distance:17.5,pitch:1.17,ahead:.42,fov:50}};
 const TWO_PI=Math.PI*2;
 function v2(x,z){return {x,z};}
 function clamp(n,a,b){return Math.max(a,Math.min(b,n));}
@@ -200,9 +194,9 @@ export function mountOffice(host,profile,notice=()=>{}){
   scene.add(sun,sun.target);
   const camera=makeCamera(scene,renderer);
   const ray=new THREE.Raycaster(),pointer=new THREE.Vector2(),ground=new THREE.Plane(new THREE.Vector3(0,1,0),0);
-  let office,nav,hero,markers,currentProfile,people=[],mode="three",path=[],clock=new THREE.Clock(),
+  let office,nav,hero,markers,currentProfile,people=[],mode="wide",path=[],clock=new THREE.Clock(),
       running=true,paused=false,lastRefresh=0,requestId=0,selectedAction="hi",interactTarget=null;
-  let cameraYaw=2.65,cameraPitch=MODES.three.pitch,targetCameraPitch=MODES.three.pitch;
+  let cameraYaw=2.65,cameraPitch=MODES.wide.pitch,targetCameraPitch=MODES.wide.pitch;
   let zoom=1,manualOrbit=false;
   const lookAtPoint=new THREE.Vector3(0,1,0);
   const touchPointers=new Map();
@@ -214,8 +208,12 @@ export function mountOffice(host,profile,notice=()=>{}){
     officeLife?.dispose();officeLife=null;
     const oldPos=hero?hero.group.position.clone():null;
     currentProfile=next;
-    const roster=(next?.colleagues||[]).filter(p=>p.id!==next?.me?.id).slice(0,149);
-    const total=Math.max(1,roster.length+1);
+    // Stable roster-index seating; filtering out the viewer must never shift
+    // other colleagues' physical workstations or their hint objects.
+    const allMembers=(next?.colleagues||[]).slice(0,150);
+    const roster=allMembers.map((p,seatIndex)=>({...p,seatIndex}))
+      .filter(p=>p.id!==next?.me?.id);
+    const total=Math.max(1,allMembers.length);
     const newBays=Math.max(4,Math.ceil(total/3));
     if(!office || newBays!==office.bays){
       if(office)scene.remove(office.root);
@@ -245,7 +243,7 @@ export function mountOffice(host,profile,notice=()=>{}){
       scene.add(hero.group);
     }
     roster.forEach((p,i)=>{
-      const seat=office.seats[i+1]||office.seats[0];
+      const seat=office.seats[p.seatIndex]||office.seats[0];
       const appearance=avatarFromPerson({id:p.id||p.name,name:p.name,avatar:p.avatar},i);
       const detailed=createAvatar(appearance);
       detailed.group.position.set(seat.position.x,0,seat.position.z);
@@ -259,11 +257,11 @@ export function mountOffice(host,profile,notice=()=>{}){
       if(text)notice("👋 "+(person.name||"Colleague")+": "+text);
     });
   }
-  function setCamera(id){
-    if(!MODES[id])return;
-    mode=id;
-    targetCameraPitch=MODES[id].pitch;
-    camera.fov=MODES[id].fov;
+  function setCamera(){
+    // Older callers are supported, but no alternate preset is available.
+    mode="wide";
+    targetCameraPitch=MODES.wide.pitch;
+    camera.fov=MODES.wide.fov;
     camera.updateProjectionMatrix();
   }
   function resetCameraOrbit(){
@@ -283,8 +281,8 @@ export function mountOffice(host,profile,notice=()=>{}){
     viewWalls.south.visible=camera.position.z<room.back-.35;
   }
   function cameraGoal(){
-    const cfg=MODES[mode],distanceBase=mode==="wide"?
-      Math.min(25,cfg.distance+Math.max(0,office.bays-4)*.27):cfg.distance;
+    const cfg=MODES.wide,distanceBase=
+      Math.min(25,cfg.distance+Math.max(0,office.bays-4)*.27);
     // Respect the mobile aspect ratio: don't zoom the avatar offscreen on a
     // portrait phone, even if a prior session selected a wide preset.
     const portraitScale=camera.aspect<.70?1.10:1;
@@ -529,7 +527,7 @@ export function mountOffice(host,profile,notice=()=>{}){
     camera.lookAt(lookAtPoint);
     updateCutawayWalls();
   }
-  const prevMode=mode;setCamera(prevMode);render();
+  setCamera();render();
   return {
     get mode(){return mode;},
     setCamera,
@@ -564,7 +562,7 @@ export function mountOffice(host,profile,notice=()=>{}){
     },
     focusAvatar(){
       if(!hero)return;
-      setCamera("close");
+      setCamera();
       // Rotate towards the active camera only while inspecting the appearance.
       const dx=camera.position.x-hero.group.position.x;
       const dz=camera.position.z-hero.group.position.z;
