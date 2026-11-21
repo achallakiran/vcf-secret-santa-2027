@@ -72,7 +72,6 @@ const ACTION_STEPS={
   reassign_all:"Resetting all Santa allocations",
   ceremony_roster:"Preparing the Christmas stage",
   ceremony_details:"Bringing the next participant to the stage",
-  save_santa_hints:"Saving clues for your Secret Child",
   unlock_santa_hint:"Unlocking a mystery clue",
   change_admin_pin:"Updating administrator PIN",
   player_dashboard:"Loading personal dashboard",
@@ -847,7 +846,7 @@ function showPlayerTab(name){
 async function loadPlayer(){
   const firstEntry=!player||$("player").classList.contains("hidden");
   player=await api("player_dashboard");
-  $("player-hint-text").textContent=player.hint?"Daily office hint: "+player.hint:"Daily office clues will be available when the organizer publishes the office scene.";
+  $("player-hint-text").textContent=player.hint?"Office puzzle: "+player.hint:"";
   if(firstEntry){
     $("welcome").classList.add("hidden");
     $("admin").classList.add("hidden");
@@ -890,7 +889,7 @@ async function loadPlayer(){
   $("santa-message").disabled=!child;
   $("save-message").disabled=!child;
   $("gift-purchased").disabled=!child;
-  $("task-form").querySelectorAll("input,button").forEach(x=>x.disabled=!child);
+  $("task-form").querySelectorAll("input,textarea,button").forEach(x=>x.disabled=!child);
 
   // Environment clues are generated from visible workstation props by the game.
   const mystery=player.mystery||null;
