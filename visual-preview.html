@@ -25,11 +25,16 @@
     .kicker{font-size:10px;letter-spacing:.18em;font-weight:800;color:#e4bd83;margin:0 0 5px}
     h1{font-family:Georgia,serif;font-weight:650;font-size:clamp(17px,2.6vw,26px);margin:0 0 5px}
     .subtitle{color:#dbd8ca;font-size:12px;line-height:1.5;margin:0}
-    .head a{
-      border:1px solid #e5cfab;padding:11px 15px;pointer-events:auto;
+    .head .controls{display:flex;gap:5px;pointer-events:auto;flex-wrap:wrap;justify-content:end}
+    .head .controls button,.head a{
+      border:1px solid #e5cfab;padding:11px 12px;
       background:#f1ddad;color:#25382f;text-decoration:none;font-size:12px;
-      border-radius:10px;font-weight:800;white-space:nowrap;
+      border-radius:10px;font-weight:800;white-space:nowrap;cursor:pointer;
     }
+    .head .controls button:not([aria-pressed="true"]){
+      background:#142b2fda;color:#f3e1c8;
+    }
+    .head .controls button:disabled{opacity:.55;cursor:wait}
     .footer{position:absolute;inset:auto 12px 12px;z-index:10;
       display:flex;justify-content:center;pointer-events:none}
     #notice{padding:9px 15px;border:1px solid #f4e0b747;
@@ -57,30 +62,62 @@
       <h1>Christmas Office / Visual Upgrade</h1>
       <p class="subtitle">The same 3D environment used by the actual game, with fictional colleagues. No login or real Santa data.</p>
     </section>
-    <a href="./">Open game</a>
+    <nav class="controls" aria-label="Compare old and new office visualization">
+      <button type="button" id="compare-before" aria-pressed="false">Before</button>
+      <button type="button" id="compare-after" aria-pressed="true">After</button>
+      <a href="./">Open game</a>
+    </nav>
   </div>
   <p id="status" role="status">Preparing the Christmas office…</p>
   <div class="footer"><div id="notice">Drag to look around · Pinch or scroll to zoom · Tap floor to walk</div></div>
   <script type="module">
-    import {mountOffice} from "./assets/game/main.js?v=grand-overhaul-v2";
     const info=document.getElementById("status");
     const notice=document.getElementById("notice");
+    const before=document.getElementById("compare-before");
+    const after=document.getElementById("compare-after");
     const names=["Anjali","Ravi","Nina","Karthik","Maya","Arun",
       "Madhuri","Kabir","Zoya","Meera","Dev","Pooja"];
     const colleagues=names.map((name,i)=>({
       id:"preview-person-"+i,name,desk_key:"P-"+String(i+1).padStart(2,"0"),officeSeat:i,
       avatar:{}
     }));
-    try{
-      const runtime=mountOffice(document.getElementById("scene"),
-        {me:{id:"visual-review-guest",name:"Guest",avatar:{}},colleagues},
-        message=>{if(message)notice.textContent=message;});
-      info.remove();
-      window.addEventListener("pagehide",()=>runtime.dispose(),{once:true});
-    }catch(error){
-      console.error("Unable to render the office visual review",error);
-      info.textContent="Unable to start the 3D preview. Try the main game or update your browser.";
+    const profile={me:{id:"visual-review-guest",name:"Guest",avatar:{}},colleagues};
+    let runtime=null,serial=0,current=null;
+    async function show(version){
+      if(version===current)return;
+      const id=++serial;
+      before.disabled=true;after.disabled=true;
+      info.style.display="block";
+      info.textContent=version==="after"?"Loading the visual overhaul…":"Loading the previous office…";
+      try{
+        const url=version==="after"?
+          "./assets/game/main.js?v=grand-overhaul-v2":
+          "https://cdn.jsdelivr.net/gh/achallakiran/vcf-secret-santa-2027@56172c941983c0c79ec89846f10096c2c760b707/assets/game/main.js";
+        const {mountOffice}=await import(url);
+        if(id!==serial)return;
+        runtime?.dispose();
+        runtime=null;
+        const next=mountOffice(document.getElementById("scene"),profile,
+          message=>{if(message)notice.textContent=message;});
+        runtime=next;
+        current=version;
+        before.setAttribute("aria-pressed",String(version==="before"));
+        after.setAttribute("aria-pressed",String(version==="after"));
+        info.style.display="none";
+        notice.textContent=version==="after"?
+          "New: sculpted wall bays, green-gold walkway, distinct desks, theatrical stage. Drag to explore.":
+          "Previous: smaller desk-color and stationery refinements. Drag to explore.";
+      }catch(error){
+        console.error("Unable to render the selected comparison",error);
+        info.textContent="Unable to load the selected scene. The original game is available using Open game.";
+      }finally{
+        before.disabled=false;after.disabled=false;
+      }
     }
+    before.addEventListener("click",()=>show("before"));
+    after.addEventListener("click",()=>show("after"));
+    window.addEventListener("pagehide",()=>runtime?.dispose(),{once:true});
+    show("after");
   </script>
 </body>
 </html>
