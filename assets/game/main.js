@@ -6,9 +6,9 @@ import {createOfficeLife} from "./office-life.js?v=studio-qa-v1";
 /* A responsive office runtime. 3D art and camera are independent from the existing Supabase UI. */
 const UP=new THREE.Vector3(0,1,0);
 // One slightly closer, lower overview: same visual language and orientation as
-// the approved After preview, but desk/character details read more clearly.
+// the approved After preview, with a small additional zoom toward the character and nearby desks.
 const AFTER_OVERVIEW=Object.freeze({
-  yaw:2.63,pitch:.66,distance:40.5,focusX:0,focusY:1.4,focusZ:12.7
+  yaw:2.63,pitch:.66,distance:38,focusX:0,focusY:1.4,focusZ:12.7
 });
 const MODES={wide:{distance:AFTER_OVERVIEW.distance,
   pitch:AFTER_OVERVIEW.pitch,fov:50}};
