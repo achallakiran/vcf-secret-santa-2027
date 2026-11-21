@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#080d16"/>
   <meta name="description" content="Voxel Secret Santa — a thoughtful Christmas office mystery."/>
   <title>Voxel Secret Santa</title>
-  <link rel="stylesheet" href="./assets/styles.css?v=studio-qa-v1"/>
+  <link rel="stylesheet" href="./assets/styles.css?v=face-refine-v4"/>
 </head>
 <body>
   <div class="snow" id="snow" aria-hidden="true"></div>
@@ -142,6 +142,8 @@
                 <input type="hidden" id="avatar-facialHair" value="none"/>
                 <input type="hidden" id="avatar-glassesStyle" value="none"/>
                 <input type="hidden" id="avatar-glassesColor" value="0"/>
+                 <input type="hidden" id="avatar-bindiStyle" value="none"/>
+                 <input type="hidden" id="avatar-bindiColor" value="0"/>
                 <input type="checkbox" id="avatar-glasses"/>
               </div>
               <section data-studio-panel="look" class="atelier-panel" aria-labelledby="atelier-category-title">
@@ -173,11 +175,15 @@
                 <div id="avatar-bottomColor-options" class="atelier-swatch-grid" role="group" aria-label="Lower clothing color"></div>
               </section>
               <section data-studio-panel="accessories" class="atelier-panel hidden">
-                <p class="atelier-description">Choose spectacles shape and frame color. The tiles show eyewear only.</p>
+                <p class="atelier-description">Select spectacles and bindi styles with their own colors. Tiles show only the accessory.</p>
                 <div class="atelier-option-heading">Spectacles shape</div>
                 <div id="avatar-glassesStyle-options" class="atelier-card-grid" role="group" aria-label="Spectacles shapes"></div>
                 <div class="atelier-option-heading">Spectacles frame color</div>
                 <div id="avatar-glassesColor-options" class="atelier-swatch-grid" role="group" aria-label="Spectacles frame colors"></div>
+                 <div class="atelier-option-heading">Bindi style</div>
+                 <div id="avatar-bindiStyle-options" class="atelier-card-grid" role="group" aria-label="Bindi shapes"></div>
+                 <div class="atelier-option-heading">Bindi color</div>
+                 <div id="avatar-bindiColor-options" class="atelier-swatch-grid" role="group" aria-label="Bindi colors"></div>
               </section>
               <section data-studio-panel="footwear" class="atelier-panel hidden">
                 <p class="atelier-description">Choose the shoes your character wears around the office.</p>
@@ -298,6 +304,6 @@
   <script type="importmap">
     {"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js"}}
   </script>
-  <script type="module" src="./assets/app.js?v=studio-qa-v1"></script>
+  <script type="module" src="./assets/app.js?v=face-refine-v4"></script>
 </body>
 </html>
