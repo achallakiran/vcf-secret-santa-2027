@@ -1,7 +1,8 @@
 import * as THREE from "three";
 import {decorateWorkstation,addWarmOfficeDetails} from "./environment-art.js?v=visual-sculpt-v3";
 import {officeTileMaterial,applyOfficeTileRepeat,addOfficeLounge} from "./art-surfaces.js?v=visual-sculpt-v3";
-import {getInteriorFinishes} from "./interior-finishes.js?v=interior-art-v1";
+import {getInteriorFinishes} from "./interior-finishes.js?v=visual-upgrade-p1";
+import {deskThemeForSeat,dressWorkstation,dressOfficeArchitecture} from "./office-visual-style.js?v=visual-upgrade-p1";
 // Fully procedural office furniture, lights and festive scenery; no external models.
 const boxGeo=new THREE.BoxGeometry(1,1,1);
 boxGeo.userData.officeInstancing=true;
@@ -403,7 +404,9 @@ function workstation(parent,x,z,i,row,colliders){
   const chairX=x+chairSide*1.13;
   const g=new THREE.Group();g.position.set(x,0,z);parent.add(g);
   const finish=getInteriorFinishes();
-  const oak=finish.maple,white=finish.cabinet;
+  const seatIndex=i*3+({W:0,L:1,R:2}[row]||0);
+  const style=deskThemeForSeat(seatIndex);
+  const oak=finish[style.top],white=finish.cabinet;
   // Three times the old tabletop AREA (0.73×1.52 -> 0.99×3.36).
   // Long axis follows workstation row, leaving real personal work space.
   softBlock(g,0,.76,0,.99,.075,3.36,oak,.12);
@@ -425,9 +428,9 @@ function workstation(parent,x,z,i,row,colliders){
   block(g,0,.18,0,.69,.22,3.04,mat(0xeae5dc));
   // Full privacy partitions on BOTH desk ends plus a rear divider.
   // Ends sit beyond the new top, rather than slicing through the work area.
-  softBlock(g,-chairSide*.485,1.11,0,.052,.65,3.31,finish.divider,.045,false);
+  softBlock(g,-chairSide*.485,1.11,0,.052,.65,3.31,finish[style.divider],.045,false);
   for(const side of [-1,1]){
-    softBlock(g,0,1.10,side*1.69,1.02,.63,.07,finish.divider,.04,false);
+    softBlock(g,0,1.10,side*1.69,1.02,.63,.07,finish[style.divider],.04,false);
     block(g,0,1.43,side*1.69,.99,.023,.086,finish.trim,false);
   }
   // Warm desk-edge accent is an emissive trim, never a point light per desk.
@@ -435,7 +438,8 @@ function workstation(parent,x,z,i,row,colliders){
   // Monitors face the employee (west/east), with long edge of desk fronting the chair.
   const screenX=-left*.19;
   block(g,screenX,.98,-.22,.09,.45,.62,0x343d48);
-  block(g,screenX+left*.05,.99,-.22,.015,.37,.53,mat(i%3?0x6a9cae:0x568c88,{emissive:0x174459}),false);
+  block(g,screenX+left*.05,.99,-.22,.015,.37,.53,
+    mat(style.ink,{emissive:0x163a42,roughness:.22}),false);
   block(g,screenX,1.02,-.22,.03,.22,.23,0x1d5470,false);
   block(g,screenX,1.17,-.22,.035,.09,.12,0xb0c8d0,false);
   block(g,screenX,.83,-.22,.055,.10,.05,0x5b6674);
@@ -472,11 +476,16 @@ function workstation(parent,x,z,i,row,colliders){
     block(g,-.15,.84,.51,.25,.04,.23,0xc76161);
     ball(g,-.15,.91,.51,.08,0x93ad65);
   }
-  // A second monitor, document tray and a small desk light occupy the
-  // expanded surface rather than leaving most of the 3x desk empty.
-  block(g,screenX,.99,.83,.09,.44,.64,0x343d48);
-  block(g,screenX+left*.051,1.0,.83,.015,.36,.53,
-    mat(i%2?0x648d9b:0x5f8b78,{emissive:0x173b39}),false);
+  // Three monitor configurations: landscape pair, portrait companion or
+  // low-profile secondary display. All retain the same workstation footprint.
+  const displayMode=seatIndex%3,secondTall=displayMode===1,
+        secondLow=displayMode===2;
+  const screenHeight=secondTall?.60:secondLow?.27:.44,
+        screenWidth=secondTall?.41:secondLow?.72:.64;
+  const screenY=.78+screenHeight/2+.04;
+  block(g,screenX,screenY,.83,.09,screenHeight,screenWidth,0x343d48);
+  block(g,screenX+left*.051,screenY,.83,.015,screenHeight-.08,screenWidth-.11,
+    mat(style.ink,{emissive:0x163b41,roughness:.31}),false);
   block(g,screenX,.81,.83,.055,.08,.055,0x53606c);
   block(g,chairSide*.16,.818,-1.12,.30,.032,.38,0xa1b4bf,false);
   for(let sheet=0;sheet<3;sheet++)
@@ -485,10 +494,12 @@ function workstation(parent,x,z,i,row,colliders){
   const lampNeck=cyl(g,-chairSide*.13,1.01,1.28,.020,.020,.29,0x847c70,8);
   lampNeck.rotation.z=.21;
   ball(g,-chairSide*.08,1.18,1.26,.09,mat(0xffe6b8,{emissive:0xe0ac6b}),1);
-  const seatIndex=i*3+({W:0,L:1,R:2}[row]||0);
   decorateWorkstation(g,{seatSide:chairSide,index:seatIndex}, {block,ball,cyl,mat});
+  // Art direction lives in a reusable appearance layer and never moves the
+  // Santa hint prop in the far desk corner at z=1.29.
+  dressWorkstation(g,{seatIndex,chairSide,finish},{block,softBlock,ball,mat});
   decorateClueDesk(g,seatIndex,chairSide);
-  chair(parent,chairX,z,facing,i);
+  chair(parent,chairX,z,facing,seatIndex);
   colliders.push({x,z,hx:.57,hz:1.79});
   colliders.push({x:chairX,z,hx:.36,hz:.43});
   return {position:{x:chairX,z:z-.08},facing,row,index:i};
@@ -811,6 +822,9 @@ export function buildOffice(count=12){
   },{block,ball,cyl,mat});
   addOfficeLounge(root,{rowZ,bays,partyStart,colliders,room:{left,right,front,back}},
     {softBlock,block,ball,cyl,plant,mat});
+  // Wall/floor visual dressing never changes seats, clues or walkable space.
+  dressOfficeArchitecture(root,{left,right,front,partyStart,bays,rowZ,viewWalls},
+    {softBlock,block,ball,mat});
   const optimizedBatches=batchOfficeStaticGeometry(root,twinkle,viewWalls);
   return {root,colliders,seats,spawn,bays,optimizedBatches,
     // Structural wall passages are not additional explorable rooms.
