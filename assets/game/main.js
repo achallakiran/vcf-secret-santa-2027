@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import {buildOffice} from "./office.js?v=grand-overhaul-v2";
+import {buildOffice} from "./office.js?v=grand-overhaul-v3";
 import {createAvatar,avatarFromPerson} from "./avatar.js?v=face-refine-v4-studio-qa-v1";
 import {createOfficeLife} from "./office-life.js?v=studio-qa-v1";
 
