@@ -280,8 +280,15 @@ function officeEnvironmentClues(santaId:string,roster:any[]):string[]{
   const seatIndex=roster.findIndex((p:any)=>p.id===santaId);
   if(seatIndex<0)return [];
   const decor=deskDecorForIndex(seatIndex);
+  // These context objects are placed by buildOffice(): a west-wall wreath
+  // for every fifth row, and planted aisle edges for every third row.
   const bank=decor.bank===0?"near the west wall":
     "in the central workstations";
+  const nearby=decor.bank===0&&decor.row%5===0?
+    "There is a Christmas wreath on the wall beside your Santa's desk.":
+    decor.row%3===0?
+    "There are leafy potted plants along your Santa's workstation row.":
+    "Your Santa's workstation is "+bank+".";
   const objects:Record<string,string>={
     apple:"a red apple with a tiny green leaf",
     coffee:"a coffee mug",
@@ -296,7 +303,7 @@ function officeEnvironmentClues(santaId:string,roster:any[]):string[]{
   const bankName=["west-wall desk","left desk of the central island",
     "right desk of the central island"][decor.bank];
   return [
-    "Your Santa's workstation is "+bank+".",
+    nearby,
     "Look for "+objects[decor.kind]+" on your Santa's desk.",
     "Their desk is in workstation row "+(decor.row+1)+", at the "+bankName+"."
   ];
