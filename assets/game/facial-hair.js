@@ -1,3 +1,12 @@
+export const BINDI_STYLES=Object.freeze([
+  ["none","No bindi"],["small-round","Small round"],["medium-round","Classic round"],
+  ["oval","Long oval"],["diamond","Diamond"],["ornate","Decorative"]
+]);
+export const BINDI_COLORS=Object.freeze([
+  0xb2273d,0x7e1830,0x242128,0x34764f,0x365ba4,0xd9a92e,
+  0xf2ece2,0x8b508d
+]);
+
 /** Shared, declarative facial-hair vocabulary.
  * Used by both the modeled meshes and fine microvoxels, so the option label,
  * silhouette and saved value always describe the same style. */
