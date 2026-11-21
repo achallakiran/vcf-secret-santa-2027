@@ -1396,3 +1396,255 @@ body.office-playing #player-menu textarea{
   display:block;margin-top:4px;font-size:11px;font-weight:720;
   color:#a35d28;line-height:1.3;
 }
+
+
+/* Stage controls occupy a deliberate organizer dashboard section. */
+.admin-event-tools{
+  display:grid;grid-template-columns:1.25fr 1fr;gap:16px;
+  align-items:stretch;margin:22px 0 6px;
+}
+.admin-tool-card{
+  border:1px solid #d4bdbc;border-radius:17px;
+  background:linear-gradient(145deg,#fff9f1,#f6e7e7);
+  padding:21px;color:#493345;display:flex;flex-direction:column;
+}
+.admin-tool-card h3{margin:3px 0 9px;color:#553444;font-size:19px}
+.admin-tool-card p:not(.eyebrow){line-height:1.55;font-size:12px;color:#765668;margin:0 0 16px}
+.admin-tool-card .eyebrow{color:#b06772}
+.admin-tool-card button{align-self:center;margin-top:auto;min-height:43px}
+.admin-tool-card.stage-tool-card{
+  background:radial-gradient(ellipse at 95% 0%,#d4d8b8,#f9eee6 50%,#fff8f2);
+  border-color:#d0c09b;
+}
+.admin-tool-card.redraw-tool-card{
+  background:linear-gradient(145deg,#fff8f3,#f6eae8);
+  border-color:#e5cbc2;
+}
+.admin-danger{color:#9b3142!important;border:1px solid #d9a4aa!important;
+  background:#fff4f2!important;font-weight:800;}
+.admin-danger:hover{background:#fce4e0!important}
+.admin-danger:disabled{opacity:.4;cursor:not-allowed}
+.roster-delete{border-color:#8c5960!important;color:#cc8f90!important}
+.roster-delete:hover{background:#6e333e!important;color:#fff!important}
+
+/* Secret Santa-written hints, in the same warm notebook as character styling. */
+#player-menu .santa-hint-grid{margin-top:17px;align-items:start;gap:16px}
+#player-menu .santa-hint-grid>section{
+  border:1px solid #e9c9c5;background:#fffaf7;min-width:0;
+  border-radius:15px;padding:clamp(15px,2vw,22px);
+  box-shadow:0 11px 25px #9c6b7650;
+}
+#player-menu .santa-hint-grid h4{font-size:17px;line-height:1.3;margin:4px 0 11px;color:#774659}
+#player-menu .santa-hint-grid .personal-list{min-height:50px}
+#player-menu .santa-hint-grid .personal-item{border-left:3px solid #c98b96!important}
+#player-menu .santa-hint-form{display:grid;gap:9px}
+#player-menu .santa-hint-form label{display:grid;gap:5px;color:#775568;font-size:11px;font-weight:730}
+#player-menu .santa-hint-form input{
+  width:100%;border:1px solid #dcc4ca;background:white;border-radius:9px;
+  min-height:43px;color:#5c3449;padding:9px 11px;font-size:13px;
+}
+#player-menu .santa-hint-form input:disabled{background:#f3e7e6;color:#9c6c7d}
+#player-menu .santa-hint-form button{justify-self:start;margin-top:6px}
+#player-menu #hint-unlock-status{margin:12px 0;line-height:1.55}
+
+/* Full-screen theatrical organizer presentation. No participant can open it. */
+.ceremony-dialog{
+  box-sizing:border-box;position:fixed;inset:0;
+  width:min(1520px,calc(100vw - 20px));max-width:none;
+  height:min(940px,calc(100dvh - 20px));max-height:none;
+  padding:0;border:1px solid #c79c6d;border-radius:20px;
+  color:#fef4e6;background:#121321;
+  box-shadow:0 25px 130px #040207e0;overflow:hidden;
+}
+.ceremony-dialog::backdrop{background:#04030cf0;backdrop-filter:blur(15px)}
+.ceremony-dialog .hidden{display:none!important}
+.ceremony-topbar{
+  height:82px;box-sizing:border-box;display:flex;align-items:center;
+  justify-content:space-between;gap:12px;padding:13px 24px;
+  background:linear-gradient(125deg,#37182c,#251627 58%,#122b2d);
+  border-bottom:1px solid #97714f;
+}
+.ceremony-super{display:block;color:#e2b673;font-weight:830;
+  font-size:10px;letter-spacing:.22em}
+.ceremony-topbar h2{margin:5px 0 0;font-family:Georgia,serif;
+  font-size:clamp(20px,2.6vw,33px);font-weight:700;color:#fff1ce}
+.ceremony-close{
+  min-width:44px;min-height:44px;border-radius:12px;
+  border:1px solid #85596c;background:#371b2d;color:#ffe4db;
+  font-size:19px;cursor:pointer
+}
+.ceremony-layout{
+  display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);
+  height:calc(100% - 82px);min-height:0;
+}
+.ceremony-theatre{
+  position:relative;min-width:0;overflow:hidden;
+  background:
+    radial-gradient(ellipse at 50% 74%,#b07b5630 0%,transparent 48%),
+    linear-gradient(155deg,#39233b 0%,#1d182c 46%,#0f1524 100%);
+  isolation:isolate;
+}
+.ceremony-theatre::before{
+  content:"";position:absolute;inset:0;pointer-events:none;
+  background:
+    conic-gradient(from 165deg at 33% 1%,transparent 0deg,#fff7a713 16deg,transparent 34deg),
+    conic-gradient(from 164deg at 67% 1%,transparent 0deg,#ffc0a61c 21deg,transparent 44deg),
+    linear-gradient(180deg,#1b112a66,transparent 38%,#06070a62);
+  z-index:1;
+}
+.ceremony-theatre::after{
+  content:"";position:absolute;z-index:3;pointer-events:none;
+  left:0;right:0;bottom:0;height:19%;
+  background:linear-gradient(180deg,transparent,#130b19e8);
+}
+.ceremony-stage-lights{
+  position:absolute;left:0;right:0;top:20px;text-align:center;
+  color:#f5d891;letter-spacing:clamp(7px,1.5vw,18px);
+  font-size:clamp(15px,2.3vw,27px);text-shadow:0 0 14px #ffdf72;
+  z-index:5;pointer-events:none;
+}
+.ceremony-curtain{
+  position:absolute;top:0;bottom:0;width:16%;z-index:2;
+  pointer-events:none;
+  background:repeating-linear-gradient(95deg,#4c0f2b,#961b3e 19%,#6c1432 34%,#470d2b 50%);
+  box-shadow:inset -12px 0 32px #19000ba6,12px 0 28px #0f081ca0;
+}
+.ceremony-curtain-left{left:0;clip-path:polygon(0 0,100% 0,63% 100%,0 100%)}
+.ceremony-curtain-right{right:0;transform:scaleX(-1);clip-path:polygon(0 0,100% 0,63% 100%,0 100%)}
+.ceremony-portrait-host{
+  position:absolute;inset:0;z-index:2;min-width:0;min-height:0;
+  display:grid;place-items:center;
+}
+.ceremony-avatar-fallback{
+  color:#f2c882;font-weight:900;font-size:clamp(17px,3vw,30px);
+  text-align:center;text-shadow:0 5px 22px #000;
+}
+.ceremony-nameplate{
+  position:absolute;left:6%;right:6%;bottom:5%;
+  z-index:6;text-align:center;display:grid;justify-items:center;
+  pointer-events:none;
+  text-shadow:0 4px 16px #000;
+}
+.ceremony-nameplate span:first-child{
+  color:#f1c77c;font-size:10px;font-weight:840;letter-spacing:.22em;
+}
+.ceremony-nameplate strong{
+  font-family:Georgia,serif;font-weight:760;
+  font-size:clamp(28px,4.6vw,64px);line-height:1.1;margin:7px 0;
+  color:#ffefd1;
+}
+.ceremony-nameplate span:last-child{color:#dfbaa0;font-size:12px;letter-spacing:.16em}
+.ceremony-side{
+  display:flex;flex-direction:column;min-width:0;min-height:0;
+  background:linear-gradient(140deg,#faf0e5,#f5e7e5 64%,#ebdfeb);
+  color:#3b2939;
+}
+.ceremony-select-bar{
+  padding:14px 18px;display:flex;align-items:center;
+  justify-content:space-between;gap:11px;flex-wrap:wrap;
+  background:#fff7f0;border-bottom:1px solid #e3c8bd;
+}
+.ceremony-select-bar label{display:grid;gap:5px;font-size:10px;font-weight:850;color:#8b6071}
+.ceremony-select-bar select{
+  font-size:13px;border:1px solid #d6aead;border-radius:9px;
+  background:#fff;color:#4b3340;padding:10px;min-width:180px;max-width:100%;
+}
+#ceremony-spotlight-state{font-size:10px;color:#936777;
+  font-weight:750;letter-spacing:.06em}
+.ceremony-scroll{flex:1;min-height:0;overflow-y:auto;padding:18px;overscroll-behavior:contain}
+.ceremony-story-card,.ceremony-guess-panel{
+  border:1px solid #e5d0c9;border-radius:13px;
+  background:#fffbf6;padding:15px 17px;margin-bottom:13px;
+  box-shadow:0 6px 18px #6b375b14;
+}
+.ceremony-story-card h3,.ceremony-guess-panel h3{
+  margin:0 0 10px;font-size:15px;font-weight:800;color:#694052;
+}
+.ceremony-story-list{display:grid;gap:7px}
+.ceremony-story-item{
+  border-left:3px solid #cd9a71;background:#fff5ea;
+  padding:8px 11px;border-radius:5px;line-height:1.5;
+  font-size:13px;color:#614252;overflow-wrap:anywhere;
+}
+.ceremony-story-empty{font-style:italic;color:#9a7686;font-size:12px;line-height:1.5}
+.ceremony-message{white-space:pre-wrap;overflow-wrap:anywhere;
+  font-size:13px;color:#70485b;line-height:1.7;margin:3px 0}
+.ceremony-clue-heading{display:flex;align-items:start;justify-content:space-between;gap:10px}
+.ceremony-clue-heading h3{margin:0 0 10px}
+.ceremony-clue-heading .small-outline{
+  flex-shrink:0;padding:8px 10px;border-color:#dfbcc0;color:#974967;
+  background:#fff4f2
+}
+.ceremony-guess-panel{background:linear-gradient(135deg,#fff1df,#f6e6eb)}
+.ceremony-guess-panel p{font-size:12px;color:#8c6778;line-height:1.6;margin:4px 0 13px}
+.ceremony-guess-panel input{
+  box-sizing:border-box;width:100%;background:#fffdf8;border:1px solid #d4b6b4;
+  border-radius:9px;padding:12px;color:#512e41;font-size:14px;
+}
+.ceremony-reveal-btn{
+  width:100%;min-height:47px;margin-top:12px;border-radius:11px;
+  border:1px solid #a77d3f;cursor:pointer;font-size:14px;font-weight:840;
+  color:#422b20;background:linear-gradient(#ffe2a5,#edb874);
+  box-shadow:0 5px 18px #b778503f;
+}
+.ceremony-reveal-btn:disabled{opacity:.45;cursor:not-allowed}
+.ceremony-revealed{
+  margin-top:15px;padding:16px;text-align:center;
+  border:1px solid #dfb96e;border-radius:10px;
+  background:radial-gradient(circle at top,#fff2c0,#fff8e7);
+  box-shadow:0 7px 24px #be98523d;animation:ceremony-reveal-appear .5s ease both;
+}
+.ceremony-revealed span{display:block;color:#99632b;font-weight:800;
+  letter-spacing:.19em;font-size:10px}
+.ceremony-revealed strong{
+  display:block;margin:8px 0 5px;color:#773a59;
+  font-family:Georgia,serif;font-size:clamp(21px,3vw,37px);
+}
+.ceremony-revealed p{margin:3px;color:#926a58;font-size:12px}
+@keyframes ceremony-reveal-appear{
+  from{opacity:0;transform:translateY(12px) scale(.95)}
+  to{opacity:1;transform:translateY(0) scale(1)}
+}
+.ceremony-controls{
+  padding:12px 17px;background:#fff8f1;border-top:1px solid #e9ccc8;
+  display:flex;gap:10px;justify-content:space-between;flex-wrap:wrap;
+}
+.ceremony-controls .small-outline{
+  border-color:#d5b8bb;background:#fff;color:#76465a;
+}
+.ceremony-controls .primary{background:#a54c6c;border-color:#a54c6c}
+.ceremony-controls button:disabled{opacity:.40;cursor:default}
+@media(max-width:960px){
+  .ceremony-layout{grid-template-columns:1fr .96fr}
+}
+@media(max-width:750px){
+  .admin-event-tools{grid-template-columns:1fr}
+  #player-menu .santa-hint-grid{grid-template-columns:1fr}
+  .ceremony-dialog{
+    width:100vw;height:100dvh;border:0;border-radius:0;max-width:none;max-height:none;
+  }
+  .ceremony-topbar{height:66px;padding:10px 13px}
+  .ceremony-layout{
+    grid-template-columns:1fr;grid-template-rows:minmax(200px,40%) minmax(0,1fr);
+    height:calc(100% - 66px);
+  }
+  .ceremony-nameplate strong{font-size:clamp(26px,7vw,43px)}
+  .ceremony-nameplate{bottom:2.5%}
+  .ceremony-scroll{padding:10px}
+  .ceremony-story-card,.ceremony-guess-panel{padding:12px;margin-bottom:10px}
+  .ceremony-select-bar{padding:9px 11px}
+  .ceremony-select-bar select{min-width:155px}
+  .ceremony-controls{padding:9px 11px;gap:8px}
+}
+@media(max-width:460px){
+  .ceremony-layout{grid-template-rows:minmax(190px,35%) minmax(0,1fr)}
+  .ceremony-stage-lights{top:8px}
+  .ceremony-topbar h2{font-size:20px}
+  .ceremony-controls button{flex:1}
+  .ceremony-select-bar label{flex:1;min-width:0}
+  .ceremony-select-bar select{width:100%}
+  #ceremony-spotlight-state{font-size:9px}
+}
+@media(prefers-reduced-motion:reduce){
+  .ceremony-revealed{animation:none}
+}
