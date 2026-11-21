@@ -13,15 +13,29 @@ A holiday office Secret Santa experience, hosted as a static GitHub Pages fronte
 ## Current implementation
 
 - Black Christmas entry screen with animated falling snow, festive title, rules including the suggested ₹500 gift budget and optional Santa tasks.
-- PIN-based organizer interface: create events, register participants with an optional desk, create or rotate four-digit codes, open WhatsApp invitations, generate/lock one-to-one Secret Santa pairings, and change the admin PIN.
+- PIN-based organizer interface: create events, register participants with an optional desk, create or rotate four-digit codes, open WhatsApp invitations, draw one-to-one Secret Santa pairings (and later-arrival cohorts), safely delete participants, guarded global reassignment, and run the organizer-only finale stage, and change the admin PIN.
 - Participant code redemption: signed event-scoped sessions, personal dashboard, editable itemized wishlist.
-- Santa-side interface: see only your Secret Child, read the Child's wishlist, assign dated tasks, tick tasks complete, record gift purchase, write private ceremony message.
-- Child-side interface: read tasks assigned up to the current day, including completion status, without revealing their Santa's identity.
+- Santa-side interface: see only your Secret Child, read their wishlist, assign optional dated tasks, mark gift purchased, write the private ceremony message, and author three anonymous hints.
+- Child-side interface: read tasks assigned up to the current day, see completion status, and optionally unlock the first of three Santa-written clues immediately and subsequent clues after a 24-hour cooldown. Santa identity is never disclosed to the recipient by the hint API.
 - Minimal two-icon player HUD (pause, hint) and pause menu with **Character** and **Personal** tabs.
 - Supabase database: 8 `ss_*` game tables, plus one restricted `ss_auth_guard` table for PIN verification/lockout, and three privileged transaction helpers.
 - Supabase functions: `ss-gateway` is the current API; `ss-organizer` is retired and returns HTTP 410.
 
-**Not implemented yet:** Full production-quality facial morphs, all contemporary Indian wardrobe variations and footwear choices, published office/day scene generation, truthful daily hints, or organizer-controlled final reveal. Phase 2B now includes a working initial avatar editor and secure per-player save, but visual fidelity still needs real-browser review and further polishing.
+**Still to verify:** Full production-quality facial morphs and wardrobe fidelity on real devices, published office-day scenes and automatic office-puzzle hints, and the stage show's WebGL appearance across mobile and desktop. The organizer-controlled final reveal and manually authored Santa-identity clues are implemented; the older daily office-scene hint system is separate and remains dependent on publishing an office day.
+
+## Organizer Santa allocation, deletions and finale (November 2026)
+
+Open the ?admin=1 console and select the event.
+
+- **First draw:** Use **Draw Secret Santas**. Every active participant gives to one colleague and receives from another; no tasks are created.
+- **Later arrivals:** Add colleagues normally, then use **Assign newcomers**. Existing pairings stay unchanged; a single waiting newcomer needs at least one more member. Two-person cohorts weaken anonymity and trigger a UI warning.
+- **Delete:** Each roster row has a 🗑 button. Deletion requires typing DELETE and a second confirmation. The server splices an unprotected participant out of the cycle, revokes their invitation, and refuses removal when it would destroy meaningful wishlists, messages, tasks, gift status or unlocked hints, or create a self-pairing.
+- **Global reassign:** The central **Reassign All Santas** control is intentionally destructive. It asks for confirmation and for typing REASSIGN, then replaces all pairings and clears pair-specific tasks, messages, hints and gift flags. **Do not use this casually once gifting begins.** The interface never performs this automatically.
+- **Christmas Stage Show:** Organizer-only **Open Stage Show** opens a responsive theatrical screen with the existing fully rigged 3D avatar on a spotlight podium. The organizer can select or advance through people, display their wishlist, tasks, Santa's private message, reveal authored hints gradually, record an optional spoken guess, then click **Reveal the Secret Santa** for an animated reveal. The Santa's identity is not rendered in the reveal panel until requested. Stage API actions require an authenticated administrator session.
+- **Anonymous hints:** A Santa can author up to three hints in the Personal notebook; the Child can unlock the first ready hint immediately, and later hints are subject to a 24-hour cooldown. The Child's dashboard contains only unlocked hints. The organizer can show the authored hints during the stage finale. Clues are optional.
+- **Technical:** Migrations 20261121_assign_pending_cohorts.sql, 20261121_prevent_same_name_assignments.sql, and 20261121_ceremony_hint_admin_controls.sql enforce server-side allocation integrity. The ss-gateway function uses server-side authorization; the browser has only a publishable key. assets/game/ceremony-stage.js reuses a WebGL renderer between participants and disposes on close.
+
+**Verification:** Static JS syntax, page element wiring, and server access checks passed; synthetic 4-participant cycles were tested inside rollback-only SQL transactions for draws, safe deletion, clues and cooldown, and guarded reassign. Real-device visual testing is still needed.
 
 ## WhatsApp invitations — temporary recipient prompt
 
@@ -205,7 +219,7 @@ README.md
 
 Uses Supabase project `fwrievuhudjkeffmszqf` (the existing `achallakiran's Project`). Secret Santa tables/functions are prefixed `ss_`. Other applications' existing data, application tables, and Supabase Auth configuration were not modified.
 
-Current `public.ss_events`, `public.ss_participants`, `public.ss_assignments` and code tables have **no live event/participant data** until the organizer creates the first event. The server-generated assignment cycle ensures every participating Santa has a different Child, and everyone receives exactly one Santa.
+The current Secret Santa event has organizer-managed live participants and assignments. Each active participant in a fully allocated event has one Santa and one different Secret Child. The server rejects same-person and same-name pairings, and can form separate cycles for newcomers without changing existing relationships.
 
 ## Verification status
 
