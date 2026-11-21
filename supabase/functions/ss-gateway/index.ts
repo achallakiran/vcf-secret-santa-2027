@@ -269,7 +269,7 @@ async function dashboard(claims:any){
     db("ss_events?select=id,slug,title,status,timezone,gift_budget_recommendation_inr&"+"id=eq."+eventId+"&limit=1"),
     db("ss_participants?select=id,display_name,desk_key,avatar,avatar_version&event_id=eq."+eventId+"&is_active=eq.true&order=created_at.asc"),
     db("ss_participant_private?select=wishlist,wishlist_version&participant_id=eq."+pid+"&event_id=eq."+eventId+"&limit=1"),
-    db("ss_assignments?select=id,child_id,santa_message,gift_purchased,santa_hints&event_id=eq."+eventId+"&santa_id=eq."+pid+"&limit=1"),
+    db("ss_assignments?select=id,child_id,santa_message,gift_purchased,santa_hints,hints_unlocked_count&event_id=eq."+eventId+"&santa_id=eq."+pid+"&limit=1"),
     db("ss_assignments?select=id,santa_hints,hints_unlocked_count,hint_last_unlocked_at&event_id=eq."+eventId+"&child_id=eq."+pid+"&limit=1")
   ]);
   const eventObj=event[0];if(!eventObj)fail("Event not found.",404);
@@ -292,7 +292,7 @@ async function dashboard(claims:any){
     event:{title:eventObj.title,slug:eventObj.slug,status:eventObj.status,timezone:eventObj.timezone,budget:eventObj.gift_budget_recommendation_inr},
     me:{id:pid,display_name:isMine.display_name,avatar:isMine.avatar,avatar_version:isMine.avatar_version||1,wishlist:priv[0]?.wishlist||[],wishlist_version:priv[0]?.wishlist_version||1},
     colleagues:roster.map((p:any)=>({id:p.id,name:p.display_name,desk_key:p.desk_key,avatar:p.avatar})),
-    myChild:outgoing?{id:outgoing.child_id,name:roster.find((p:any)=>p.id===outgoing.child_id)?.display_name||"Secret Child",wishlist:ownChildWishlist?.[0]?.wishlist||[],gift_purchased:outgoing.gift_purchased,message:outgoing.santa_message||"",tasks:ownTasks,hints:outgoing.santa_hints||["","",""]}:null,
+    myChild:outgoing?{id:outgoing.child_id,name:roster.find((p:any)=>p.id===outgoing.child_id)?.display_name||"Secret Child",wishlist:ownChildWishlist?.[0]?.wishlist||[],gift_purchased:outgoing.gift_purchased,message:outgoing.santa_message||"",tasks:ownTasks,hints:outgoing.santa_hints||["","",""],hints_unlocked_count:outgoing.hints_unlocked_count||0}:null,
     mystery:incoming?{
       unlocked:incoming.hints_unlocked_count||0,
       hints:(incoming.santa_hints||[]).slice(0,incoming.hints_unlocked_count||0),
