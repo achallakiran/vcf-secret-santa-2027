@@ -541,10 +541,6 @@ function avatarIdentity(info){
     colleagues:people.map(p=>[p.id,p.name,p.avatar])
   });
 }
-function syncCameraButtons(){
-  const active=officeRuntime?.mode||"three";
-  document.querySelectorAll("[data-camera]").forEach(b=>b.classList.toggle("selected",b.dataset.camera===active));
-}
 async function enterOffice(info){
   if(ADMIN)return;
   const identity=avatarIdentity(info);
@@ -567,15 +563,12 @@ async function enterOffice(info){
   }
   $("office-loading").classList.remove("hidden");
   officeLoading=(async()=>{
-    const module=await import("./game/main.js?v=face-refine-v4-studio-qa-v1");
+    const module=await import("./game/main.js?v=environment-mystery-v1");
     officeRuntime=module.mountOffice($("office-canvas"),info,officeToast);
-    let cam=null;
-    try{cam=localStorage.getItem("vcf-ss-office-camera");}catch{}
-    officeRuntime.setCamera(["three","close","wide"].includes(cam)?cam:"three");
+    officeRuntime.setCamera("wide");
     officeKey=identity;
     avatarBaseline=officeRuntime.getAvatar();
     setAvatarEditor(avatarBaseline);
-    syncCameraButtons();
     $("office-loading").classList.add("hidden");
     officeToast("Tap the floor to move. Tap the hand to perform a random cheerful action.");
   })();
@@ -690,7 +683,6 @@ $("avatar-view").addEventListener("click",()=>{
   previewAvatarNow();
   officeRuntime?.focusAvatar();
   closePlayerMenu();
-  syncCameraButtons();
   officeToast("Inspect your avatar up close. Return to Pause to save this look.");
 });
 $("avatar-reset").addEventListener("click",()=>{
@@ -900,16 +892,7 @@ async function loadPlayer(){
   $("gift-purchased").disabled=!child;
   $("task-form").querySelectorAll("input,button").forEach(x=>x.disabled=!child);
 
-  // Santa can draft three clues for their Child. Only the intended recipient
-  // ever sees clues and only after explicitly unlocking each one.
-  const savedHints=child?.hints||[];
-  for(let i=1;i<=3;i++){
-    const input=$("santa-hint-"+i);
-    input.value=String(savedHints[i-1]||"");
-    input.disabled=!child||(child?.hints_unlocked_count||0)>=i;
-  }
-  $("save-santa-hints").disabled=!child;
-
+  // Environment clues are generated from visible workstation props by the game.
   const mystery=player.mystery||null;
   const revealed=(mystery?.hints||[]).filter(v=>typeof v==="string"&&v.trim());
   const clueBox=$("mystery-hints");clueBox.replaceChildren();
@@ -929,7 +912,7 @@ async function loadPlayer(){
     cooldown?"Next clue available after "+new Intl.DateTimeFormat("en-IN",
       {dateStyle:"medium",timeStyle:"short"}).format(new Date(nextTime))+".":
     nextReady?"The next clue is ready. Reveal it when you wish.":
-    "Your Santa has not written the next hint yet. Try refreshing later.";
+    "No further clue is available at the moment. Refresh later.";
   if(!child){
     itemLine(childWishes,"Your Secret Child's wishlist will appear after the draw.");
     itemLine(myTasks,"No assigned Secret Child yet. Tasks are optional.");
@@ -1068,7 +1051,6 @@ $("player-pause").addEventListener("click",()=>{
   menu.classList.remove("hidden");
   officeRuntime?.setPaused(true);
   showPlayerTab("character");
-  syncCameraButtons();
 });
 $("player-close").addEventListener("click",closePlayerMenu);
 // One tap, one random action. No dropdown or action selection UI.
@@ -1085,17 +1067,6 @@ $("player-action").addEventListener("click",()=>{
   const pick=available[Math.floor(Math.random()*available.length)];
   lastOfficeAction=pick.index;
   officeRuntime.playAction(pick.name);
-});
-document.querySelectorAll("[data-camera]").forEach(b=>b.addEventListener("click",()=>{
-  const cam=b.dataset.camera;
-  if(!["three","close","wide"].includes(cam))return;
-  officeRuntime?.setCamera(cam);
-  try{localStorage.setItem("vcf-ss-office-camera",cam);}catch{}
-  syncCameraButtons();
-}));
-$("camera-reset").addEventListener("click",()=>{
-  officeRuntime?.resetCameraOrbit();
-  officeToast("Camera direction and zoom restored.");
 });
 $("player-tab-character").addEventListener("click",()=>showPlayerTab("character"));
 $("player-tab-personal").addEventListener("click",()=>showPlayerTab("personal"));
@@ -1115,19 +1086,11 @@ $("wishlist-form").addEventListener("submit",run(async e=>{
   await saveWishlist([...player.me.wishlist,{id:crypto.randomUUID(),text}]);
   $("wishlist-form").reset();
 }));
-$("santa-hint-form").addEventListener("submit",run(async e=>{
-  e.preventDefault();
-  if(!player?.myChild)throw Error("Your Secret Child has not been assigned.");
-  const hints=[1,2,3].map(i=>$("santa-hint-"+i).value.trim());
-  await api("save_santa_hints",{hints});
-  await loadPlayer();
-  toast("Anonymous clues saved. Your Secret Child can unlock them gradually.");
-}));
 $("unlock-hint").addEventListener("click",run(async()=>{
   if(!player?.mystery)throw Error("You do not have a Santa assignment yet.");
   await api("unlock_santa_hint");
   await loadPlayer();
-  toast("Your next Secret Santa clue is unlocked.");
+  toast("A new clue from your Santa’s actual office surroundings is unlocked.");
 }));
 $("child-toggle").addEventListener("click",()=>{
   if(!player?.myChild)return;
