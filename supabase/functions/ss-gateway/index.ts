@@ -238,7 +238,7 @@ function sanitizedAvatar(data:unknown){
     const v=Number(r[key]);return Number.isFinite(v)&&v>=min&&v<=max?Math.round(v*100)/100:fallback;
   };
   return {
-    schema_version:3,
+    schema_version:4,
     gender:strVal("gender",["male","female"],"male"),
     outfit:strVal("outfit",["shirt","tshirt","suit","salwar","dress","sweater","jacket","bomber","blazer"],"shirt"),
     bottom:strVal("bottom",["jeans","trousers","leggings","palazzo"],"jeans"),
@@ -249,7 +249,9 @@ function sanitizedAvatar(data:unknown){
     footwear:strVal("footwear",["auto","sneakers","formal","flats","sandals"],"auto"),
     bottomColor:intVal("bottomColor",11,-1),
     shoeColor:intVal("shoeColor",11,-1),
-    facialHair:strVal("facialHair",["none","stubble-light","stubble-full","stubble-heavy","beard-short","beard-full","beard-ear","moustache-pencil","moustache-handlebar","combo-short","combo-full","combo-ear"],"none"),
+    facialHair:strVal("facialHair",["none","moustache-classic","moustache-pencil","moustache-handlebar","soul-patch","beard-goatee","beard-anchor","beard-balbo","beard-vandyke","beard-short","beard-tight","beard-boxed","beard-full","beard-ear","beard-lumberjack","beard-viking","combo-short","combo-full","combo-ear","stubble-light","stubble-full","stubble-heavy"],"none"),
+    bindiStyle:strVal("bindiStyle",["none","small-round","medium-round","oval","diamond","ornate"],"none"),
+    bindiColor:intVal("bindiColor",7),
     glassesStyle:strVal("glassesStyle",["none","round","rectangle","square","aviator","cat-eye"],r.glasses===true?"rectangle":"none"),
     glassesColor:intVal("glassesColor",11),
     glasses:r.glassesStyle!==undefined?r.glassesStyle!=="none":r.glasses===true,
