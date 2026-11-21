@@ -1699,3 +1699,74 @@ body.office-playing #player-menu textarea{
   .ceremony-layout{grid-template-columns:1fr}
   .ceremony-side .ceremony-scroll{padding:10px}
 }
+
+
+/* Task entry: the date input's native minimum size must never compete with
+   the long text field inside a narrow two-column Personal panel. Keep a
+   vertical, intrinsic-width-safe layout on every viewport, including iOS. */
+#player-menu #player-personal .personal-optional-tasks .personal-layout > section {
+  min-width:0;
+  max-width:100%;
+}
+#player-menu #player-personal #task-form {
+  display:grid;
+  grid-template-columns:minmax(0,1fr);
+  gap:12px;
+  width:100%;
+  min-width:0;
+  max-width:100%;
+  margin-top:12px;
+  align-items:stretch;
+}
+#player-menu #player-personal #task-form .task-field {
+  box-sizing:border-box;
+  display:flex;
+  flex-direction:column;
+  gap:7px;
+  min-width:0;
+  width:100%;
+  max-width:100%;
+  color:#75495b;
+  font-size:12px;
+  font-weight:700;
+}
+#player-menu #player-personal #task-form input,
+#player-menu #player-personal #task-form textarea {
+  box-sizing:border-box;
+  display:block;
+  width:100%;
+  min-width:0;
+  max-width:100%;
+  margin:0;
+  border:1px solid #d7b9be;
+  border-radius:10px;
+  background:#fffefa;
+  color:#482b3c;
+  padding:11px 12px;
+  font-size:16px;
+  line-height:1.4;
+  font-family:inherit;
+}
+#player-menu #player-personal #task-form input[type="date"] {
+  min-height:46px;
+  appearance:auto;
+  -webkit-appearance:auto;
+  color-scheme:light;
+}
+#player-menu #player-personal #task-form textarea {
+  min-height:74px;
+  resize:vertical;
+  overflow-wrap:anywhere;
+}
+#player-menu #player-personal #task-form .task-submit {
+  justify-self:start;
+  min-height:43px;
+  padding:10px 18px;
+  white-space:nowrap;
+}
+@media(max-width:480px) {
+  #player-menu #player-personal #task-form .task-submit {
+    width:100%;
+    justify-self:stretch;
+  }
+}
