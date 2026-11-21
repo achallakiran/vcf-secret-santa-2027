@@ -1,4 +1,5 @@
 import {SKIN_COLORS,HAIR_COLORS,OUTFIT_COLORS,FOOTWEAR_OPTIONS} from "./palette.js?v=custom-v1";
+import {FACIAL_HAIR_OPTIONS,BINDI_STYLES,BINDI_COLORS,facialHairShape} from "./facial-hair.js?v=face-refine-v4";
 
 /** One 3D avatar factory for full model and style thumbnails.
  * Face accessories use isolated vector silhouettes, not full portrait thumbnails.
@@ -14,21 +15,15 @@ export function createVisualAvatarEditor({read,choose,studio}){
   ];
   const groups={
     look:[
-      {field:"gender",id:"avatar-gender-options",items:[["female","Female"],["male","Male"]]},
+      {field:"gender",id:"avatar-gender-options",items:[["female","Female"],["male","Male"]],portrait:true},
       {field:"skin",id:"avatar-skin-options",palette:SKIN_COLORS}
     ],
     hair:[
       {field:"hairstyle",id:"avatar-hairstyle-options",items:hairstyles.map((s,i)=>[i,s]),portrait:true},
       {field:"hair",id:"avatar-hair-options",palette:HAIR_COLORS},
-      {field:"facialHair",id:"avatar-facialHair-options",items:[
-        ["none","Clean shaven"],["stubble-light","Light stubble"],["stubble-full","Full face stubble"],
-        ["stubble-heavy","Heavy stubble"],["beard-short","Short beard only"],
-        ["beard-full","Full beard only"],["beard-ear","Full beard to ears"],
-        ["moustache-pencil","Thin moustache"],["moustache-handlebar","Handlebar moustache"],
-        ["combo-short","Short beard + moustache"],["combo-full","Full beard + moustache"],
-        ["combo-ear","Full beard to ears + moustache"]],iconOnly:true}
+      {field:"facialHair",id:"avatar-facialHair-options",items:FACIAL_HAIR_OPTIONS,iconOnly:true}
     ],
-    fashion:[
+        fashion:[
       {field:"outfit",id:"avatar-outfit-options",items:[
         ["salwar","Salwar suit"],["dress","Dress"],["shirt","Shirt"],
         ["tshirt","T-shirt"],["suit","Suit"],["sweater","Festive"],
@@ -42,7 +37,9 @@ export function createVisualAvatarEditor({read,choose,studio}){
       {field:"glassesStyle",id:"avatar-glassesStyle-options",items:[
         ["none","No spectacles"],["round","Round"],["rectangle","Rectangle"],
         ["square","Square"],["aviator","Aviator"],["cat-eye","Cat-eye"]],iconOnly:true},
-      {field:"glassesColor",id:"avatar-glassesColor-options",palette:OUTFIT_COLORS}
+      {field:"glassesColor",id:"avatar-glassesColor-options",palette:OUTFIT_COLORS},
+      {field:"bindiStyle",id:"avatar-bindiStyle-options",items:BINDI_STYLES,iconOnly:true},
+      {field:"bindiColor",id:"avatar-bindiColor-options",palette:BINDI_COLORS}
     ],
     footwear:[
       {field:"footwear",id:"avatar-footwear-options",items:FOOTWEAR_OPTIONS.map(x=>[x,
@@ -58,9 +55,20 @@ export function createVisualAvatarEditor({read,choose,studio}){
   function iconMarkup(field,value,config){
     const fc=OUTFIT_COLORS[config.glassesColor]??OUTFIT_COLORS[0];
     const hc=HAIR_COLORS[config.hair]??HAIR_COLORS[0];
-    const ink="#"+(field==="glassesStyle"?fc:hc).toString(16).padStart(6,"0");
+    const bc=BINDI_COLORS[config.bindiColor]??BINDI_COLORS[0];
+    const hex=v=>"#"+v.toString(16).padStart(6,"0");
+    const ink=hex(field==="glassesStyle"?fc:field==="bindiStyle"?bc:hc);
     const start='<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 76"><rect width="120" height="76" rx="12" fill="#fff4eb"/>';
-    if(value==="none")return start+'<circle cx="60" cy="38" r="19" fill="none" stroke="#ad8295" stroke-width="4"/><path d="M46 52 74 24" stroke="#ad8295" stroke-width="4"/></svg>';
+    if(value==="none")return start+'<circle cx="60" cy="37" r="19" fill="none" stroke="#ad8295" stroke-width="4"/><path d="M46 51 74 23" stroke="#ad8295" stroke-width="4"/></svg>';
+    if(field==="bindiStyle"){
+      let art="";
+      if(value==="small-round")art='<circle cx="60" cy="38" r="8"/>';
+      if(value==="medium-round")art='<circle cx="60" cy="38" r="14"/>';
+      if(value==="oval")art='<ellipse cx="60" cy="38" rx="10" ry="21"/>';
+      if(value==="diamond")art='<rect x="47" y="25" width="26" height="26" transform="rotate(45 60 38)" rx="2"/>';
+      if(value==="ornate")art='<circle cx="60" cy="38" r="12"/><circle cx="32" cy="38" r="5"/><circle cx="88" cy="38" r="5"/><circle cx="60" cy="14" r="4"/>';
+      return start+'<g fill="'+ink+'">'+art+'</g></svg>';
+    }
     if(field==="glassesStyle"){
       let lenses="";
       for(const x of [17,69]){
@@ -72,28 +80,34 @@ export function createVisualAvatarEditor({read,choose,studio}){
       return start+'<g stroke="'+ink+'" stroke-width="5" fill="none" stroke-linejoin="round">'+lenses+
         '<path d="M51 34 Q60 29 69 34 M17 32 H6 M103 32 H114"/></g></svg>';
     }
-    let face="";
-    const beard=value.startsWith("beard")||value.startsWith("combo");
-    const stubble=value.startsWith("stubble");
-    const moustache=value.startsWith("moustache")||value.startsWith("combo");
-    if(beard){
-      const full=value==="beard-full"||value==="combo-full"||value.endsWith("-ear");
-      const ear=value.endsWith("-ear");
-      face='<path d="M'+(ear?'13':'25')+' '+(ear?'12':'22')+' Q17 38 31 51 L43 '+(full?'67':'58')+' Q60 '+(full?'77':'65')+' 77 '+(full?'67':'58')+' L89 51 Q103 38 '+(ear?'107 12':'95 22')+' L83 44 Q60 56 37 44 Z" fill="'+ink+'"/>';
+    const f=facialHairShape(value);
+    let art="";
+    if(f.sideburns){
+      const y=8+10*Math.max(0,1-f.sideburns);
+      art+='<path d="M16 '+y+' Q10 42 25 54 L34 42 Q23 27 26 '+y+' Z M104 '+y+' Q110 42 95 54 L86 42 Q97 27 94 '+y+' Z"/>';
     }
-    if(stubble){
-      const thick=value==="stubble-heavy",dense=value!=="stubble-light";
-      face+='<path d="M23 24 Q16 42 33 57 Q60 71 87 57 Q104 42 97 24 L85 44 Q60 58 35 44 Z" fill="'+ink+'" opacity="'+(thick?.75:dense?.49:.26)+'"/>';
-      for(let i=0;i<(thick?44:dense?28:16);i++){
-        const x=25+(i*17%70),y=30+(i*29%27);
-        face+='<circle cx="'+x+'" cy="'+y+'" r="'+(thick?1.3:.9)+'" fill="'+ink+'" opacity=".65"/>';
-      }
+    if(f.cheeks){
+      const depth=10+12*f.cheeks;
+      art+='<path d="M24 22 L36 31 L44 '+(42+depth*.32)+' L32 '+(55+depth*.35)+' Q14 47 24 22 Z M96 22 L84 31 L76 '+(42+depth*.32)+' L88 '+(55+depth*.35)+' Q106 47 96 22 Z"/>';
     }
-    if(moustache){
-      face+='<path d="M60 32 Q49 17 28 28 Q35 45 53 39 L60 34 Q67 45 85 39 Q92 30 94 '+(value==="moustache-handlebar"?'18':'28')+' Q72 18 60 32 Z" fill="'+ink+'"/>';
-      if(value==="moustache-handlebar")face+='<path d="M28 28 Q12 24 15 12 M94 28 Q108 25 105 12" fill="none" stroke="'+ink+'" stroke-width="5" stroke-linecap="round"/>';
+    if(f.jaw){
+      art+='<path d="M29 49 Q60 '+(63+f.jaw*6)+' 91 49 L84 '+(49-f.jaw*5)+' Q60 '+(59+f.jaw*5)+' 36 '+(49-f.jaw*5)+' Z"/>';
     }
-    return start+face+'</svg>';
+    if(f.chin){
+      const extra=f.chin*17;
+      const width=f.pointed?13:19;
+      art+='<path d="M'+(60-width)+' 48 Q60 52 '+(60+width)+' 48 L'+(60+(f.pointed?4:width*.65))+' '+(51+extra)+' Q60 '+(61+extra)+' '+(60-(f.pointed?4:width*.65))+' '+(51+extra)+' Z"/>';
+    }
+    if(f.soul)art+='<path d="M54 39 L66 39 L63 51 L57 51 Z"/>';
+    if(f.moustache){
+      art+='<path d="M60 34 Q49 24 28 31 Q36 44 53 40 L60 36 Q67 44 84 40 Q94 31 92 '+(f.handlebar?23:31)+' Q71 24 60 34 Z"/>';
+      if(f.handlebar)art+='<path d="M29 32 Q13 27 16 14 M91 32 Q107 27 104 14" stroke="'+ink+'" stroke-width="5" fill="none"/>';
+    }
+    if(f.stubble){
+      art+='<path d="M24 25 Q20 44 36 53 Q60 68 84 53 Q100 44 96 25 L85 37 Q60 60 35 37 Z" opacity="'+(.28+f.stubble*.38)+'"/>';
+      for(let j=0;j<Math.round(f.stubble*34);j++)art+='<circle cx="'+(27+(j*17)%67)+'" cy="'+(36+(j*13)%20)+'" r="1.0"/>';
+    }
+    return start+'<g fill="'+ink+'">'+art+'</g></svg>';
   }
   function swatches(parent,group,config){
     const values=group.allowAuto?[-1,...group.palette.map((_,i)=>i)]:group.palette.map((_,i)=>i);
