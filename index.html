@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#080d16"/>
   <meta name="description" content="Voxel Secret Santa — a thoughtful Christmas office mystery."/>
   <title>Voxel Secret Santa</title>
-  <link rel="stylesheet" href="./assets/styles.css?v=multi-admin-v1"/>
+  <link rel="stylesheet" href="./assets/styles.css?v=notebook-stable-v1"/>
 </head>
 <body>
   <div class="snow" id="snow" aria-hidden="true"></div>
@@ -135,20 +135,21 @@
       </div>
       <div id="office-toast" class="office-toast hidden" role="status" aria-live="polite"></div>
     </div>
-    <section id="player-menu" class="player-menu panel hidden" aria-label="Character studio and pause menu" role="dialog" aria-modal="true">
+    <section id="player-menu" class="player-menu panel hidden" aria-label="Christmas Notebook" role="dialog" aria-modal="true">
       <div class="section-head notebook-toolbar">
         <div class="notebook-heading">
           <p class="eyebrow">CHRISTMAS NOTEBOOK</p>
           <h3 id="player-greeting" class="notebook-accessible-meta">SECRET SANTA</h3>
           <p id="player-event-title" class="notebook-accessible-meta">Christmas office</p>
         </div>
-        <nav class="menu-tabs" aria-label="Notebook sections">
-          <button type="button" class="tab active" id="player-tab-character">Character</button>
-          <button type="button" class="tab" id="player-tab-personal">Personal</button>
+        <nav class="menu-tabs" role="tablist" aria-label="Notebook sections">
+          <button type="button" class="tab active" id="player-tab-character" role="tab" aria-controls="player-character" aria-selected="true">Character</button>
+          <button type="button" class="tab" id="player-tab-personal" role="tab" aria-controls="player-personal" aria-selected="false">Santa Hub</button>
         </nav>
         <button id="player-close" class="small-outline" type="button" aria-label="Close notebook and resume game" title="Close notebook">✕</button>
       </div>
-      <section id="player-character" class="character-studio-section">
+      <div id="notebook-scroll" class="notebook-body" tabindex="-1">
+        <section id="player-character" class="character-studio-section" role="tabpanel" aria-labelledby="player-tab-character">
         <div class="avatar-atelier">
           <nav class="atelier-categories" aria-label="Character styling categories">
             <button type="button" data-studio-tab="look" class="atelier-category active" aria-selected="true"><span class="atelier-category-icon" aria-hidden="true">☺</span><span>Face</span></button>
@@ -253,7 +254,7 @@
           </div>
         </div>
       </section>
-      <section id="player-personal" class="hidden">
+        <section id="player-personal" class="hidden" role="tabpanel" aria-labelledby="player-tab-personal">
         <div class="personal-heading">
           <div>
             <p class="studio-eyebrow">A LITTLE CHRISTMAS NOTEBOOK</p>
@@ -325,7 +326,8 @@
             </section>
           </div>
         </details>
-      </section>
+        </section>
+      </div>
     </section>
   </main>
   <dialog id="admin-avatar-dialog" class="admin-avatar-dialog" aria-label="Edit participant avatar">
@@ -431,6 +433,6 @@
   <script type="importmap">
     {"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js"}}
   </script>
-  <script type="module" src="./assets/app.js?v=multi-admin-v1"></script>
+  <script type="module" src="./assets/app.js?v=notebook-stable-v1"></script>
 </body>
 </html>
