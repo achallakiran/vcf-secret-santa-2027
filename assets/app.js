@@ -584,16 +584,18 @@ function revealClue(){
   if(hints.length){
     const last=hints[hints.length-1];
     const note=available?"You can reveal the next clue when you're ready.":"";
-    showClue("Clue "+hints.length+" of 3",last+(note?"\n"+note:""),available);
+    const daily=player?.hint?"\nToday's note: "+player.hint:"";
+    showClue("Clue "+hints.length+" of 3",last+daily+(note?"\n"+note:""),available);
     return;
   }
   if(available){
-    showClue("Your first Santa clue","Your first clue is ready. Tap Reveal clue to see it.",true);
+    showClue("Your first Santa clue","Your first clue is ready.",true);
     return;
   }
   const next=mystery.next_at?Date.parse(mystery.next_at):0;
   const wait=next>Date.now()?"Next clue available "+new Intl.DateTimeFormat("en-IN",{dateStyle:"medium",timeStyle:"short"}).format(new Date(next))+".":"Your Santa clues aren't ready yet.";
-  showClue("Santa clue",count>=3?"All three clues have been revealed.":wait);
+  showClue("Santa clue",player?.hint?player.hint:count>=3?
+    "All three clues have been revealed.":wait);
 }
 function showOfficeTutorial(){
   if(!player?.me||!player?.event)return;
@@ -609,7 +611,20 @@ function hideOfficeTutorial(){
 }
 $("office-tutorial-close").addEventListener("click",hideOfficeTutorial);
 $("clue-dismiss").addEventListener("click",hideClue);
-$("player-clue").addEventListener("click",revealClue);
+$("player-clue").addEventListener("click",()=>{
+  // The first bulb tap unlocks and immediately displays clue one. Later taps
+  // revisit the current clue; advancing to clue two or three is an explicit
+  // second action, avoiding accidental consumption of 24-hour unlocks.
+  const hints=player?.mystery?.hints||[];
+  if(!hints.length&&updateClueButton().available){
+    void run(async()=>{
+      await api("unlock_santa_hint");
+      await loadPlayer();
+      const latest=player?.mystery?.hints||[];
+      showClue("Clue "+latest.length+" of 3",latest.at(-1)||"Your Santa clue is ready.");
+    })();
+  }else revealClue();
+});
 $("clue-next").addEventListener("click",run(async()=>{
   const {available}=updateClueButton();
   if(!available)throw Error("The next Santa clue isn't ready yet.");
@@ -926,7 +941,8 @@ function showPlayerTab(name){
 async function loadPlayer(){
   const firstEntry=!player||$("player").classList.contains("hidden");
   player=await api("player_dashboard");
-  $("player-hint-text").textContent=player.hint?"Office puzzle: "+player.hint:"";
+  // The daily note is available from the gameplay bulb, not a redundant
+  // Santa Hub mystery/office-puzzle panel.
   if(firstEntry){
     $("welcome").classList.add("hidden");
     $("admin").classList.add("hidden");
