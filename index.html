@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#080d16"/>
   <meta name="description" content="Voxel Secret Santa — a thoughtful Christmas office mystery."/>
   <title>Voxel Secret Santa</title>
-  <link rel="stylesheet" href="./assets/styles.css?v=notebook-stable-v2"/>
+  <link rel="stylesheet" href="./assets/styles.css?v=christmas-hub-v1"/>
 </head>
 <body>
   <div class="snow" id="snow" aria-hidden="true"></div>
@@ -16,11 +16,11 @@
       <div class="hat" aria-hidden="true"><i></i></div>
       <div class="title-wrap"><h1 class="voxel-title"><span class="red">SECRET</span><span class="green">SANTA</span></h1><div class="year" id="hero-year">2026</div></div>
       <form id="entry-form" class="entry-form">
-        <label for="entry-code">YOUR INVITATION CODE</label><p id="entry-event" class="field-note">Enter the code shared by your organizer.</p>
+        <p id="entry-event" class="field-note">Enter the code shared by your organizer.</p>
         <div class="entry-row"><input id="entry-code" type="text" maxlength="4" inputmode="numeric" autocomplete="one-time-code" placeholder="••••" pattern="[0-9]{4}" required aria-label="Four-digit invitation code"/><button type="submit" class="arrow-button" aria-label="Enter office">➜</button></div>
       </form>
     </section>
-    <section class="rules" aria-label="Secret Santa rules"><div class="rule-icon">🎁</div><div><h2>THE SPIRIT OF SECRET SANTA</h2><p>We recommend keeping your gift within <strong>₹500</strong>. Take time to choose something thoughtful for your Secret Child, rather than something expensive.</p><p>Your anonymous Santa may assign you small, fun daily tasks. Enjoy the surprises and look for clues around the office.</p><p class="rule-last">Above all, leave your warm wishes and make your Secret Child feel special!</p></div></section>
+    <section class="rules" aria-label="Secret Santa rules"><div class="rule-icon">🎁</div><div><h2>THE SPIRIT OF SECRET SANTA</h2><p>We recommend keeping your gift within <strong>₹500</strong>. The intention is to buy something thoughtful rather than something expensive.</p><p>Your Santa may assign you small, fun daily tasks. Enjoy the surprises and look for clues around the office.</p><p class="rule-last">Above all, leave your warm wishes and make your Secret Child feel special!</p></div></section>
   </main>
   <main id="admin" class="admin page hidden">
     <header class="admin-header"><a class="back" href="./">← Return to Christmas</a><span>SECRET SANTA · ORGANIZER</span><button id="sign-out" class="small-outline hidden">Sign out</button></header>
@@ -127,7 +127,19 @@
         <small>Spreading Christmas cheer…</small>
       </div>
       <button id="player-pause" class="office-pause" type="button" aria-label="Open pause menu" title="Pause">Ⅱ</button>
+      <button id="player-clue" class="office-clue" type="button" aria-label="View Secret Santa clue" title="Santa clue">💡</button>
       <button id="player-music" class="office-music" type="button" aria-label="Mute Jingle Bells" aria-pressed="false" title="Mute Jingle Bells">🔊</button>
+      <div id="clue-popover" class="clue-popover hidden" role="status" aria-live="polite">
+        <div class="clue-popover-heading"><strong id="clue-popover-title">Santa clue</strong>
+          <button id="clue-dismiss" type="button" aria-label="Close clue" title="Close clue">✕</button>
+        </div>
+        <p id="clue-popover-text"></p>
+      </div>
+      <div id="office-tutorial" class="office-tutorial hidden" role="group" aria-label="How to move around the office">
+        <button type="button" id="office-tutorial-close" class="office-tutorial-close" aria-label="Dismiss tutorial">✕</button>
+        <p>👆 Point and click or tap the floor to move.</p>
+        <p>🔎 Pinch in or out to zoom. Scroll on desktop.</p>
+      </div>
       <div class="office-action-dock">
         <button id="player-action" class="office-action" type="button" aria-label="Perform a random cheerful action" title="Random cheerful action">
           <span id="player-action-symbol" aria-hidden="true">👋</span>
@@ -257,7 +269,7 @@
         <section id="player-personal" class="hidden" role="tabpanel" aria-labelledby="player-tab-personal">
         <div class="personal-heading">
           <div>
-            <p class="studio-eyebrow">A LITTLE CHRISTMAS NOTEBOOK</p>
+            <p class="studio-eyebrow">SANTA HUB</p>
             <h3 id="personal-name"></h3>
             <p id="player-hint-text" class="muted small"></p>
           </div>
@@ -268,17 +280,19 @@
           <section class="personal-card personal-wishlist">
             <span class="personal-card-kicker">01 · FOR MY SECRET SANTA</span>
             <h4>My wishlist</h4>
-            <p class="muted small">Add gift ideas whenever you like. Only the colleague assigned to you as Santa can see these.</p>
+            <p class="muted small">Enter your wishlist. Your Secret Santa can see your wishlist.</p>
             <div id="wishlist-items" class="personal-list"></div>
             <form id="wishlist-form" class="form-row">
-              <label class="grow"><input id="wishlist-input" placeholder="A thoughtful gift idea…" maxlength="240" required aria-label="Add a gift wish"/></label>
+              <label class="grow"><input id="wishlist-input" placeholder="Add to your wishlist" maxlength="240" required aria-label="Add a gift wish"/></label>
               <button class="primary" type="submit" aria-label="Add wishlist item">＋</button>
             </form>
           </section>
           <section class="personal-card personal-child-card">
-            <span class="personal-card-kicker">02 · YOUR SECRET MISSION</span>
-            <h4>My Secret Child <button id="child-toggle" type="button" class="small-outline" aria-label="Privately reveal or hide Secret Child">◉ Reveal</button></h4>
-            <p id="child-name" class="child-name">Not assigned yet</p>
+            <div class="secret-child-reveal-row">
+              <span class="personal-card-kicker">02 · YOUR SECRET CHILD</span>
+              <button id="child-toggle" type="button" class="small-outline" aria-label="Privately reveal or hide Secret Child">◉ Reveal</button>
+            </div>
+            <p id="child-name" class="child-name hidden" aria-live="polite"></p>
             <p class="muted small">This name is visible only to you when you choose Reveal. Your own Santa remains anonymous.</p>
             <p id="personal-budget" class="personal-budget"></p>
             <h5>Their wishlist</h5>
@@ -292,26 +306,16 @@
             </div>
           </section>
         </div>
-        <section class="personal-card hint-card environment-hint-card">
-          <span class="personal-card-kicker">03 · THE OFFICE MYSTERY</span>
-          <h4>🔍 Find your Secret Santa</h4>
-          <p class="muted small">The game discovers clues from objects and decorations around your Santa's workstation. No one needs to write clues. Each hint reveals more of the office mystery.</p>
-          <div id="mystery-hints" class="personal-list" aria-live="polite"></div>
-          <p id="hint-unlock-status" class="muted small"></p>
-          <button type="button" id="unlock-hint" class="small-outline">✦ Reveal the next office clue</button>
-        </section>
-        <details id="optional-tasks" class="personal-optional-tasks">
-          <summary>✦ Optional festive tasks <span>Not needed for Santa allocation or gifting</span></summary>
-          <div class="personal-layout">
-            <section>
-              <h4>Kind challenges from my anonymous Santa</h4>
-              <p class="muted small">Only your Santa chooses and marks these tasks. They are never compulsory.</p>
-              <div id="received-tasks" class="personal-list"></div>
+        <section id="optional-tasks" class="personal-card personal-optional-tasks santa-tasks-card">
+          <span class="personal-card-kicker">03 · SECRET SANTA TASKS</span>
+          <div class="santa-task-columns">
+            <section class="santa-task-group">
+              <h4>Tasks for me from my Secret Santa</h4>
+              <div id="received-tasks" class="personal-list santa-task-list"></div>
             </section>
-            <section>
-              <h4>Challenges I send to my Secret Child</h4>
-              <p class="muted small">Entirely optional. You can give a gift without assigning a single task.</p>
-              <div id="assigned-tasks" class="personal-list"></div>
+            <section class="santa-task-group">
+              <h4>Tasks for my Secret Child</h4>
+              <div id="assigned-tasks" class="personal-list santa-task-list"></div>
               <form id="task-form" class="task-entry-form">
                 <label class="task-field task-date-field" for="task-date">
                   <span>Date</span>
@@ -319,13 +323,13 @@
                 </label>
                 <label class="task-field task-description-field" for="task-text">
                   <span>Task</span>
-                  <textarea id="task-text" rows="2" maxlength="1000" placeholder="A thoughtful or fun challenge…" required></textarea>
+                  <textarea id="task-text" rows="2" maxlength="1000" placeholder="Add a task for your Secret Child…" required></textarea>
                 </label>
-                <button type="submit" class="primary task-submit">＋ Add task</button>
+                <button type="submit" class="primary task-submit">✓ Save task</button>
               </form>
             </section>
           </div>
-        </details>
+        </section>
         </section>
       </div>
     </section>
@@ -433,6 +437,6 @@
   <script type="importmap">
     {"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js"}}
   </script>
-  <script type="module" src="./assets/app.js?v=player-follow-v1"></script>
+  <script type="module" src="./assets/app.js?v=christmas-hub-v1"></script>
 </body>
 </html>
