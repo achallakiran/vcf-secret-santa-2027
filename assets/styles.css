@@ -2291,3 +2291,373 @@ body.office-playing #player-menu textarea{
     padding:6px 3px;
   }
 }
+
+
+/* Christmas 2026: evergreen and cranberry pause notebook, with legible
+   white text. The festive styling is scoped to the playable notebook so
+   the separate organizer avatar editor keeps its own appearance. */
+.player #player-menu.player-menu:has(#notebook-scroll){
+  background:radial-gradient(ellipse 75% 55% at 100% 0%,#66372c 0%,transparent 70%),
+             linear-gradient(140deg,#163f2d,#102a21 59%,#153a2a);
+  border:1px solid #bc9b61;
+  color:#fff;
+  box-shadow:0 24px 90px #081c17d9,inset 0 0 0 1px #e2ce8c20;
+}
+#player-menu .notebook-toolbar{
+  border-bottom:1px solid #98b8a277;
+}
+#player-menu .notebook-heading .eyebrow,
+#player-menu .notebook-toolbar .menu-tabs,
+#player-menu .notebook-toolbar .section-head p,
+#player-menu .notebook-toolbar .section-head h3{
+  color:#fff!important;
+}
+#player-menu .notebook-heading .eyebrow{letter-spacing:.075em}
+#player-menu .notebook-toolbar .menu-tabs .tab{
+  color:#fff;border:1px solid #a5c6ab;
+  background:linear-gradient(145deg,#26583e,#19442f);
+  box-shadow:none;
+}
+#player-menu .notebook-toolbar .menu-tabs .tab.active,
+#player-menu:has(#player-character:not(.hidden)) .notebook-toolbar .menu-tabs .tab.active{
+  color:#fff;background:linear-gradient(135deg,#c03445,#942030);
+  border-color:#f2cbbd;box-shadow:0 3px 13px #641b2880;
+}
+#player-menu .notebook-toolbar #player-close{
+  color:#fff;background:#992739;border:1px solid #d59a9f;
+}
+#player-menu .notebook-toolbar #player-close:hover,
+#player-menu .notebook-toolbar .tab:hover{filter:brightness(1.12)}
+#player-menu .notebook-body{scrollbar-color:#a6bba6 #112b21}
+#player-menu #player-personal,
+#player-menu #player-character{color:#fff}
+#player-menu #player-personal .studio-eyebrow,
+#player-menu #player-personal .personal-heading .studio-eyebrow,
+#player-menu #player-personal .personal-card-kicker{
+  color:#f6dfb1;letter-spacing:.10em;
+}
+#player-menu #player-personal .personal-heading h3,
+#player-menu #player-personal h3,
+#player-menu #player-personal h4,
+#player-menu #player-personal h5{
+  color:#fff!important;
+}
+#player-menu #player-personal .muted,
+#player-menu #player-personal .personal-heading .muted,
+#player-menu #player-personal .personal-budget{
+  color:#d5e8d9;
+}
+#player-menu #player-personal .personal-main-cards > section,
+#player-menu #player-personal .santa-tasks-card{
+  color:#fff;
+  border:1px solid #6c987b;
+  background:linear-gradient(140deg,#1d513a,#163c2e);
+  box-shadow:0 11px 24px #081d1766;
+  border-radius:15px;
+}
+#player-menu #player-personal .personal-main-cards .personal-child-card{
+  background:linear-gradient(135deg,#6f2531,#3b272c 76%,#244330);
+  border-color:#a66a69;
+}
+#player-menu #player-personal .personal-child-card .muted{
+  color:#eee1d8;
+}
+#player-menu #player-personal .personal-card-kicker{
+  color:#f7e0a4;
+}
+#player-menu #player-personal .personal-layout > section,
+#player-menu #player-personal .santa-task-columns > section{
+  color:#fff;background:#163a2b;
+  border:1px solid #548a69;
+  box-shadow:none;
+}
+#player-menu #player-personal .personal-item{
+  color:#fff;background:#214e39;border:1px solid #6b927a;
+  border-radius:10px;
+}
+#player-menu #player-personal .child-name,
+#player-menu #player-personal .personal-field,
+#player-menu #player-personal .personal-layout label,
+#player-menu #player-personal .personal-optional-tasks .task-field,
+#player-menu #player-personal #task-form .task-field{
+  color:#fff;
+}
+#player-menu #player-personal input:not([type="checkbox"]),
+#player-menu #player-personal textarea,
+#player-menu #player-personal #task-form input,
+#player-menu #player-personal #task-form textarea{
+  background:#102f24;color:#fff;
+  border-color:#81a791;color-scheme:dark;
+}
+#player-menu #player-personal input::placeholder,
+#player-menu #player-personal textarea::placeholder{color:#c4ddcb;opacity:.8}
+#player-menu #player-personal input:focus-visible,
+#player-menu #player-personal textarea:focus-visible{
+  outline:2px solid #f2d99c;outline-offset:2px;
+}
+#player-menu #player-personal input[type="checkbox"]{accent-color:#76c98c}
+#player-menu #player-personal .primary,
+#player-menu #player-personal #task-form .task-submit{
+  background:#ae293b;border:1px solid #db8a8a;
+  color:#fff;
+}
+#player-menu #player-personal .small-outline,
+#player-menu #player-personal .personal-heading .small-outline{
+  background:#1f5c40;color:#fff;border:1px solid #99bea2;
+}
+#player-menu #player-personal .personal-action-row .gift-check{
+  color:#fff;background:#234a38;border:1px solid #6f997f;
+}
+#player-menu #player-personal #personal-budget{color:#f6e2b7}
+
+/* Character Atelier: retain detailed 3D previews and editor controls while
+   replacing pink surfaces and pink typography with the Christmas palette. */
+#player-menu .avatar-atelier{color:#fff}
+#player-menu .atelier-categories{
+  background:#143c2b;border:1px solid #629272;
+}
+#player-menu .atelier-category{
+  color:#fff;background:#1e4a37;border-color:#3e7356;
+}
+#player-menu .atelier-category.active,
+#player-menu .atelier-category[aria-selected="true"]{
+  color:#fff;background:#a6283b;border-color:#e2a0a1;
+  box-shadow:0 3px 12px #651b2b88;
+}
+#player-menu .atelier-preview.character-preview-shell{
+  border:1px solid #8da783;
+  background:radial-gradient(ellipse at 42% 40%,#648875 0%,#2e5545 58%,#12372c 100%);
+  box-shadow:inset 0 0 0 1px #e6e0c65c,0 13px 30px #091f1990;
+}
+#player-menu .studio-workbench.atelier-options{
+  color:#fff;background:linear-gradient(150deg,#194934,#103728);
+  border:1px solid #71977a;box-shadow:0 9px 25px #091c1466;
+}
+#player-menu .atelier-options .studio-workbench-heading{
+  border-bottom:1px solid #8bba9777;
+}
+#player-menu .atelier-options .studio-workbench-heading h4{
+  color:#fff!important;
+}
+#player-menu .atelier-options .studio-eyebrow,
+#player-menu .atelier-description,
+#player-menu .atelier-option-heading,
+#player-menu .studio-fields > p,
+#player-menu .studio-holiday-mark,
+#player-menu .atelier-options .studio-save-bar p,
+#player-menu .studio-camera-footer > span,
+#player-menu .camera-gesture-help{
+  color:#e3eddf;
+}
+#player-menu .atelier-choice{
+  color:#fff;background:#27533e;
+  border-color:#5a876b;
+}
+#player-menu .atelier-choice:hover{background:#326449}
+#player-menu .atelier-choice.selected{
+  background:#842a38;border-color:#f4b0ae;box-shadow:0 0 0 1px #e7b28b;
+}
+#player-menu .atelier-choice-art{
+  background:#e8ddc8;
+}
+#player-menu .atelier-choice-label{color:#fff}
+#player-menu .atelier-choice-selected{
+  background:#e5c482;color:#173524;
+}
+#player-menu .atelier-thumb-pending{color:#335f47}
+#player-menu .studio-fields .avatar-slider-grid > label,
+#player-menu .studio-inputs > label{
+  background:#1d4a36;color:#fff;border:1px solid #729b7c;
+}
+#player-menu .studio-fields input,
+#player-menu .studio-fields select{
+  color:#fff;background:#143a2c;border-color:#719b82;color-scheme:dark;
+}
+#player-menu .studio-fields input[type="range"]{accent-color:#c53f50}
+#player-menu .atelier-panel{scrollbar-color:#93bb9f #153e2e}
+#player-menu .atelier-options .studio-save-bar{
+  background:#1a4835;border-top:1px solid #84a990;
+}
+#player-menu .atelier-options .studio-reset,
+#player-menu .atelier-options .studio-save{
+  color:#fff;background:#a22c3b;border:1px solid #d68d8a;
+}
+#player-menu .atelier-options .studio-save{
+  background:#2d774c;border-color:#86b99b;
+}
+#player-menu .atelier-save-bar,#player-menu .studio-save-bar{
+  box-shadow:none;
+}
+#player-menu .studio-camera-footer .camera-option,
+#player-menu .studio-camera-footer #camera-reset{
+  color:#fff;background:#1c5239;border-color:#6d9d7b;
+}
+#player-menu .studio-camera-footer .camera-option.selected{
+  background:#9b2838;border-color:#ebaca3;color:#fff;
+}
+#player-menu .atelier-accessory-only .atelier-choice-art{
+  background:#e8dcc9;
+}
+
+/* Simple, always-open matching task cards and dated rows. */
+#player-menu #player-personal .santa-tasks-card{
+  margin:18px 0 4px;
+  padding:clamp(15px,2vw,22px);
+}
+#player-menu #player-personal .santa-task-columns{
+  display:grid;grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:14px;margin-top:12px;
+}
+#player-menu #player-personal .santa-task-group{
+  min-width:0;
+  padding:16px;background:#15402e;border:1px solid #57876a;
+  border-radius:13px;
+}
+#player-menu #player-personal .santa-task-group h4{
+  color:#fff;margin:0 0 13px;font-size:16px;line-height:1.35;
+}
+#player-menu #player-personal .santa-task-list{display:grid;gap:8px}
+#player-menu #player-personal .santa-task-entry{
+  display:grid;grid-template-columns:auto minmax(0,1fr) auto;
+  gap:9px;align-items:center;
+  padding:10px 12px;min-width:0;
+}
+#player-menu #player-personal .santa-task-date{
+  color:#fff;font-size:11px;font-weight:800;
+  background:#a02a39;border-radius:6px;
+  padding:6px 8px;min-width:52px;text-align:center;
+}
+#player-menu #player-personal .santa-task-text{
+  color:#fff;font-size:12px;line-height:1.4;
+  overflow-wrap:anywhere;min-width:0;
+}
+#player-menu #player-personal .santa-task-status{
+  color:#b9edc2;font-size:11px;white-space:nowrap;
+}
+#player-menu #player-personal .santa-task-entry input[type="checkbox"]{
+  width:19px;height:19px;
+}
+#player-menu #player-personal .santa-task-group #task-form{
+  background:#174730;border-top:1px solid #7b9b77;
+  padding:14px 0 0;margin-top:14px;
+}
+#player-menu #player-personal #task-form input[type="date"]{
+  color-scheme:dark;
+}
+#player-menu #player-personal #task-form button.task-submit{
+  background:#b42b3b;color:#fff;border-color:#e1a19c;
+  min-height:44px;
+}
+#player-menu #player-personal .secret-child-reveal-row{
+  display:flex;justify-content:space-between;
+  align-items:center;gap:10px;margin-bottom:11px;
+}
+#player-menu #player-personal .secret-child-reveal-row .personal-card-kicker{
+  margin:0;
+}
+#player-menu #player-personal .secret-child-reveal-row #child-toggle{
+  white-space:nowrap;min-height:38px;color:#fff;
+  background:#1b6644;border-color:#98c4a1;
+}
+#player-menu #player-personal .child-name:not(.hidden){
+  color:#fff;margin:0 0 12px;
+}
+#player-menu #player-personal #my-assignment-status.hidden{display:none!important}
+
+/* Minimal, closable office tutorial. No full-screen takeover. */
+.office-tutorial{
+  position:absolute;left:50%;top:22%;
+  transform:translateX(-50%);z-index:23;
+  width:min(345px,calc(100vw - 28px));
+  display:grid;gap:7px;
+  padding:15px 38px 15px 17px;
+  background:#163b2ff2;color:#fff;
+  border:1px solid #e0c186;
+  border-radius:15px;
+  box-shadow:0 13px 38px #061b19a8;
+  pointer-events:auto;backdrop-filter:blur(9px);
+}
+.office-tutorial p{font-size:12px;line-height:1.55;margin:0;color:#fff}
+.office-tutorial-close{
+  position:absolute;right:5px;top:5px;
+  width:31px;height:31px;border:0;border-radius:9px;
+  background:#a72f3e;color:#fff;
+  font-size:17px;display:grid;place-items:center;
+}
+.office-clue{
+  position:absolute;z-index:16;
+  top:calc(21px + env(safe-area-inset-top,0px));
+  right:calc(86px + env(safe-area-inset-right,0px));
+  width:47px;height:47px;padding:0;
+  display:grid;place-items:center;
+  color:#fff;background:linear-gradient(145deg,#9b2838,#6e1f2b);
+  border:1.5px solid #f0d0a0;border-radius:13px;
+  font-size:24px;box-shadow:0 5px 17px #16251c88;
+  touch-action:manipulation;
+}
+.office-clue.clue-ready{
+  border-color:#fff3bd;box-shadow:0 0 0 3px #edda8750,0 5px 17px #16251c88;
+}
+.office-clue:disabled{opacity:.62;cursor:default}
+.office-pause{
+  color:#fff;background:linear-gradient(145deg,#1d6a47,#15442f);
+  border-color:#d5e3be;
+}
+.office-music{
+  right:calc(150px + env(safe-area-inset-right,0px));
+  background:linear-gradient(145deg,#195a3e,#153c2c);
+  color:#fff;border-color:#aac9aa;
+}
+.clue-popover{
+  position:absolute;z-index:24;
+  top:calc(81px + env(safe-area-inset-top,0px));
+  right:calc(85px + env(safe-area-inset-right,0px));
+  width:min(330px,calc(100vw - 24px));max-width:100%;
+  padding:14px 15px;
+  background:#173f2ff5;
+  color:#fff;border:1px solid #edcf8f;border-radius:14px;
+  box-shadow:0 14px 30px #0d2219a6;
+  backdrop-filter:blur(9px);
+  pointer-events:auto;
+}
+.clue-popover-heading{
+  display:flex;justify-content:space-between;align-items:center;gap:10px;
+}
+.clue-popover-heading strong{font-size:13px;color:#f4dfab}
+.clue-popover-heading button{
+  width:28px;height:28px;padding:0;border:0;border-radius:8px;
+  background:#9d3040;color:#fff;font-size:14px;
+}
+.clue-popover p{
+  font-size:13px;color:#fff;line-height:1.55;
+  white-space:pre-line;margin:11px 0 6px;overflow-wrap:anywhere;
+}
+.clue-next{
+  min-height:36px;margin:6px 0 0;padding:8px 12px;
+  color:#fff;background:#a3293c;border:1px solid #e6a49b;
+  border-radius:9px;font-size:12px;font-weight:760;
+}
+@media(max-width:700px){
+  #player-menu #player-personal .santa-task-columns{grid-template-columns:1fr}
+  #player-menu #player-personal .santa-task-group{padding:12px}
+  .office-clue{
+    top:calc(18px + env(safe-area-inset-top,0px));
+    right:calc(69px + env(safe-area-inset-right,0px));
+    width:43px;height:43px;font-size:22px;
+  }
+  .office-music{
+    right:calc(119px + env(safe-area-inset-right,0px));
+    top:calc(20px + env(safe-area-inset-top,0px));
+  }
+  .clue-popover{
+    top:calc(74px + env(safe-area-inset-top,0px));
+    right:calc(11px + env(safe-area-inset-right,0px));
+  }
+  .office-tutorial{top:19%}
+}
+@media(max-width:400px){
+  .office-tutorial{top:17%}
+  #player-menu #player-personal .santa-task-entry{grid-template-columns:auto minmax(0,1fr) auto}
+  #player-menu #player-personal .santa-task-date{font-size:10px}
+  #player-menu #player-personal .secret-child-reveal-row .personal-card-kicker{font-size:9px}
+}
