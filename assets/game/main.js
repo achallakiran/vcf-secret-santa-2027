@@ -5,13 +5,13 @@ import {createOfficeLife} from "./office-life.js?v=studio-qa-v1";
 
 /* A responsive office runtime. 3D art and camera are independent from the existing Supabase UI. */
 const UP=new THREE.Vector3(0,1,0);
-// One slightly closer, lower overview: same visual language and orientation as
-// the approved After preview, with a gentle 6.6% zoom and a focus biased slightly toward the player's starting area.
-const AFTER_OVERVIEW=Object.freeze({
-  yaw:2.63,pitch:.66,distance:35.5,focusX:.8,focusY:1.4,focusZ:11.3
+// Keep the elevated orbit, but center the actively controlled avatar rather
+// than the middle of the potentially long office. It never loses its subject.
+const PLAYER_CAMERA=Object.freeze({
+  yaw:2.63,pitch:.60,distance:11.8,focusHeight:1.32,fov:50
 });
-const MODES={wide:{distance:AFTER_OVERVIEW.distance,
-  pitch:AFTER_OVERVIEW.pitch,fov:50}};
+const MODES={wide:{distance:PLAYER_CAMERA.distance,
+  pitch:PLAYER_CAMERA.pitch,fov:PLAYER_CAMERA.fov}};
 const TWO_PI=Math.PI*2;
 function v2(x,z){return {x,z};}
 function clamp(n,a,b){return Math.max(a,Math.min(b,n));}
@@ -219,9 +219,9 @@ export function mountOffice(host,profile,notice=()=>{}){
   const ray=new THREE.Raycaster(),pointer=new THREE.Vector2(),ground=new THREE.Plane(new THREE.Vector3(0,1,0),0);
   let office,nav,hero,markers,currentProfile,people=[],mode="wide",path=[],clock=new THREE.Clock(),
       running=true,paused=false,lastRefresh=0,requestId=0,selectedAction="hi",interactTarget=null;
-  let cameraYaw=AFTER_OVERVIEW.yaw,
+  let cameraYaw=PLAYER_CAMERA.yaw,
       cameraPitch=MODES.wide.pitch,targetCameraPitch=MODES.wide.pitch;
-  let zoom=1,manualOrbit=false,cameraTravelEnabled=false;
+  let zoom=1;
   const lookAtPoint=new THREE.Vector3(0,1,0);
   const touchPointers=new Map();
   let pointerDownPoint=null,pointerDragged=false,pointerHadMultiTouch=false,pinchDistance=0;
@@ -293,11 +293,9 @@ export function mountOffice(host,profile,notice=()=>{}){
     camera.updateProjectionMatrix();
   }
   function resetCameraOrbit(){
-    cameraYaw=AFTER_OVERVIEW.yaw;
-    manualOrbit=false;
+    cameraYaw=PLAYER_CAMERA.yaw;
     zoom=1;
-    cameraTravelEnabled=false;
-    targetCameraPitch=AFTER_OVERVIEW.pitch;
+    targetCameraPitch=PLAYER_CAMERA.pitch;
   }
   function updateCutawayWalls(){
     if(!office?.viewWalls)return;
@@ -310,28 +308,16 @@ export function mountOffice(host,profile,notice=()=>{}){
     viewWalls.south.visible=camera.position.z<room.back-.35;
   }
   function cameraGoal(){
-    // Keep the approved wide composition, now a little closer to the player.
-    // Larger offices extend that view without a separate camera preset.
-    const extraBays=Math.max(0,office.bays-4);
-    const distanceBase=AFTER_OVERVIEW.distance+extraBays*3.75;
-    const portraitScale=camera.aspect<.70?1.17:1;
-    const distance=distanceBase*zoom*portraitScale;
+    // Follow the controlled character at every frame, from spawn onward.
+    // Long offices and custom avatar appearances never alter the focal point.
     const focus=new THREE.Vector3(
-      AFTER_OVERVIEW.focusX,
-      AFTER_OVERVIEW.focusY,
-      AFTER_OVERVIEW.focusZ+extraBays*3.4
+      hero.group.position.x,
+      hero.group.position.y+PLAYER_CAMERA.focusHeight,
+      hero.group.position.z
     );
-    // Stay in the broad office composition when it first opens. Once the
-    // player chooses a distant walking destination, pan the same overview
-    // only enough to retain visibility of their character.
-    if(cameraTravelEnabled&&hero){
-      const dx=hero.group.position.x-focus.x;
-      const dz=hero.group.position.z-focus.z;
-      const marginX=camera.aspect<.70?4.5:6.5;
-      const marginZ=camera.aspect<.70?8.5:12;
-      focus.x+=Math.sign(dx)*Math.max(0,Math.abs(dx)-marginX)*.82;
-      focus.z+=Math.sign(dz)*Math.max(0,Math.abs(dz)-marginZ)*.82;
-    }
+    // Portrait retains headroom without zooming back to the distant overview.
+    const portraitScale=camera.aspect<.70?1.15:1;
+    const distance=PLAYER_CAMERA.distance*zoom*portraitScale;
     const cos=Math.cos(cameraPitch);
     return {
       focus,
@@ -347,7 +333,6 @@ export function mountOffice(host,profile,notice=()=>{}){
     const next=nav.find({x:hero.group.position.x,z:hero.group.position.z},target);
     if(!next.length){notice("Can't reach there.");return;}
     path=next;
-    cameraTravelEnabled=true;
     clickMarker.group.visible=true;clickMarker.group.position.set(next.at(-1).x,0,next.at(-1).z);
     interactTarget=null;
   }
@@ -380,7 +365,6 @@ export function mountOffice(host,profile,notice=()=>{}){
       const approach=officeLife?.findApproach(origin,target,hero,1.65);
       if(approach?.path?.length){
         path=approach.path;interactTarget=hit;
-        cameraTravelEnabled=true;
         clickMarker.group.visible=true;
         clickMarker.group.position.set(approach.end.x,0,approach.end.z);
         notice("Walking to "+hit.name);
@@ -433,7 +417,7 @@ export function mountOffice(host,profile,notice=()=>{}){
     if(!pointerDragged)return;
     cameraYaw-=dx*.0075;
     targetCameraPitch=clamp(targetCameraPitch+dy*.0058,.34,1.31);
-    manualOrbit=true;
+
   }
   function up(evt){
     const tracked=touchPointers.has(evt.pointerId);
@@ -541,8 +525,10 @@ export function mountOffice(host,profile,notice=()=>{}){
       speech.update(elapsed);
       cameraPitch+=(targetCameraPitch-cameraPitch)*Math.min(1,dt*10);
       const goal=cameraGoal();
-      camera.position.lerp(goal.position,Math.min(1,dt*10));
-      lookAtPoint.lerp(goal.focus,Math.min(1,dt*12));
+      // Smooth translation while always aiming at the CURRENT position of
+      // the controlled avatar, never a delayed aim point.
+      camera.position.lerp(goal.position,1-Math.exp(-dt*13));
+      lookAtPoint.copy(goal.focus);
       camera.lookAt(lookAtPoint);
       updateCutawayWalls();
     }
@@ -556,7 +542,7 @@ export function mountOffice(host,profile,notice=()=>{}){
     }
     renderer.render(scene,camera);
   }
-  // Open in the approved wide office composition, now modestly closer.
+  // Open close to the controlled avatar, centered from the first frame.
   if(hero){
     cameraPitch=targetCameraPitch=MODES[mode].pitch;
     const goal=cameraGoal();
