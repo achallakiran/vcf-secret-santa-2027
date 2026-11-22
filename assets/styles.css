@@ -2211,3 +2211,83 @@ body.office-playing #player-menu textarea{
   .admin-invite-intro button{width:100%}
   .admin-register-buttons button{flex:1 1 140px}
 }
+
+
+/* Christmas Notebook v2: the same anchored frame for Character and Santa
+   Hub, regardless of their different content heights. Only notebook-body
+   scrolls; the top bar never participates in overflow or browser scroll
+   anchoring. Keep the proven atelier/personal content styles intact. */
+.player #player-menu.player-menu:has(#notebook-scroll){
+  --notebook-viewport:100dvh;
+  --notebook-top:max(14px,env(safe-area-inset-top,0px));
+  --notebook-bottom:max(12px,env(safe-area-inset-bottom,0px));
+  top:var(--notebook-top);
+  height:calc(var(--notebook-viewport) - var(--notebook-top) - var(--notebook-bottom));
+  max-height:calc(var(--notebook-viewport) - var(--notebook-top) - var(--notebook-bottom));
+  width:min(1180px,calc(100vw - 22px));
+  max-width:1180px;
+  display:flex;
+  flex-direction:column;
+  overflow:hidden;
+  padding:16px clamp(13px,2vw,25px) 13px;
+  box-sizing:border-box;
+}
+#player-menu .notebook-toolbar{
+  flex:0 0 auto;
+  min-height:54px;
+  align-items:center;
+  margin:0 0 10px;
+  padding:0 0 10px;
+  gap:clamp(6px,1.5vw,18px);
+  position:relative;
+  z-index:2;
+}
+#player-menu .notebook-body{
+  flex:1 1 auto;
+  min-height:0;
+  min-width:0;
+  overflow-x:hidden;
+  overflow-y:auto;
+  overscroll-behavior:contain;
+  -webkit-overflow-scrolling:touch;
+  scrollbar-gutter:stable;
+  overflow-anchor:none;
+  padding:0 3px 10px 0;
+}
+#player-menu .notebook-body > #player-personal,
+#player-menu .notebook-body > #player-character{
+  max-width:100%;
+  min-width:0;
+}
+#player-menu .notebook-body > .hidden{display:none!important}
+@supports(height:100svh){
+  @media(pointer:coarse){
+    .player #player-menu.player-menu:has(#notebook-scroll){
+      --notebook-viewport:100svh;
+    }
+  }
+}
+@media(max-width:700px){
+  .player #player-menu.player-menu:has(#notebook-scroll){
+    width:100%;
+    max-width:none;
+    border-radius:0;
+    padding:10px 11px 8px;
+    --notebook-top:env(safe-area-inset-top,0px);
+    --notebook-bottom:env(safe-area-inset-bottom,0px);
+  }
+  #player-menu .notebook-toolbar{
+    min-height:46px;
+    padding:0 0 8px;
+    margin:0 0 8px;
+  }
+  #player-menu .notebook-body{padding-right:1px}
+}
+@media(max-width:380px){
+  #player-menu .notebook-heading .eyebrow{font-size:8px;letter-spacing:0}
+  #player-menu .notebook-toolbar .menu-tabs button{
+    min-width:58px;
+    font-size:10px;
+    padding:6px 3px;
+  }
+}
