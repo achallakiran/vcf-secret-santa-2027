@@ -21,6 +21,7 @@ const button=(label,handler,style="small-outline")=>{
 };
 let session=null, busy=false, events=[],event=null,participants=[],assignments=[],player=null,childVisible=false;
 let officeRuntime=null,officeLoading=null,officeKey=null,officeNoticeTimer=null;
+let clueDismissTimer=null;
 let avatarBaseline=null,avatarPreviewTimer=null;
 let avatarStudio=null,avatarStudioLoading=null,activeStudioTab="look",visualEditor=null;
 let adminEditingParticipant=null;
@@ -117,7 +118,7 @@ const run=task=>async(...args)=>{
   }
 };
 async function api(action,values={}){
-  if(busy&&ACTION_STEPS[action])showProgress(ACTION_STEPS[action],"Working with Supabase securely…");
+  if(busy&&ACTION_STEPS[action])showProgress(ACTION_STEPS[action],"Preparing your Christmas event…");
   let reply;
   try{
     reply=await fetch(GATEWAY,{
@@ -151,6 +152,9 @@ function endSession(){
   if(officeRuntime){officeRuntime.dispose();officeRuntime=null;}
   clearTimeout(avatarPreviewTimer);
   avatarBaseline=null;officeLoading=null;officeKey=null;
+  clearTimeout(clueDismissTimer);clueDismissTimer=null;
+  $("clue-popover").classList.add("hidden");
+  $("office-tutorial").classList.add("hidden");
   setSession(null);player=null;event=null;participants=[];assignments=[];events=[];codes.clear();
   latestAdminInvitation=null;
   $("admin-invite-result").classList.add("hidden");
@@ -541,6 +545,79 @@ function officeToast(message){
   clearTimeout(officeNoticeTimer);
   officeNoticeTimer=setTimeout(()=>el.classList.add("hidden"),2200);
 }
+function hideClue(){
+  clearTimeout(clueDismissTimer);
+  clueDismissTimer=null;
+  $("clue-popover").classList.add("hidden");
+}
+function showClue(title,message,canUnlock=false){
+  hideClue();
+  $("clue-popover-title").textContent=title;
+  $("clue-popover-text").textContent=message;
+  $("clue-next").classList.toggle("hidden",!canUnlock);
+  $("clue-popover").classList.remove("hidden");
+  clueDismissTimer=setTimeout(hideClue,8500);
+}
+function updateClueButton(){
+  const mystery=player?.mystery;
+  const count=mystery?.unlocked||0;
+  const valid=Array.isArray(mystery?.hints);
+  const available=Boolean(mystery?.can_unlock && count<3 &&
+    (!mystery.next_at || Date.parse(mystery.next_at)<=Date.now()));
+  const control=$("player-clue");
+  control.disabled=!mystery;
+  control.classList.toggle("clue-ready",available);
+  control.title=!mystery?"Available after Santa assignments":
+    available?"A new Santa clue is ready":"See your Santa clue";
+  control.setAttribute("aria-label",control.title);
+  $("clue-next").classList.toggle("hidden",!available);
+  return {available,count,valid};
+}
+function revealClue(){
+  const mystery=player?.mystery;
+  const {available,count}=updateClueButton();
+  if(!mystery){
+    showClue("Santa clue","Clues will appear after the Santa draw.");
+    return;
+  }
+  const hints=(mystery.hints||[]).filter(t=>typeof t==="string"&&t.trim());
+  if(hints.length){
+    const last=hints[hints.length-1];
+    const note=available?"You can reveal the next clue when you're ready.":"";
+    showClue("Clue "+hints.length+" of 3",last+(note?"\n"+note:""),available);
+    return;
+  }
+  if(available){
+    showClue("Your first Santa clue","Your first clue is ready. Tap Reveal clue to see it.",true);
+    return;
+  }
+  const next=mystery.next_at?Date.parse(mystery.next_at):0;
+  const wait=next>Date.now()?"Next clue available "+new Intl.DateTimeFormat("en-IN",{dateStyle:"medium",timeStyle:"short"}).format(new Date(next))+".":"Your Santa clues aren't ready yet.";
+  showClue("Santa clue",count>=3?"All three clues have been revealed.":wait);
+}
+function showOfficeTutorial(){
+  if(!player?.me||!player?.event)return;
+  const key="secret-santa-office-tutorial-v1:"+player.event.slug+":"+player.me.id;
+  if(sessionStorage.getItem(key))return;
+  $("office-tutorial").dataset.storageKey=key;
+  $("office-tutorial").classList.remove("hidden");
+}
+function hideOfficeTutorial(){
+  const el=$("office-tutorial");
+  if(el.dataset.storageKey)sessionStorage.setItem(el.dataset.storageKey,"1");
+  el.classList.add("hidden");
+}
+$("office-tutorial-close").addEventListener("click",hideOfficeTutorial);
+$("clue-dismiss").addEventListener("click",hideClue);
+$("player-clue").addEventListener("click",revealClue);
+$("clue-next").addEventListener("click",run(async()=>{
+  const {available}=updateClueButton();
+  if(!available)throw Error("The next Santa clue isn't ready yet.");
+  await api("unlock_santa_hint");
+  await loadPlayer();
+  const hints=player?.mystery?.hints||[];
+  showClue("Clue "+hints.length+" of 3",hints.at(-1)||"Your new clue is ready.");
+}));
 function avatarIdentity(info){
   const people=info.colleagues||[];
   return JSON.stringify({
@@ -577,7 +654,7 @@ async function enterOffice(info){
     avatarBaseline=officeRuntime.getAvatar();
     setAvatarEditor(avatarBaseline);
     $("office-loading").classList.add("hidden");
-    officeToast("Tap to walk · Tap the hand to celebrate!");
+    showOfficeTutorial();
   })();
   try{await officeLoading;}
   catch(error){
@@ -862,9 +939,9 @@ async function loadPlayer(){
   $("player-event-title").textContent=player.event.title;
   $("personal-name").textContent=player.me.display_name;
   const child=player.myChild;
-  $("my-assignment-status").textContent=child?
-    "🎁 You have a Secret Child! Use Reveal privately, check their wishes and prepare your gift. Tasks are optional.":
-    "⏳ Waiting for the organizer's Santa draw. You can prepare your wishlist now; no tasks are required.";
+  $("my-assignment-status").classList.toggle("hidden",!!child);
+  $("my-assignment-status").textContent=child?"": 
+    "⏳ Waiting for the organizer's Santa draw. You can prepare your wishlist now.";
   const budget=Number(player.event?.budget);
   $("personal-budget").textContent=Number.isFinite(budget)&&budget>0?
     "Suggested gift budget: ₹"+budget.toLocaleString("en-IN"):"";
@@ -879,12 +956,11 @@ async function loadPlayer(){
     })));
   }
   const incoming=$("received-tasks");incoming.replaceChildren();
-  if(!player.receivedTasks.length)itemLine(incoming,"No optional challenges have been set. That is perfectly fine.");
-  for(const t of player.receivedTasks){
-    itemLine(incoming,niceDate(t.task_date)+" · "+(t.status==="completed"?"✓ ":"○ ")+t.task_text);
-  }
+  if(!player.receivedTasks.length)itemLine(incoming,"No tasks assigned yet.");
+  for(const t of player.receivedTasks)renderSantaTask(incoming,t,false);
   const label=$("child-name");
-  label.textContent=child?(childVisible?privateChildLabel():"Identity hidden · tap Reveal"):"Awaiting assignment";
+  label.classList.toggle("hidden",!child||!childVisible);
+  label.textContent=child&&childVisible?privateChildLabel():"";
   $("child-toggle").textContent=childVisible?"◉ Hide":"◉ Reveal";
   $("child-toggle").disabled=!child;
   const childWishes=$("child-wishlist");childWishes.replaceChildren();
@@ -894,27 +970,9 @@ async function loadPlayer(){
   $("gift-purchased").disabled=!child;
   $("task-form").querySelectorAll("input,textarea,button").forEach(x=>x.disabled=!child);
 
-  // Environment clues are generated from visible workstation props by the game.
-  const mystery=player.mystery||null;
-  const revealed=(mystery?.hints||[]).filter(v=>typeof v==="string"&&v.trim());
-  const clueBox=$("mystery-hints");clueBox.replaceChildren();
-  if(!mystery)itemLine(clueBox,"Your Secret Santa has not been assigned yet.");
-  else if(!revealed.length)itemLine(clueBox,"No clues unlocked yet. Your Santa stays anonymous.");
-  else revealed.forEach((clue,i)=>itemLine(clueBox,"Clue "+(i+1)+" · "+clue));
-  const count=mystery?.unlocked||0;
-  const nextTime=mystery?.next_at?Date.parse(mystery.next_at):0;
-  const cooldown=nextTime>Date.now();
-  const nextReady=mystery?.can_unlock&&count<3;
-  $("unlock-hint").disabled=!mystery||!nextReady||cooldown;
-  $("unlock-hint").textContent=count>=3?"✓ All clues unlocked":
-    "✦ Unlock clue "+(count+1);
-  $("hint-unlock-status").textContent=!mystery?
-    "The organizer needs to draw Secret Santas first.":
-    count>=3?"All three clues have been unlocked.":
-    cooldown?"Next clue available after "+new Intl.DateTimeFormat("en-IN",
-      {dateStyle:"medium",timeStyle:"short"}).format(new Date(nextTime))+".":
-    nextReady?"The next clue is ready. Reveal it when you wish.":
-    "No further clue is available at the moment. Refresh later.";
+  // Clues now live exclusively behind the in-office lightbulb.
+  // Preserve the existing server-side unlock count and 24h cooldown.
+  updateClueButton();
   if(!child){
     itemLine(childWishes,"Your Secret Child's wishlist will appear after the draw.");
     itemLine(myTasks,"No assigned Secret Child yet. Tasks are optional.");
@@ -926,18 +984,29 @@ async function loadPlayer(){
   else child.wishlist.forEach(w=>itemLine(childWishes,w.text));
   $("santa-message").value=child.message||"";
   $("gift-purchased").checked=!!child.gift_purchased;
-  if(!child.tasks.length)itemLine(myTasks,"No optional challenges. You can give a thoughtful gift without any tasks.");
-  for(const task of child.tasks){
-    const row=node("label","personal-item");
+  if(!child.tasks.length)itemLine(myTasks,"No tasks assigned yet.");
+  for(const task of child.tasks)renderSantaTask(myTasks,task,true);
+}
+// Both columns use the same dated task visual; only the author can mark
+// the tasks they sent as completed, preserving the current permission model.
+function renderSantaTask(parent,task,editable){
+  const row=node("div","personal-item santa-task-entry");
+  const date=node("time","santa-task-date",niceDate(task.task_date));
+  date.dateTime=task.task_date;
+  const words=node("span","santa-task-text",task.task_text);
+  const state=node("span","santa-task-status",task.status==="completed"?"✓ Done":"");
+  row.append(date,words);
+  if(editable){
     const box=node("input");box.type="checkbox";box.checked=task.status==="completed";
     box.disabled=task.status==="cancelled";
+    box.setAttribute("aria-label","Mark task completed: "+task.task_text);
     box.addEventListener("change",run(async()=>{
       await api("complete_task",{task_id:task.id,completed:box.checked});
       await loadPlayer();
     }));
-    row.append(box,node("span","",niceDate(task.task_date)+" · "+task.task_text));
-    myTasks.append(row);
-  }
+    row.append(box);
+  }else if(task.status==="completed")row.append(state);
+  parent.append(row);
 }
 async function saveWishlist(wishes){
   await api("save_wishlist",{items:wishes,version:player.me.wishlist_version});
@@ -1133,23 +1202,18 @@ $("wishlist-form").addEventListener("submit",run(async e=>{
   await saveWishlist([...player.me.wishlist,{id:crypto.randomUUID(),text}]);
   $("wishlist-form").reset();
 }));
-$("unlock-hint").addEventListener("click",run(async()=>{
-  if(!player?.mystery)throw Error("You do not have a Santa assignment yet.");
-  await api("unlock_santa_hint");
-  await loadPlayer();
-  toast("A new clue from your Santa’s actual office surroundings is unlocked.");
-}));
 $("child-toggle").addEventListener("click",()=>{
   if(!player?.myChild)return;
   childVisible=!childVisible;
-  $("child-name").textContent=childVisible?privateChildLabel():"Identity hidden · tap Reveal";
+  $("child-name").classList.toggle("hidden",!childVisible);
+  $("child-name").textContent=childVisible?privateChildLabel():"";
   $("child-toggle").textContent=childVisible?"◉ Hide":"◉ Reveal";
 });
 $("task-form").addEventListener("submit",run(async e=>{
   e.preventDefault();
   await api("add_task",{task_date:$("task-date").value,task_text:$("task-text").value});
   $("task-text").value="";
-  await loadPlayer();toast("Optional task saved.");
+  await loadPlayer();toast("Task saved for your Secret Child.");
 }));
 $("gift-purchased").addEventListener("change",run(async e=>{
   await api("gift_status",{purchased:e.target.checked});
