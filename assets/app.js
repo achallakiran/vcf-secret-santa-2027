@@ -770,7 +770,10 @@ function closeAdminCharacterEditor(){
   clearTimeout(avatarPreviewTimer);
   const dialog=$("admin-avatar-dialog");
   if(avatarStudio){avatarStudio.dispose();avatarStudio=null;}
-  const section=$("player-character"),parent=$("player-menu");
+  // In-game avatar and Santa Hub panels share an independently scrolling
+  // content region. The administrator editor temporarily borrows the avatar
+  // panel and must restore it to that region, not above the fixed header.
+  const section=$("player-character"),parent=$("notebook-scroll");
   if(section.parentElement!==parent)parent.insertBefore(section,$("player-personal"));
   adminEditingParticipant=null;
   document.body.classList.remove("admin-avatar-editing");
@@ -831,6 +834,11 @@ function showPlayerTab(name){
   $("player-personal").classList.toggle("hidden",!personal);
   $("player-tab-character").classList.toggle("active",!personal);
   $("player-tab-personal").classList.toggle("active",personal);
+  $("player-tab-character").setAttribute("aria-selected",String(!personal));
+  $("player-tab-personal").setAttribute("aria-selected",String(personal));
+  // Changing panels must never carry over the previous panel's scroll
+  // offset; scrolling now affects only the body, leaving tabs stationary.
+  $("notebook-scroll").scrollTop=0;
   if(!personal){
     setStudioTab(activeStudioTab);
     void ensureAvatarStudio();
@@ -1091,6 +1099,7 @@ $("player-pause").addEventListener("click",()=>{
   const menu=$("player-menu");
   if(!menu.classList.contains("hidden")){closePlayerMenu();return;}
   menu.classList.remove("hidden");
+  $("notebook-scroll").scrollTop=0;
   officeRuntime?.setPaused(true);
   showPlayerTab("character");
 });
