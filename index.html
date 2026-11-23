@@ -126,23 +126,13 @@
         <strong>Preparing your Christmas office…</strong>
         <small>Spreading Christmas cheer…</small>
       </div>
-      <!-- Top HUD Navigation Bar -->
+      <!-- Minimal Top Bar (Non-cluttering) -->
       <header class="office-hud-top" role="toolbar" aria-label="Game navigation and tools">
         <div class="hud-group-left">
           <div class="hud-badge"><span class="hud-badge-icon">🎄</span><span id="hud-event-name">Secret Santa</span></div>
-          <button id="hud-btn-rules" class="hud-pill" type="button" title="View Game Rules & Spirit">📜 <span>Rules</span></button>
-          <button id="hud-btn-help" class="hud-pill" type="button" title="Movement & Controls Guide">🎮 <span>How to Play</span></button>
-          <button id="hud-btn-mydesk" class="hud-pill hud-pill-gold" type="button" title="Find & Walk to My Desk">⭐ <span>My Desk</span></button>
-          <button id="hud-btn-party" class="hud-pill hud-pill-party" type="button" title="Toggle Holiday Party Celebration & 3D Confetti">🎉 <span>Party Mode</span></button>
-          <button id="hud-btn-quest" class="hud-pill hud-pill-quest" type="button" title="Holiday Secret Santa Quest Log">🧭 <span>Quest</span> <span id="hud-quest-badge" class="hud-counter-badge">0/3</span></button>
-          <button id="hud-btn-arcade" class="hud-pill hud-pill-arcade" type="button" title="Break-Room Arcade Console">🕹️ <span>Arcade</span></button>
-          <button id="hud-btn-workshop" class="hud-pill hud-pill-workshop" type="button" title="Parent / Secret Santa Setup Workshop">🎅 <span>Santa Setup</span></button>
         </div>
         <div class="hud-group-right">
-          <button id="hud-btn-time" class="hud-pill" type="button" title="Office Time of Day (Click to toggle)">🌙 <span>Night</span></button>
-          <button id="hud-btn-santa" class="hud-pill hud-pill-santa" type="button" title="Open Santa Hub (Wishlist & Secret Child)">🎁 <span>Santa Hub</span></button>
-          <button id="hud-btn-avatar" class="hud-pill" type="button" title="Customize 3D Avatar">👤 <span>Avatar</span></button>
-          <button id="player-clue" class="office-clue" type="button" aria-label="View Secret Santa clue" title="Santa clue">💡</button>
+          <button id="player-clue" class="office-clue" type="button" aria-label="View Secret Santa clue" title="Santa Clue">💡</button>
           <button id="player-music" class="office-music" type="button" aria-label="Mute Jingle Bells" aria-pressed="false" title="Mute Jingle Bells">🔊</button>
           <button id="player-pause" class="office-pause" type="button" aria-label="Open pause menu" title="Pause / Menu">☰</button>
         </div>
@@ -292,8 +282,99 @@
         </div>
       </div>
 
+      <!-- Sleek Floating Bottom Navigation Dock -->
+      <nav id="office-nav-bottom" class="office-nav-bottom" role="navigation" aria-label="Main navigation bar">
+        <button id="nav-btn-quest" class="nav-tab nav-tab-quest" type="button" title="Holiday Secret Santa Quest">
+          <span class="nav-tab-icon">🧭</span>
+          <span class="nav-tab-label">Quest</span>
+          <span id="hud-quest-badge" class="hud-counter-badge">0/2</span>
+        </button>
+        <button id="nav-btn-arcade" class="nav-tab nav-tab-arcade" type="button" title="Break-Room Arcade Console">
+          <span class="nav-tab-icon">🕹️</span>
+          <span class="nav-tab-label">Arcade</span>
+        </button>
+        <button id="nav-btn-mydesk" class="nav-tab nav-tab-gold" type="button" title="Walk to My Workspace">
+          <span class="nav-tab-icon">⭐</span>
+          <span class="nav-tab-label">My Desk</span>
+        </button>
+        <button id="nav-btn-workshop" class="nav-tab nav-tab-santa" type="button" title="Secret Santa &amp; Parent Workshop">
+          <span class="nav-tab-icon">🎅</span>
+          <span class="nav-tab-label">Santa Setup</span>
+        </button>
+        <button id="nav-btn-more" class="nav-tab nav-tab-more" type="button" title="More Features &amp; Settings">
+          <span class="nav-tab-icon">✨</span>
+          <span class="nav-tab-label">Menu</span>
+        </button>
+      </nav>
+
       <div id="office-toast" class="office-toast hidden" role="status" aria-live="polite"></div>
     </div>
+
+    <!-- More Features & Office Settings Dialog -->
+    <dialog id="more-menu-dialog" class="office-dialog-modal more-menu-dialog" aria-labelledby="more-menu-title">
+      <div class="more-menu-container">
+        <div class="more-menu-header">
+          <div class="more-menu-title-wrap">
+            <span class="more-menu-icon">✨</span>
+            <div>
+              <h3 id="more-menu-title">Office Hub &amp; Settings</h3>
+              <p class="more-menu-subtitle">Atmosphere controls, wishlists, rules &amp; character customization</p>
+            </div>
+          </div>
+          <button type="button" class="more-menu-close-btn" id="more-menu-close-btn" aria-label="Close Menu">✕</button>
+        </div>
+
+        <div class="more-menu-grid">
+          <button type="button" class="more-menu-card" id="menu-item-party">
+            <span class="menu-card-icon">🎉</span>
+            <div class="menu-card-text">
+              <strong>Holiday Party Mode</strong>
+              <span>Toggle party celebration, music &amp; 3D confetti</span>
+            </div>
+          </button>
+
+          <button type="button" class="more-menu-card" id="menu-item-time">
+            <span class="menu-card-icon">🌙</span>
+            <div class="menu-card-text">
+              <strong>Day / Night Lighting</strong>
+              <span>Toggle warm evening glow or bright morning sun</span>
+            </div>
+          </button>
+
+          <button type="button" class="more-menu-card" id="menu-item-santahub">
+            <span class="menu-card-icon">🎁</span>
+            <div class="menu-card-text">
+              <strong>Secret Santa Hub</strong>
+              <span>Check your secret child, wishlists &amp; gift budget</span>
+            </div>
+          </button>
+
+          <button type="button" class="more-menu-card" id="menu-item-avatar">
+            <span class="menu-card-icon">👤</span>
+            <div class="menu-card-text">
+              <strong>Avatar Studio</strong>
+              <span>Personalize your 3D outfit, colors &amp; Santa hat</span>
+            </div>
+          </button>
+
+          <button type="button" class="more-menu-card" id="menu-item-rules">
+            <span class="menu-card-icon">📜</span>
+            <div class="menu-card-text">
+              <strong>Rules &amp; Spirit</strong>
+              <span>Budget guidelines, anonymity &amp; event schedule</span>
+            </div>
+          </button>
+
+          <button type="button" class="more-menu-card" id="menu-item-help">
+            <span class="menu-card-icon">🎮</span>
+            <div class="menu-card-text">
+              <strong>How to Play</strong>
+              <span>Movement controls, keyboard shortcuts &amp; tips</span>
+            </div>
+          </button>
+        </div>
+      </div>
+    </dialog>
     <section id="player-menu" class="player-menu panel hidden" aria-label="Christmas Notebook" role="dialog" aria-modal="true">
       <div class="section-head notebook-toolbar">
         <div class="notebook-heading">
@@ -761,7 +842,7 @@
         <button type="button" class="arcade-close-btn" id="arcade-close-btn" aria-label="Close Arcade">✕</button>
       </div>
 
-      <!-- Game Selector Tabs -->
+      <!-- Game Selector Tabs (Racing Championships) -->
       <div class="arcade-tabs">
         <button type="button" class="arcade-tab-btn active" data-game="voxel-racers">
           <span>🏎️</span> Voxel Racers
@@ -769,55 +850,28 @@
         <button type="button" class="arcade-tab-btn" data-game="voxel-bike">
           <span>🏍️</span> Voxel Bikes
         </button>
-        <button type="button" class="arcade-tab-btn" data-game="cocoa-rush">
-          <span>☕</span> Cocoa Rush
-        </button>
       </div>
 
-      <!-- Active Goal & Clue Unlocking Banner -->
+      <!-- Active Goal & Clue Unlocking Banner with Challenge Tracker -->
       <div class="arcade-goal-banner" id="arcade-goal-banner">
         <div class="goal-info">
           <span class="goal-badge">🎯 SANTA'S GOAL</span>
           <span class="goal-desc" id="arcade-goal-desc">Finish 1 lap on Dust Track to unlock Clue #1!</span>
         </div>
-        <button type="button" class="btn btn-primary btn-claim-clue" id="arcade-claim-clue-btn">
-          ✨ Claim Clue!
-        </button>
+        <div class="arcade-goal-actions">
+          <button type="button" class="btn btn-secondary btn-sm" id="arcade-timer-btn" title="Track your race duration">
+            ⏱️ <span id="arcade-timer-display">Start Timer</span>
+          </button>
+          <button type="button" class="btn btn-primary btn-claim-clue" id="arcade-claim-clue-btn">
+            🏆 Claim Clue!
+          </button>
+        </div>
       </div>
 
       <!-- Game Screen Viewport -->
       <div class="arcade-screen-viewport">
         <!-- Iframe for external games -->
         <iframe id="arcade-iframe" class="arcade-iframe" src="https://achallakiran.github.io/voxel-racers/" allow="autoplay; fullscreen" loading="lazy"></iframe>
-        
-        <!-- Built-in Cocoa Rush Mini-Game Panel -->
-        <div id="cocoa-rush-game" class="cocoa-rush-game hidden">
-          <div class="cocoa-game-header">
-            <h4>☕ Pantry Hot Cocoa Rush</h4>
-            <div class="cocoa-timer-wrap">
-              <span>Time: <strong id="cocoa-timer">30s</strong></span>
-              <span>Orders: <strong id="cocoa-score">0 / 3</strong></span>
-            </div>
-          </div>
-          <div class="cocoa-order-card" id="cocoa-order-card">
-            <span class="order-label">Incoming Order:</span>
-            <div class="order-recipe" id="cocoa-order-recipe">1 Mug + 🍫 Rich Cocoa + 🍬 2 Marshmallows</div>
-          </div>
-          <div class="cocoa-assembly-area">
-            <div class="cup-display" id="cocoa-cup-display">
-              <span class="cup-icon" id="cup-icon">☕</span>
-              <div class="cup-contents" id="cup-contents">Empty Festive Mug</div>
-            </div>
-          </div>
-          <div class="cocoa-ingredient-buttons">
-            <button type="button" class="ingredient-btn" data-ingredient="mug">☕ Festive Mug</button>
-            <button type="button" class="ingredient-btn" data-ingredient="cocoa">🍫 Rich Cocoa</button>
-            <button type="button" class="ingredient-btn" data-ingredient="marshmallow">🍬 Marshmallows</button>
-            <button type="button" class="ingredient-btn" data-ingredient="cinnamon">✨ Cinnamon</button>
-            <button type="button" class="ingredient-btn ingredient-serve" id="cocoa-serve-btn">🛎️ Serve Drink!</button>
-          </div>
-          <p class="cocoa-hint" id="cocoa-feedback">Assemble ingredients in order and tap Serve!</p>
-        </div>
       </div>
 
       <div class="arcade-footer">
@@ -882,18 +936,6 @@
             </label>
             <label class="workshop-label">🔓 Clue #2 Revealed Upon Completion:
               <input type="text" id="workshop-clue-2" class="workshop-input" value="Your Secret Santa always carries a blue water bottle and loves dark chocolate!" />
-            </label>
-          </div>
-
-          <div class="task-setup-card">
-            <div class="task-setup-header">
-              <span class="task-pill">Task 3: ☕ Santa's Cocoa Barista</span>
-            </div>
-            <label class="workshop-label">Goal to Complete:
-              <input type="text" id="workshop-goal-3" class="workshop-input" value="Serve 3 hot cocoas with marshmallows in the break room!" />
-            </label>
-            <label class="workshop-label">🔓 Clue #3 Revealed Upon Completion:
-              <input type="text" id="workshop-clue-3" class="workshop-input" value="Your Secret Santa gave you a big warm hug this morning!" />
             </label>
           </div>
         </div>
