@@ -309,9 +309,14 @@ export const CLUE_PROPS=[
   "apple","ornament","mini-tree","books","lantern","candy-cane"
 ];
 export function deskClueForSeat(index){return CLUE_PROPS[index%CLUE_PROPS.length];}
-function decorateClueDesk(g,seatIndex,chairSide){
-  const kind=deskClueForSeat(seatIndex);
+export function decorateClueDesk(g,seatIndex,chairSide,customKind=null){
+  const kind=customKind||deskClueForSeat(seatIndex);
   const stand=new THREE.Group();
+  stand.name="clueStand";
+  stand.userData.isClueStand=true;
+  stand.userData.clueObject=kind;
+  stand.userData.seatIndex=seatIndex;
+  stand.userData.chairSide=chairSide;
   // Near the user's edge of the oversized desk, clear of the rear divider,
   // dual monitors and the lamp. The object is persistent, not a random NPC action.
   stand.position.set(chairSide*.34,.84,1.29);
@@ -504,7 +509,7 @@ function workstation(parent,x,z,i,row,colliders){
   chair(parent,chairX,z,facing,seatIndex);
   colliders.push({x,z,hx:.57,hz:1.79});
   colliders.push({x:chairX,z,hx:.36,hz:.43});
-  return {position:{x:chairX,z:z-.08},facing,row,index:i};
+  return {position:{x:chairX,z:z-.08},facing,row,index:i,deskGroup:g,deskPosition:{x,z},seatIndex,chairSide};
 }
 function sign(parent,x,y,z,text){
   // Labels identify office areas, never place giant logos over gameplay.

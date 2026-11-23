@@ -95,3 +95,55 @@ export function createChristmasMusic(){
   }
   return {unlock,enter,leave,setMuted,toggle,dispose,get muted(){return muted;}};
 }
+
+export function playFestiveChime(type="bell"){
+  try{
+    const AudioContext=window.AudioContext||window.webkitAudioContext;
+    if(!AudioContext)return;
+    const ctx=new AudioContext();
+    if(ctx.state==="suspended")ctx.resume().catch(()=>{});
+
+    if(type==="party"||type==="fanfare"){
+      const notes=[523.25,659.25,783.99,987.77,1046.50];
+      notes.forEach((freq,i)=>{
+        const osc=ctx.createOscillator();
+        const g=ctx.createGain();
+        osc.type="sine";
+        osc.frequency.setValueAtTime(freq,ctx.currentTime+i*0.07);
+        g.gain.setValueAtTime(0,ctx.currentTime+i*0.07);
+        g.gain.linearRampToValueAtTime(0.18,ctx.currentTime+i*0.07+0.02);
+        g.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+i*0.07+0.55);
+        osc.connect(g);
+        g.connect(ctx.destination);
+        osc.start(ctx.currentTime+i*0.07);
+        osc.stop(ctx.currentTime+i*0.07+0.6);
+      });
+    }else if(type==="sit"){
+      const notes=[659.25,783.99];
+      notes.forEach((freq,i)=>{
+        const osc=ctx.createOscillator();
+        const g=ctx.createGain();
+        osc.type="sine";
+        osc.frequency.setValueAtTime(freq,ctx.currentTime+i*0.09);
+        g.gain.setValueAtTime(0,ctx.currentTime+i*0.09);
+        g.gain.linearRampToValueAtTime(0.15,ctx.currentTime+i*0.09+0.02);
+        g.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+i*0.09+0.45);
+        osc.connect(g);
+        g.connect(ctx.destination);
+        osc.start(ctx.currentTime+i*0.09);
+        osc.stop(ctx.currentTime+i*0.09+0.5);
+      });
+    }else{
+      const osc=ctx.createOscillator();
+      const g=ctx.createGain();
+      osc.type="sine";
+      osc.frequency.setValueAtTime(1046.50,ctx.currentTime);
+      g.gain.setValueAtTime(0.14,ctx.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+0.7);
+      osc.connect(g);
+      g.connect(ctx.destination);
+      osc.start();
+      osc.stop(ctx.currentTime+0.75);
+    }
+  }catch(_e){}
+}

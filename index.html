@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#080d16"/>
   <meta name="description" content="Voxel Secret Santa — a thoughtful Christmas office mystery."/>
   <title>Voxel Secret Santa</title>
-  <link rel="stylesheet" href="./assets/styles.css?v=christmas-hub-v1"/>
+  <link rel="stylesheet" href="./assets/styles.css?v=actions-hud-v2"/>
 </head>
 <body>
   <div class="snow" id="snow" aria-hidden="true"></div>
@@ -126,9 +126,41 @@
         <strong>Preparing your Christmas office…</strong>
         <small>Spreading Christmas cheer…</small>
       </div>
-      <button id="player-pause" class="office-pause" type="button" aria-label="Open pause menu" title="Pause">Ⅱ</button>
-      <button id="player-clue" class="office-clue" type="button" aria-label="View Secret Santa clue" title="Santa clue">💡</button>
-      <button id="player-music" class="office-music" type="button" aria-label="Mute Jingle Bells" aria-pressed="false" title="Mute Jingle Bells">🔊</button>
+      <!-- Top HUD Navigation Bar -->
+      <header class="office-hud-top" role="toolbar" aria-label="Game navigation and tools">
+        <div class="hud-group-left">
+          <div class="hud-badge"><span class="hud-badge-icon">🎄</span><span id="hud-event-name">Secret Santa</span></div>
+          <button id="hud-btn-rules" class="hud-pill" type="button" title="View Game Rules & Spirit">📜 <span>Rules</span></button>
+          <button id="hud-btn-help" class="hud-pill" type="button" title="Movement & Controls Guide">🎮 <span>How to Play</span></button>
+          <button id="hud-btn-mydesk" class="hud-pill hud-pill-gold" type="button" title="Find & Walk to My Desk">⭐ <span>My Desk</span></button>
+          <button id="hud-btn-party" class="hud-pill hud-pill-party" type="button" title="Toggle Holiday Party Celebration & 3D Confetti">🎉 <span>Party Mode</span></button>
+        </div>
+        <div class="hud-group-right">
+          <button id="hud-btn-time" class="hud-pill" type="button" title="Office Time of Day (Click to toggle)">🌙 <span>Night</span></button>
+          <button id="hud-btn-santa" class="hud-pill hud-pill-santa" type="button" title="Open Santa Hub (Wishlist & Secret Child)">🎁 <span>Santa Hub</span></button>
+          <button id="hud-btn-avatar" class="hud-pill" type="button" title="Customize 3D Avatar">👤 <span>Avatar</span></button>
+          <button id="player-clue" class="office-clue" type="button" aria-label="View Secret Santa clue" title="Santa clue">💡</button>
+          <button id="player-music" class="office-music" type="button" aria-label="Mute Jingle Bells" aria-pressed="false" title="Mute Jingle Bells">🔊</button>
+          <button id="player-pause" class="office-pause" type="button" aria-label="Open pause menu" title="Pause / Menu">☰</button>
+        </div>
+      </header>
+
+      <!-- Interactive Desk Proximity Card -->
+      <div id="desk-card" class="desk-card hidden" role="region" aria-label="Desk information">
+        <div class="desk-card-badge" id="desk-card-badge">⭐ YOUR DESK</div>
+        <div class="desk-card-main">
+          <div class="desk-card-icon" id="desk-card-icon">🪑</div>
+          <div class="desk-card-content">
+            <h4 id="desk-card-title">Kiran's Workspace</h4>
+            <p id="desk-card-subtitle">Desk D-02 · Clue Prop: ☕ Hot Coffee Mug</p>
+          </div>
+          <div class="desk-card-actions">
+            <button type="button" id="desk-card-action" class="desk-card-btn">Sit at Desk</button>
+            <button type="button" id="desk-card-customize" class="desk-card-btn desk-card-btn-customize hidden" title="Personalize your desk prop, theme & banner">🎨 Customize Desk</button>
+          </div>
+        </div>
+      </div>
+
       <div id="clue-popover" class="clue-popover hidden" role="status" aria-live="polite">
         <div class="clue-popover-heading"><strong id="clue-popover-title">Santa clue</strong>
           <button id="clue-dismiss" type="button" aria-label="Close clue" title="Close clue">✕</button>
@@ -136,16 +168,127 @@
         <p id="clue-popover-text"></p>
         <button id="clue-next" type="button" class="clue-next hidden">✦ Reveal next clue</button>
       </div>
+
+      <!-- Quick Controls Banner on First Join -->
       <div id="office-tutorial" class="office-tutorial hidden" role="group" aria-label="How to move around the office">
         <button type="button" id="office-tutorial-close" class="office-tutorial-close" aria-label="Dismiss tutorial">✕</button>
-        <p>👆 Point and click or tap the floor to move.</p>
-        <p>🔎 Pinch in or out to zoom. Scroll on desktop.</p>
+        <div class="tutorial-content">
+          <strong>🎮 Quick Movement Guide:</strong>
+          <p>👆 <strong>Walk:</strong> Tap/click the floor (or use <strong>W A S D</strong> / Arrows).</p>
+          <p>👥 <strong>Greet:</strong> Tap/click any colleague to walk over and say hi!</p>
+          <p>🔎 <strong>Camera:</strong> Drag to look around, pinch/scroll to zoom.</p>
+          <p>✨ <strong>Emotes:</strong> Use action buttons below (Wave, Dance, Clap, Cheer)!</p>
+        </div>
       </div>
-      <div class="office-action-dock">
-        <button id="player-action" class="office-action" type="button" aria-label="Perform a random cheerful action" title="Random cheerful action">
-          <span id="player-action-symbol" aria-hidden="true">👋</span>
-        </button>
+
+      <!-- Full "How to Play & Movement" Modal Dialog -->
+      <dialog id="help-dialog" class="help-dialog" aria-labelledby="help-dialog-title">
+        <div class="dialog-card">
+          <header class="dialog-header">
+            <div><span class="eyebrow">GAMEPLAY GUIDE</span><h3 id="help-dialog-title">🎮 How to Move & Play</h3></div>
+            <button id="help-dialog-close" type="button" class="small-outline" aria-label="Close guide">✕</button>
+          </header>
+          <div class="dialog-body guide-grid">
+            <div class="guide-item">
+              <span class="guide-icon">👆</span>
+              <div>
+                <h4>Walking & Pathfinding</h4>
+                <p>Click or tap anywhere on the carpet or tiles. Your character uses smart pathfinding to navigate around desks, chairs, and festive decor.</p>
+                <small class="guide-tip">⌨️ Desktop: Use <strong>W A S D</strong> or <strong>Arrow keys</strong> to walk!<br/>📱 Phone: Drag the on-screen <strong>Virtual Joystick</strong> (bottom-left) to walk smoothly!</small>
+              </div>
+            </div>
+            <div class="guide-item">
+              <span class="guide-icon">🔄</span>
+              <div>
+                <h4>Look Around & Zoom</h4>
+                <p>Click and drag with your mouse (or swipe on touchscreens) to orbit the camera. Use mouse wheel or pinch two fingers to zoom in and out.</p>
+              </div>
+            </div>
+            <div class="guide-item">
+              <span class="guide-icon">👥</span>
+              <div>
+                <h4>Visiting Colleagues</h4>
+                <p>Click on any coworker in the office! Your avatar will walk over, face them, and exchange a cheerful wave and greeting bubble.</p>
+              </div>
+            </div>
+            <div class="guide-item">
+              <span class="guide-icon">🎭</span>
+              <div>
+                <h4>Express Yourself</h4>
+                <p>Use the action dock at the bottom-right or keyboard shortcuts <strong>1–4</strong> to Wave, Dance, Clap, or Cheer. Nearby coworkers will often celebrate with you!</p>
+              </div>
+            </div>
+            <div class="guide-item">
+              <span class="guide-icon">🎁</span>
+              <div>
+                <h4>Santa Hub & Clues</h4>
+                <p>Tap <strong>🎁 Santa Hub</strong> at any time to update your wishlist, privately reveal your Secret Child, and assign holiday tasks. Tap <strong>💡</strong> to reveal clues about who your own Santa might be!</p>
+              </div>
+            </div>
+          </div>
+          <footer class="dialog-footer">
+            <button id="help-dialog-gotit" type="button" class="primary">Got it, let's explore! →</button>
+          </footer>
+        </div>
+      </dialog>
+
+      <!-- Full "Rules & Spirit" Modal Dialog -->
+      <dialog id="rules-dialog" class="rules-dialog" aria-labelledby="rules-dialog-title">
+        <div class="dialog-card">
+          <header class="dialog-header">
+            <div><span class="eyebrow">THE SPIRIT OF CHRISTMAS</span><h3 id="rules-dialog-title">📜 Secret Santa Rules</h3></div>
+            <button id="rules-dialog-close" type="button" class="small-outline" aria-label="Close rules">✕</button>
+          </header>
+          <div class="dialog-body rules-content">
+            <div class="rules-highlight-box">
+              <span class="gift-badge">🎁 ₹500 Budget</span>
+              <p>We recommend keeping your gift around <strong>₹500</strong>. The real goal is thoughtfulness and holiday delight, not expensive purchases!</p>
+            </div>
+            <ul class="rules-list">
+              <li><strong>🤫 True Anonymity:</strong> Only you know who your Secret Child is. Keep it a surprise until the Grand Finale!</li>
+              <li><strong>📝 Check Wishlists:</strong> Visit the <strong>Santa Hub</strong> to read what your Child wished for and craft a heartfelt Christmas message.</li>
+              <li><strong>🎯 Daily Tasks:</strong> As Santa, you can optionally assign fun, light-hearted daily holiday tasks to your Child.</li>
+              <li><strong>🔎 Office Clues:</strong> Every 24 hours, you can unlock a new clue from the 💡 bulb based on your Santa's physical office surroundings.</li>
+              <li><strong>🎭 The Finale Stage Show:</strong> The organizer will host the Grand Finale ceremony where Santas are revealed and gifts exchanged!</li>
+            </ul>
+          </div>
+          <footer class="dialog-footer">
+            <button id="rules-dialog-ok" type="button" class="primary">Spread the Cheer 🎄</button>
+          </footer>
+        </div>
+      </dialog>
+
+      <!-- Upgraded Multi-Action Dock -->
+      <div class="office-action-dock" role="toolbar" aria-label="Character emotions and actions">
+        <div class="action-buttons-wrap">
+          <button id="action-wave" class="action-pill" type="button" data-action="hi" title="Wave / Say Hi (Key 1)">
+            <span class="action-emoji">👋</span><span class="action-label">Wave</span><span class="action-hotkey">1</span>
+          </button>
+          <button id="action-dance" class="action-pill" type="button" data-action="dance" title="Dance (Key 2)">
+            <span class="action-emoji">💃</span><span class="action-label">Dance</span><span class="action-hotkey">2</span>
+          </button>
+          <button id="action-clap" class="action-pill" type="button" data-action="clap" title="Clap & Celebrate (Key 3)">
+            <span class="action-emoji">👏</span><span class="action-label">Clap</span><span class="action-hotkey">3</span>
+          </button>
+          <button id="action-cheer" class="action-pill" type="button" data-action="cheer" title="Cheer Merry Christmas (Key 4)">
+            <span class="action-emoji">🎉</span><span class="action-label">Cheer</span><span class="action-hotkey">4</span>
+          </button>
+        </div>
       </div>
+
+      <!-- Mobile Virtual Touch Joystick -->
+      <div id="mobile-joystick" class="mobile-joystick" role="group" aria-label="Touch movement joystick">
+        <div class="joystick-base" id="joystick-base">
+          <div class="joystick-arrows" aria-hidden="true">
+            <span class="j-arrow j-up">▲</span>
+            <span class="j-arrow j-down">▼</span>
+            <span class="j-arrow j-left">◀</span>
+            <span class="j-arrow j-right">▶</span>
+          </div>
+          <div class="joystick-knob" id="joystick-knob"></div>
+        </div>
+      </div>
+
       <div id="office-toast" class="office-toast hidden" role="status" aria-live="polite"></div>
     </div>
     <section id="player-menu" class="player-menu panel hidden" aria-label="Christmas Notebook" role="dialog" aria-modal="true">
@@ -178,6 +321,40 @@
           <div class="studio-workbench atelier-options">
             <div class="studio-workbench-heading">
               <div><span class="studio-eyebrow">STYLE YOUR AVATAR</span><h4 id="atelier-category-title">Face & colors</h4></div>
+            </div>
+            <!-- Auto-Match from Photo Card -->
+            <div class="photo-matcher-card" id="photo-matcher-card">
+              <div class="photo-matcher-banner">
+                <div class="photo-matcher-info">
+                  <span class="photo-matcher-icon" aria-hidden="true">📷</span>
+                  <div>
+                    <h5 class="photo-matcher-title">Match from Photo or Selfie</h5>
+                    <p class="photo-matcher-desc">Take a live selfie or upload a photo to auto-detect your features and badge your 3D desk!</p>
+                  </div>
+                </div>
+                <div class="photo-matcher-action-group">
+                  <label class="photo-upload-label" for="avatar-photo-input">
+                    <span>Upload Photo ⬆</span>
+                    <input type="file" id="avatar-photo-input" accept="image/*" class="sr-only"/>
+                  </label>
+                  <button type="button" id="photo-webcam-btn" class="photo-webcam-btn" title="Open webcam to take live selfie">
+                    <span>📸 Live Selfie</span>
+                  </button>
+                </div>
+              </div>
+              <div id="photo-matcher-preview" class="photo-matcher-preview hidden">
+                <div class="photo-matcher-thumb-wrap">
+                  <img id="photo-matcher-thumb" class="photo-matcher-thumb" alt="Uploaded photo thumbnail"/>
+                  <button type="button" id="photo-matcher-clear" class="photo-matcher-remove" title="Remove photo" aria-label="Remove photo">✕</button>
+                </div>
+                <div class="photo-matcher-details">
+                  <div class="photo-matcher-status">
+                    <span class="photo-status-badge">✨ Auto-Matched</span>
+                    <span id="photo-matcher-summary" class="photo-status-summary">Detected your features!</span>
+                  </div>
+                  <div id="photo-matcher-chips" class="photo-matcher-chips"></div>
+                </div>
+              </div>
             </div>
             <form id="avatar-form" class="studio-avatar-form">
               <div class="atelier-hidden-values" aria-hidden="true">
@@ -427,6 +604,145 @@
       </section>
     </div>
   </dialog>
+
+  <!-- Live Webcam Selfie Modal -->
+  <dialog id="webcam-modal" class="webcam-modal" aria-labelledby="webcam-title">
+    <div class="webcam-dialog-shell">
+      <div class="webcam-header">
+        <div>
+          <span class="customizer-eyebrow">LIVE CAMERA</span>
+          <h4 id="webcam-title">📸 Take Live Selfie</h4>
+        </div>
+        <button type="button" id="webcam-close-btn" class="webcam-close" aria-label="Close camera">✕</button>
+      </div>
+      <div class="webcam-viewfinder-wrap">
+        <video id="webcam-video" class="webcam-video" autoplay playsinline muted></video>
+        <div class="webcam-face-guide" aria-hidden="true"></div>
+        <canvas id="webcam-canvas" class="hidden"></canvas>
+      </div>
+      <p class="webcam-hint">Center your face in the frame. We will automatically detect your skin tone, hair, glasses &amp; outfit to style your avatar and badge your 3D desk!</p>
+      <div class="webcam-controls">
+        <button type="button" id="webcam-snap-btn" class="btn btn-primary btn-snap">⚡ Snap &amp; Match Avatar</button>
+        <button type="button" id="webcam-cancel-btn" class="btn btn-secondary">Cancel</button>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- Workspace Desk Customizer Modal -->
+  <dialog id="desk-customizer-dialog" class="desk-customizer-dialog" aria-labelledby="desk-customizer-title">
+    <div class="desk-customizer-shell">
+      <div class="desk-customizer-header">
+        <div>
+          <span class="customizer-eyebrow">WORKSPACE STUDIO</span>
+          <h3 id="desk-customizer-title">🎨 Personalize Your Desk</h3>
+        </div>
+        <button type="button" id="desk-customizer-close" class="desk-customizer-close" aria-label="Close customizer">✕</button>
+      </div>
+
+      <div class="desk-customizer-body">
+        <!-- 1. Desk Clue Prop -->
+        <div class="customizer-section">
+          <label class="customizer-section-title">1. Choose 3D Desk Prop</label>
+          <p class="customizer-section-desc">Decorates your 3D desk surface in the office for everyone to see:</p>
+          <div class="customizer-prop-grid" id="customizer-prop-grid">
+            <button type="button" class="prop-choice-card active" data-prop="mini-tree">
+              <span class="prop-icon">🎄</span>
+              <span class="prop-label">Mini Tree</span>
+            </button>
+            <button type="button" class="prop-choice-card" data-prop="coffee">
+              <span class="prop-icon">☕</span>
+              <span class="prop-label">Cocoa Mug</span>
+            </button>
+            <button type="button" class="prop-choice-card" data-prop="gift">
+              <span class="prop-icon">🎁</span>
+              <span class="prop-label">Present</span>
+            </button>
+            <button type="button" class="prop-choice-card" data-prop="lantern">
+              <span class="prop-icon">🏮</span>
+              <span class="prop-label">Lantern</span>
+            </button>
+            <button type="button" class="prop-choice-card" data-prop="succulent">
+              <span class="prop-icon">🪴</span>
+              <span class="prop-label">Succulent</span>
+            </button>
+            <button type="button" class="prop-choice-card" data-prop="candy-cane">
+              <span class="prop-icon">🍬</span>
+              <span class="prop-label">Candy Cane</span>
+            </button>
+            <button type="button" class="prop-choice-card" data-prop="ornament">
+              <span class="prop-icon">🔮</span>
+              <span class="prop-label">Bauble</span>
+            </button>
+            <button type="button" class="prop-choice-card" data-prop="books">
+              <span class="prop-icon">📚</span>
+              <span class="prop-label">Notebooks</span>
+            </button>
+            <button type="button" class="prop-choice-card" data-prop="apple">
+              <span class="prop-icon">🍎</span>
+              <span class="prop-label">Red Apple</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- 2. Desk Theme & Finish -->
+        <div class="customizer-section">
+          <label class="customizer-section-title">2. Desk Finish &amp; Nameplate Theme</label>
+          <div class="customizer-theme-grid" id="customizer-theme-grid">
+            <button type="button" class="theme-choice-card active" data-theme="emerald">
+              <span class="theme-color-swatch swatch-emerald"></span>
+              <span class="theme-name">Holiday Emerald</span>
+            </button>
+            <button type="button" class="theme-choice-card" data-theme="crimson">
+              <span class="theme-color-swatch swatch-crimson"></span>
+              <span class="theme-name">Velvet Crimson</span>
+            </button>
+            <button type="button" class="theme-choice-card" data-theme="frost">
+              <span class="theme-color-swatch swatch-frost"></span>
+              <span class="theme-name">Winter Frost</span>
+            </button>
+            <button type="button" class="theme-choice-card" data-theme="walnut">
+              <span class="theme-color-swatch swatch-walnut"></span>
+              <span class="theme-name">Warm Walnut</span>
+            </button>
+            <button type="button" class="theme-choice-card" data-theme="midnight">
+              <span class="theme-color-swatch swatch-midnight"></span>
+              <span class="theme-name">Midnight Sapphire</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- 3. Custom Motto / Status Banner -->
+        <div class="customizer-section">
+          <label class="customizer-section-title" for="customizer-motto-input">3. 3D Nameplate Holiday Banner &amp; Motto</label>
+          <p class="customizer-section-desc">Displayed on your 3D brass desk stand in the game:</p>
+          <input type="text" id="customizer-motto-input" class="customizer-motto-input" maxlength="32" placeholder="e.g. 🎅 Merry Sprints &amp; Happy Holidays!" />
+          <div class="customizer-motto-pills">
+            <button type="button" class="motto-preset-pill" data-motto="🎅 Merry Sprints &amp; Happy Holidays!">🎅 Merry Sprints</button>
+            <button type="button" class="motto-preset-pill" data-motto="☕ Fueled by Cocoa &amp; Code">☕ Cocoa &amp; Code</button>
+            <button type="button" class="motto-preset-pill" data-motto="🎁 Secret Santa 2026">🎁 Secret Santa 2026</button>
+            <button type="button" class="motto-preset-pill" data-motto="🚀 Shipping Holiday Magic">🚀 Holiday Magic</button>
+            <button type="button" class="motto-preset-pill" data-motto="❄️ Warm Winter Wishes">❄️ Winter Wishes</button>
+          </div>
+        </div>
+
+        <!-- 4. Avatar Selfie Badge -->
+        <div class="customizer-section customizer-badge-section">
+          <label class="customizer-checkbox-label">
+            <input type="checkbox" id="customizer-show-badge" checked />
+            <span class="customizer-checkbox-text">Display Avatar Photo Badge on 3D Nameplate</span>
+          </label>
+          <div class="customizer-badge-actions">
+            <button type="button" id="customizer-take-selfie" class="btn btn-secondary btn-sm">📸 Live Selfie for Badge</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="desk-customizer-footer">
+        <button type="button" id="desk-customizer-save" class="btn btn-primary customizer-save-btn">✨ Save &amp; Apply to Desk</button>
+        <button type="button" id="desk-customizer-cancel" class="btn btn-secondary">Cancel</button>
+      </div>
+    </div>
+  </dialog>
   <div id="action-progress" class="action-progress hidden" role="status" aria-live="polite" aria-atomic="true">
     <div class="progress-card">
       <div class="progress-head"><span class="progress-spinner" aria-hidden="true"></span><div><strong id="progress-title">Working…</strong><p id="progress-detail">Saving your changes securely. Please keep this page open.</p></div></div>
@@ -437,6 +753,6 @@
   <script type="importmap">
     {"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js"}}
   </script>
-  <script type="module" src="./assets/app.js?v=christmas-hub-v1"></script>
+  <script type="module" src="./assets/app.js?v=gameplay-v2"></script>
 </body>
 </html>

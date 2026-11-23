@@ -1,7 +1,8 @@
 import * as THREE from "three";
-import {buildOffice} from "./office.js?v=no-skyline-v1";
+import {buildOffice,deskClueForSeat,CLUE_PROPS,decorateClueDesk} from "./office.js?v=gameplay-v2";
 import {createAvatar,avatarFromPerson} from "./avatar.js?v=face-refine-v4-studio-qa-v1";
 import {createOfficeLife} from "./office-life.js?v=studio-qa-v1";
+import {playFestiveChime} from "./christmas-music.js?v=jingle-bells-v1";
 
 /* A responsive office runtime. 3D art and camera are independent from the existing Supabase UI. */
 const UP=new THREE.Vector3(0,1,0);
@@ -198,16 +199,455 @@ export function mountOffice(host,profile,notice=()=>{}){
   renderer.shadowMap.type=THREE.PCFSoftShadowMap;
   renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,1.5));
   const scene=new THREE.Scene();
-  scene.background=new THREE.Color(0xe5e5df);
-  scene.fog=new THREE.Fog(0xe8e4dc,55,165);
-  // Larger tonal separation than the original almost-flat flood lighting.
-  scene.add(new THREE.HemisphereLight(0xf7efe7,0xa8a29a,1.46));
-  const coolFill=new THREE.DirectionalLight(0x9ccee2,.72);
+  scene.background=new THREE.Color(0xe2e7ec);
+  scene.fog=new THREE.Fog(0xe5eaee,55,165);
+  // Indoor office balanced lighting: natural window sunlight by day,
+  // cozy warm fluorescents, desk lamps, and glowing Christmas lights by night.
+  const hemiLight=new THREE.HemisphereLight(0xfdf8f2,0xaeb2b8,1.45);
+  scene.add(hemiLight);
+  const coolFill=new THREE.DirectionalLight(0xa8d2e8,.70);
   coolFill.position.set(8,8,5);scene.add(coolFill);
-  const sun=new THREE.DirectionalLight(0xffd4a1,2.22);
+  const sun=new THREE.DirectionalLight(0xfff2dc,2.20);
   sun.position.set(-7,12,-5);sun.target.position.set(0,0,9);
-  const warmRim=new THREE.DirectionalLight(0xffcfa2,.45);
+  const warmRim=new THREE.DirectionalLight(0xffdfbe,.40);
   warmRim.position.set(2,5,22);scene.add(warmRim);
+
+  // Indoor office warm ambient & party lights for evening and night
+  const aisleWarmLight=new THREE.PointLight(0xffb85c,0.15,24,1.2);
+  aisleWarmLight.position.set(-0.8,3.4,8.0);
+  scene.add(aisleWarmLight);
+
+  const stagePartyLight=new THREE.PointLight(0xff8c44,0.25,28,1.1);
+  stagePartyLight.position.set(-1.0,3.8,24.0);
+  scene.add(stagePartyLight);
+
+  const treeWarmLight=new THREE.PointLight(0xffc866,0.20,18,1.2);
+  treeWarmLight.position.set(6.45,2.4,4.75);
+  scene.add(treeWarmLight);
+
+  const TIME_THEMES={
+    day:{
+      name:"Office Day",icon:"☀️",
+      bg:0xe2e7ec,fog:0xe5eaee,
+      hemiSky:0xfdf8f2,hemiGround:0xaeb2b8,hemiInt:1.45,
+      sunColor:0xfff2dc,sunInt:2.20,
+      fillColor:0xa8d2e8,fillInt:0.70,
+      rimColor:0xffdfbe,rimInt:0.40,
+      aisleInt:0.15,stageInt:0.25,treeInt:0.20,
+      twinkleScale:0.65
+    },
+    evening:{
+      name:"Dim Evening",icon:"🌇",
+      bg:0x222a36,fog:0x283240,
+      hemiSky:0xffd2a0,hemiGround:0x2c2622,hemiInt:1.05,
+      sunColor:0xff8844,sunInt:1.20,
+      fillColor:0xcc6688,fillInt:0.55,
+      rimColor:0xffaa55,rimInt:0.85,
+      aisleInt:1.45,stageInt:2.10,treeInt:1.35,
+      twinkleScale:1.85
+    },
+    night:{
+      name:"Christmas Night",icon:"🎄",
+      bg:0x141a24,fog:0x18202c,
+      hemiSky:0xffbe7a,hemiGround:0x1b1612,hemiInt:0.88,
+      sunColor:0x48648c,sunInt:0.40,
+      fillColor:0x3a2840,fillInt:0.45,
+      rimColor:0xff9944,rimInt:1.15,
+      aisleInt:2.35,stageInt:3.40,treeInt:2.25,
+      twinkleScale:2.75
+    }
+  };
+  const THEME_KEYS=["auto","day","evening","night"];
+  let timeThemeMode="auto";
+  let activeTwinkleScale=1.0;
+
+  function getSystemTimeThemeKey(){
+    const h=new Date().getHours();
+    if(h>=7&&h<17)return "day";
+    if(h>=17&&h<20)return "evening";
+    return "night";
+  }
+
+  function applyTimeTheme(mode=timeThemeMode){
+    timeThemeMode=mode;
+    const effectiveKey=(mode==="auto")?getSystemTimeThemeKey():mode;
+    const theme=TIME_THEMES[effectiveKey]||TIME_THEMES.day;
+
+    scene.background.setHex(theme.bg);
+    scene.fog.color.setHex(theme.fog);
+    hemiLight.color.setHex(theme.hemiSky);
+    hemiLight.groundColor.setHex(theme.hemiGround);
+    hemiLight.intensity=theme.hemiInt;
+    sun.color.setHex(theme.sunColor);
+    sun.intensity=theme.sunInt;
+    coolFill.color.setHex(theme.fillColor);
+    coolFill.intensity=theme.fillInt;
+    warmRim.color.setHex(theme.rimColor);
+    warmRim.intensity=theme.rimInt;
+
+    aisleWarmLight.intensity=theme.aisleInt;
+    stagePartyLight.intensity=theme.stageInt;
+    treeWarmLight.intensity=theme.treeInt;
+    activeTwinkleScale=theme.twinkleScale||1.0;
+
+    const btn=document.getElementById("hud-btn-time");
+    if(btn){
+      btn.innerHTML=`${theme.icon} <span>${theme.name}${mode==="auto"?" (Auto)":""}</span>`;
+      btn.title=`Office Lighting: ${theme.name}${mode==="auto"?" (Auto - from system clock)":""} - Click to toggle`;
+    }
+  }
+
+  function cycleTimeTheme(){
+    const idx=THEME_KEYS.indexOf(timeThemeMode);
+    const nextKey=THEME_KEYS[(idx+1)%THEME_KEYS.length];
+    applyTimeTheme(nextKey);
+    const themeName=nextKey==="auto"?`Auto (${TIME_THEMES[getSystemTimeThemeKey()].name})`:TIME_THEMES[nextKey].name;
+    notice(`Office theme: ${themeName}`);
+  }
+
+  applyTimeTheme("auto");
+
+  const CLUE_INFO={
+    "apple":{icon:"🍎",title:"Fresh Red Apple"},
+    "coffee":{icon:"☕",title:"Hot Coffee Mug"},
+    "mini-tree":{icon:"🎄",title:"Mini Christmas Tree"},
+    "gift":{icon:"🎁",title:"Festive Gift Box"},
+    "succulent":{icon:"🪴",title:"Desktop Succulent"},
+    "ornament":{icon:"🔮",title:"Holiday Bauble"},
+    "books":{icon:"📚",title:"Holiday Notebooks"},
+    "lantern":{icon:"🏮",title:"Cozy Holiday Lantern"},
+    "candy-cane":{icon:"🍬",title:"Peppermint Candy Cane"}
+  };
+
+  let officeDesks=[];
+  let activeDesk=null;
+
+  function drawNameplate(canvas,deskInfo){
+    const ctx=canvas.getContext("2d");
+    ctx.clearRect(0,0,512,160);
+
+    const r=24;
+    ctx.beginPath();
+    ctx.moveTo(r,0);
+    ctx.lineTo(512-r,0);
+    ctx.quadraticCurveTo(512,0,512,r);
+    ctx.lineTo(512,160-r);
+    ctx.quadraticCurveTo(512,160,512-r,160);
+    ctx.lineTo(r,160);
+    ctx.quadraticCurveTo(0,160,0,160-r);
+    ctx.lineTo(0,r);
+    ctx.quadraticCurveTo(0,0,r,0);
+    ctx.closePath();
+
+    if(deskInfo.isMe){
+      let custom={};
+      try{custom=JSON.parse(localStorage.getItem("vcf_ss_desk_custom")||"{}");}catch{}
+      const themeKey=custom.theme||"emerald";
+      const mottoText=custom.motto?.trim()||"⭐ YOUR WORKSPACE";
+      const showBadge=custom.showBadge!==false;
+      const photoUrl=localStorage.getItem("vcf_ss_avatar_photo");
+
+      const THEMES={
+        emerald:{bg1:"#144534",bg2:"#0a281e",border:"#f2c886",sub:"#f5d796",text:"#ffffff"},
+        crimson:{bg1:"#541221",bg2:"#25050c",border:"#f4c776",sub:"#fbd49b",text:"#ffffff"},
+        frost:{bg1:"#16324a",bg2:"#0b1a26",border:"#92d8f0",sub:"#b2e3f5",text:"#f5fcff"},
+        walnut:{bg1:"#3f2416",bg2:"#1d0e07",border:"#e3aa68",sub:"#f2c89b",text:"#fff8f0"},
+        midnight:{bg1:"#12163b",bg2:"#060817",border:"#c4a4f8",sub:"#d9c2fa",text:"#fbf8ff"}
+      };
+      const th=THEMES[themeKey]||THEMES.emerald;
+
+      const grad=ctx.createLinearGradient(0,0,512,160);
+      grad.addColorStop(0,th.bg1);
+      grad.addColorStop(1,th.bg2);
+      ctx.fillStyle=grad;
+      ctx.fill();
+      ctx.lineWidth=8;
+      ctx.strokeStyle=th.border;
+      ctx.stroke();
+
+      ctx.fillStyle=th.sub;
+      ctx.font="bold 20px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+      const dispMotto=mottoText.length>28?mottoText.slice(0,26)+"…":mottoText;
+      ctx.fillText(dispMotto,28,42);
+
+      ctx.fillStyle=th.text;
+      ctx.font="bold 38px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+      const maxChars=showBadge?13:17;
+      const displayName=deskInfo.ownerName.length>maxChars?deskInfo.ownerName.slice(0,maxChars-1)+"…":deskInfo.ownerName;
+      ctx.fillText(displayName,28,92);
+
+      ctx.fillStyle=th.sub;
+      ctx.font="500 23px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+      ctx.fillText(`${deskInfo.code} · ${deskInfo.clueMeta.icon} ${deskInfo.clueMeta.title}`,28,132);
+
+      if(showBadge){
+        const bx=432,by=80,br=46;
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(bx,by,br,0,Math.PI*2);
+        ctx.closePath();
+        ctx.clip();
+
+        if(photoUrl){
+          const img=new Image();
+          img.onload=()=>{
+            ctx.save();
+            ctx.beginPath();
+            ctx.arc(bx,by,br,0,Math.PI*2);
+            ctx.closePath();
+            ctx.clip();
+            ctx.drawImage(img,bx-br,by-br,br*2,br*2);
+            ctx.restore();
+
+            ctx.beginPath();
+            ctx.arc(bx,by,br,0,Math.PI*2);
+            ctx.lineWidth=5;
+            ctx.strokeStyle=th.border;
+            ctx.stroke();
+
+            if(deskInfo.texture)deskInfo.texture.needsUpdate=true;
+          };
+          img.src=photoUrl;
+          if(img.complete&&img.naturalWidth>0){
+            ctx.drawImage(img,bx-br,by-br,br*2,br*2);
+          }
+        }else{
+          ctx.fillStyle="#1c3a2c";
+          ctx.fillRect(bx-br,by-br,br*2,br*2);
+          ctx.fillStyle="#fcd890";
+          ctx.font="bold 28px sans-serif";
+          ctx.textAlign="center";
+          ctx.textBaseline="middle";
+          const initial=(deskInfo.ownerName||"U").trim().charAt(0).toUpperCase();
+          ctx.fillText("🎅 "+initial,bx,by);
+        }
+        ctx.restore();
+
+        ctx.beginPath();
+        ctx.arc(bx,by,br,0,Math.PI*2);
+        ctx.lineWidth=5;
+        ctx.strokeStyle=th.border;
+        ctx.stroke();
+      }
+    }else if(deskInfo.ownerName){
+      const grad=ctx.createLinearGradient(0,0,512,160);
+      grad.addColorStop(0,"#192f42");
+      grad.addColorStop(1,"#0f1d2a");
+      ctx.fillStyle=grad;
+      ctx.fill();
+      ctx.lineWidth=6;
+      ctx.strokeStyle="#4d7aa6";
+      ctx.stroke();
+
+      ctx.fillStyle="#8fb6dc";
+      ctx.font="bold 20px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+      ctx.fillText("💼 COLLEAGUE DESK",28,42);
+
+      ctx.fillStyle="#f5f9fc";
+      ctx.font="bold 38px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+      const displayName=deskInfo.ownerName.length>18?deskInfo.ownerName.slice(0,16)+"…":deskInfo.ownerName;
+      ctx.fillText(displayName,28,92);
+
+      ctx.fillStyle="#bad2e8";
+      ctx.font="500 23px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+      ctx.fillText(`${deskInfo.code} · Clue: ${deskInfo.clueMeta.icon} ${deskInfo.clueMeta.title}`,28,132);
+    }else{
+      ctx.fillStyle="#222c36";
+      ctx.fill();
+      ctx.lineWidth=4;
+      ctx.strokeStyle="#415161";
+      ctx.stroke();
+
+      ctx.fillStyle="#c5d2de";
+      ctx.font="bold 34px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+      ctx.fillText(`${deskInfo.code} · Open Desk`,28,76);
+
+      ctx.fillStyle="#7b91a3";
+      ctx.font="500 23px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+      ctx.fillText("Hot Desk · Available",28,120);
+    }
+  }
+
+  function buildDeskNameplate(deskInfo){
+    const canvas=document.createElement("canvas");
+    canvas.width=512;
+    canvas.height=160;
+    deskInfo.canvas=canvas;
+
+    drawNameplate(canvas,deskInfo);
+
+    const texture=new THREE.CanvasTexture(canvas);
+    texture.colorSpace=THREE.SRGBColorSpace;
+    deskInfo.texture=texture;
+
+    const material=new THREE.MeshBasicMaterial({map:texture,side:THREE.DoubleSide});
+    deskInfo.material=material;
+
+    const mesh=new THREE.Mesh(new THREE.PlaneGeometry(1.02,0.32),material);
+
+    const plateGroup=new THREE.Group();
+    mesh.position.y=0.22;
+    plateGroup.add(mesh);
+
+    const postMat=new THREE.MeshStandardMaterial({
+      color:deskInfo.isMe?0xcaa35a:0x4a5d70,
+      metalness:0.6,
+      roughness:0.3
+    });
+    const post=new THREE.Mesh(new THREE.CylinderGeometry(0.012,0.012,0.24,8),postMat);
+    post.position.y=0.10;
+    plateGroup.add(post);
+
+    deskInfo.redraw=()=>{
+      drawNameplate(canvas,deskInfo);
+      texture.needsUpdate=true;
+    };
+
+    return {plateGroup,texture,material};
+  }
+
+  let seatedDesk=null;
+  let targetSitDesk=null;
+
+  function updateDeskUI(){
+    const actionBtn=document.getElementById("desk-card-action");
+    const deskBtn=document.getElementById("hud-btn-mydesk");
+    if(deskBtn){
+      if(hero?.seated){
+        deskBtn.innerHTML=`🚶 <span>Stand Up</span>`;
+        deskBtn.title="Stand up from desk (or press WASD / move joystick)";
+      }else{
+        deskBtn.innerHTML=`⭐ <span>My Desk</span>`;
+        deskBtn.title="Walk to your assigned desk";
+      }
+    }
+    if(actionBtn&&activeDesk){
+      if(hero?.seated&&seatedDesk===activeDesk){
+        actionBtn.textContent="Stand Up 🚶";
+        actionBtn.classList.add("btn-seated");
+      }else{
+        actionBtn.classList.remove("btn-seated");
+        if(activeDesk.isMe){
+          actionBtn.textContent="Sit at Desk";
+        }else if(activeDesk.ownerName){
+          actionBtn.textContent="Say Hello 👋";
+        }else{
+          actionBtn.textContent="Sit Here";
+        }
+      }
+    }
+  }
+
+  function sitAtDesk(desk){
+    if(!desk||!hero)return;
+    if(hero.seated&&seatedDesk===desk)return;
+    if(hero.seated){
+      standUp(false);
+    }
+    const seat=desk.seat;
+    const curDist=Math.hypot(hero.group.position.x-seat.position.x,hero.group.position.z-seat.position.z);
+    if(curDist<=2.4){
+      performSit(desk);
+      return;
+    }
+    targetSitDesk=desk;
+    const approachX=seat.position.x+seat.chairSide*0.55;
+    const approachZ=seat.position.z;
+    moveTo(approachX,approachZ,true);
+    notice(`Walking to ${desk.isMe?"your desk":desk.code}... ⭐`);
+  }
+
+  function performSit(desk){
+    if(!desk||!hero)return;
+    targetSitDesk=null;
+    path=[];
+    clickMarker.group.visible=false;
+    const seat=desk.seat;
+    hero.group.position.set(seat.position.x,0,seat.position.z);
+    hero.group.rotation.y=seat.facing;
+    hero.seated=true;
+    hero.setActivity("typing");
+    seatedDesk=desk;
+    activeDesk=desk;
+    updateDeskUI();
+    const deskCard=document.getElementById("desk-card");
+    if(deskCard){
+      deskCard.classList.remove("hidden");
+    }
+    playFestiveChime("sit");
+    if(desk.isMe){
+      notice(`⭐ Seated at your desk (${desk.code})! Working & typing... 💻`);
+    }else if(desk.ownerName){
+      notice(`🪑 Visiting ${desk.ownerName}'s desk (${desk.code}) · Clue: ${desk.clueMeta.icon} ${desk.clueMeta.title}`);
+    }else{
+      notice(`🪑 Seated at desk ${desk.code}`);
+    }
+  }
+
+  function standUp(notify=true){
+    if(!hero||!hero.seated)return;
+    targetSitDesk=null;
+    if(seatedDesk){
+      hero.group.position.x+=seatedDesk.seat.chairSide*0.55;
+    }
+    hero.seated=false;
+    hero.setActivity("idle");
+    const wasMe=seatedDesk?.isMe;
+    seatedDesk=null;
+    updateDeskUI();
+    if(notify){
+      notice(wasMe?"Stood up from your desk.":"Stood up from desk.");
+    }
+  }
+
+  function goToDesk(){
+    if(hero?.seated&&seatedDesk?.isMe){
+      standUp(true);
+      return;
+    }
+    const myDesk=officeDesks.find(d=>d.isMe);
+    if(!myDesk){
+      notice("Could not locate your desk.");
+      return;
+    }
+    sitAtDesk(myDesk);
+  }
+
+  const myDeskBtn=document.getElementById("hud-btn-mydesk");
+  const timeBtn=document.getElementById("hud-btn-time");
+  const partyBtn=document.getElementById("hud-btn-party");
+  const deskCardActionBtn=document.getElementById("desk-card-action");
+  const deskCardCustomizeBtn=document.getElementById("desk-card-customize");
+
+  function onMyDeskClick(){goToDesk();}
+  function onTimeClick(){cycleTimeTheme();}
+  function onPartyClick(){togglePartyMode();}
+  function onDeskCardCustomizeClick(){
+    const customizerDialog=document.getElementById("desk-customizer-dialog");
+    if(customizerDialog){
+      if(typeof customizerDialog.showModal==="function")customizerDialog.showModal();
+      else customizerDialog.classList.remove("hidden");
+    }
+  }
+  function onDeskCardActionClick(){
+    if(!activeDesk)return;
+    if(hero?.seated&&seatedDesk===activeDesk){
+      standUp(true);
+      return;
+    }
+    if(activeDesk.ownerName&&!activeDesk.isMe){
+      hero.play("hi",clock.elapsedTime);
+      notice(`👋 Saying hi at ${activeDesk.ownerName}'s desk!`);
+      return;
+    }
+    performSit(activeDesk);
+  }
+
+  myDeskBtn?.addEventListener("click",onMyDeskClick);
+  timeBtn?.addEventListener("click",onTimeClick);
+  partyBtn?.addEventListener("click",onPartyClick);
+  deskCardActionBtn?.addEventListener("click",onDeskCardActionClick);
+  deskCardCustomizeBtn?.addEventListener("click",onDeskCardCustomizeClick);
   sun.castShadow=true;
   sun.shadow.mapSize.set(window.innerWidth<760?1024:2048,window.innerWidth<760?1024:2048);
   sun.shadow.camera.left=-18;sun.shadow.camera.right=18;sun.shadow.camera.top=28;sun.shadow.camera.bottom=-28;
@@ -228,28 +668,187 @@ export function mountOffice(host,profile,notice=()=>{}){
   const clickMarker=spot(scene);
   const speech=makeGreetingBubble(scene);
   let officeLife=null;
+
+  function createConfetti(scene){
+    const COUNT=280;
+    const geo=new THREE.BufferGeometry();
+    const pos=new Float32Array(COUNT*3);
+    const col=new Float32Array(COUNT*3);
+    const vel=new Float32Array(COUNT*3);
+    const PALETTE=[
+      [0.90,0.15,0.25],
+      [0.15,0.80,0.45],
+      [1.00,0.85,0.30],
+      [0.98,0.98,1.00],
+      [0.30,0.70,0.98],
+      [0.92,0.40,0.75]
+    ];
+    for(let i=0;i<COUNT;i++){
+      pos[i*3]=(Math.random()-0.5)*18;
+      pos[i*3+1]=Math.random()*5+0.5;
+      pos[i*3+2]=(Math.random()-0.5)*18;
+      const c=PALETTE[Math.floor(Math.random()*PALETTE.length)];
+      col[i*3]=c[0];col[i*3+1]=c[1];col[i*3+2]=c[2];
+      vel[i*3]=(Math.random()-0.5)*0.5;
+      vel[i*3+1]=-0.55-Math.random()*0.75;
+      vel[i*3+2]=(Math.random()-0.5)*0.5;
+    }
+    geo.setAttribute("position",new THREE.BufferAttribute(pos,3));
+    geo.setAttribute("color",new THREE.BufferAttribute(col,3));
+
+    const flakeCanvas=document.createElement("canvas");
+    flakeCanvas.width=16;flakeCanvas.height=16;
+    const fctx=flakeCanvas.getContext("2d");
+    fctx.fillStyle="#ffffff";
+    fctx.fillRect(1,1,14,14);
+    const flakeTex=new THREE.CanvasTexture(flakeCanvas);
+
+    const mat=new THREE.PointsMaterial({
+      size:0.18,
+      vertexColors:true,
+      map:flakeTex,
+      transparent:true,
+      opacity:0.92,
+      depthWrite:false
+    });
+    const points=new THREE.Points(geo,mat);
+    points.visible=false;
+    scene.add(points);
+
+    let active=false;
+    return {
+      points,
+      get active(){return active;},
+      start(){active=true;points.visible=true;},
+      stop(){active=false;points.visible=false;},
+      toggle(){
+        active=!active;
+        points.visible=active;
+        return active;
+      },
+      update(dt){
+        if(!active)return;
+        const p=geo.attributes.position.array;
+        const now=Date.now()*0.0025;
+        for(let i=0;i<COUNT;i++){
+          p[i*3]+=vel[i*3]*dt+Math.sin(now+i)*0.003;
+          p[i*3+1]+=vel[i*3+1]*dt;
+          p[i*3+2]+=vel[i*3+2]*dt+Math.cos(now+i)*0.003;
+          if(p[i*3+1]<0.12){
+            p[i*3+1]=4.8+Math.random()*1.5;
+            p[i*3]=(Math.random()-0.5)*18;
+            p[i*3+2]=(Math.random()-0.5)*18;
+          }
+        }
+        geo.attributes.position.needsUpdate=true;
+      }
+    };
+  }
+
+  const confettiSystem=createConfetti(scene);
+  let partyModeActive=false;
+
+  function togglePartyMode(){
+    partyModeActive=confettiSystem.toggle();
+    const btn=document.getElementById("hud-btn-party");
+    if(btn){
+      btn.classList.toggle("hud-pill-active",partyModeActive);
+      btn.innerHTML=partyModeActive?`🎉 <span>Party: ON</span>`:`🎉 <span>Party Mode</span>`;
+    }
+    if(partyModeActive){
+      playFestiveChime("party");
+      notice("🎉 Secret Santa Party Mode is ON! Confetti & celebration active! ✨");
+    }else{
+      notice("Party celebration paused 🎄");
+    }
+    return partyModeActive;
+  }
+
+  function customizeMyDesk(customSettings){
+    try{
+      localStorage.setItem("vcf_ss_desk_custom",JSON.stringify(customSettings));
+    }catch{}
+    const myDesk=officeDesks.find(d=>d.isMe);
+    if(!myDesk)return;
+
+    if(customSettings.prop){
+      myDesk.clueKey=customSettings.prop;
+      myDesk.clueMeta=CLUE_INFO[customSettings.prop]||{icon:"🎁",title:"Secret Santa Clue"};
+      if(myDesk.deskGroup){
+        const stands=myDesk.deskGroup.children.filter(c=>c.userData&&c.userData.isClueStand);
+        stands.forEach(s=>myDesk.deskGroup.remove(s));
+        decorateClueDesk(myDesk.deskGroup,myDesk.seatIndex,myDesk.seat.chairSide,customSettings.prop);
+      }
+    }
+
+    if(myDesk.redraw){
+      myDesk.redraw();
+    }
+
+    if(activeDesk&&activeDesk.isMe){
+      const icon=document.getElementById("desk-card-icon");
+      const title=document.getElementById("desk-card-title");
+      const subtitle=document.getElementById("desk-card-subtitle");
+      if(icon)icon.textContent=myDesk.clueMeta.icon;
+      if(title)title.textContent=myDesk.ownerName+"'s Workspace";
+      if(subtitle)subtitle.textContent=`${myDesk.code} · Clue Prop: ${myDesk.clueMeta.icon} ${myDesk.clueMeta.title}`;
+    }
+
+    notice("✨ Your workspace desk has been personalized!");
+  }
+
+  function updateAvatarPhoto(photoUrl){
+    try{
+      if(photoUrl) localStorage.setItem("vcf_ss_avatar_photo",photoUrl);
+      else localStorage.removeItem("vcf_ss_avatar_photo");
+    }catch{}
+    const myDesk=officeDesks.find(d=>d.isMe);
+    if(myDesk&&myDesk.redraw){
+      myDesk.redraw();
+    }
+  }
+
   function applyProfile(next){
     officeLife?.dispose();officeLife=null;
+    for(const d of officeDesks){
+      if(d.nameplateGroup&&d.deskGroup){
+        d.deskGroup.remove(d.nameplateGroup);
+        d.texture?.dispose();
+        d.material?.dispose();
+      }
+    }
+    officeDesks=[];
+
     const oldPos=hero?hero.group.position.clone():null;
     currentProfile=next;
-    // Stable roster-index seating; filtering out the viewer must never shift
-    // other colleagues' physical workstations or their hint objects.
     const allMembers=(next?.colleagues||[]).slice(0,150);
-    const roster=allMembers.map((p,index)=>({
-      ...p,seatIndex:Number.isInteger(p.officeSeat)?p.officeSeat:index
-    })).filter(p=>p.id!==next?.me?.id);
-    // Empty desk slots left by deleted participants stay empty: no colleague
-    // moves and previously issued physical-desk clues remain truthful.
-    const total=Math.max(1,...allMembers.map((p,i)=>
+    const myId=next?.me?.id||"player";
+    const myName=next?.me?.display_name||next?.me?.name||"You";
+
+    let mySeatIndex=Number.isInteger(next?.me?.officeSeat)?next.me.officeSeat:-1;
+    if(mySeatIndex===-1){
+      const meInAll=allMembers.findIndex(p=>p.id===myId);
+      if(meInAll!==-1){
+        mySeatIndex=Number.isInteger(allMembers[meInAll].officeSeat)?allMembers[meInAll].officeSeat:meInAll;
+      }else{
+        mySeatIndex=allMembers.length;
+      }
+    }
+
+    const total=Math.max(1,mySeatIndex+1,...allMembers.map((p,i)=>
       (Number.isInteger(p.officeSeat)?p.officeSeat:i)+1));
     const newBays=Math.max(4,Math.ceil(total/3));
-    if(!office || newBays!==office.bays){
+    if(!office||newBays!==office.bays){
       if(office)scene.remove(office.root);
       office=buildOffice(total);scene.add(office.root);
       nav=new Navigation(office);
     }
-    // Every colleague is a fully sculpted, articulated avatar. No low-detail
-    // substitutes, impostors, or distance-dependent replacement models.
+
+    const roster=allMembers.map((p,index)=>({
+      ...p,
+      seatIndex:Number.isInteger(p.officeSeat)?p.officeSeat:(index>=mySeatIndex?index+1:index)
+    })).filter(p=>p.id!==myId);
+
     for(const item of people){
       if(item.detailed){
         scene.remove(item.detailed.group);
@@ -258,13 +857,13 @@ export function mountOffice(host,profile,notice=()=>{}){
     }
     people=[];
     if(!hero){
-      hero=createAvatar(avatarFromPerson({...next.me,id:next.me.id||"player"}));
+      hero=createAvatar(avatarFromPerson({...next.me,id:myId}));
       hero.group.position.set(office.spawn.x,0,office.spawn.z);
       hero.group.rotation.y=Math.PI;
       scene.add(hero.group);
     }else{
       scene.remove(hero.group);
-      hero=createAvatar(avatarFromPerson({...next.me,id:next.me.id||"player"}));
+      hero=createAvatar(avatarFromPerson({...next.me,id:myId}));
       hero.group.position.copy(oldPos||new THREE.Vector3(office.spawn.x,0,office.spawn.z));
       hero.group.position.x=clamp(hero.group.position.x,office.room.left+.4,office.room.right-.4);
       hero.group.position.z=clamp(hero.group.position.z,office.room.front+.4,office.room.back-.4);
@@ -280,6 +879,55 @@ export function mountOffice(host,profile,notice=()=>{}){
       scene.add(detailed.group);
       people.push({id:p.id,name:p.name||"Colleague",seat,appearance,detailed});
     });
+
+    office.seats.forEach((seat,seatIdx)=>{
+      const isMe=(seatIdx===mySeatIndex);
+      const colleague=isMe?null:roster.find(p=>p.seatIndex===seatIdx);
+      const ownerName=isMe?myName:(colleague?(colleague.name||colleague.display_name||"Colleague"):"");
+      const ownerId=isMe?myId:(colleague?colleague.id:null);
+      const clueKey=deskClueForSeat(seatIdx);
+      const clueMeta=CLUE_INFO[clueKey]||{icon:"🎁",title:"Secret Santa Clue"};
+      const code="D-"+String(seatIdx+1).padStart(2,"0");
+
+      const deskInfo={
+        seatIndex:seatIdx,
+        code,
+        isMe,
+        ownerName,
+        ownerId,
+        colleague,
+        clueKey,
+        clueMeta,
+        seat,
+        deskPos:seat.deskPosition,
+        chairPos:seat.position,
+        deskGroup:seat.deskGroup
+      };
+
+      if(isMe&&seat.deskGroup){
+        let custom={};
+        try{custom=JSON.parse(localStorage.getItem("vcf_ss_desk_custom")||"{}");}catch{}
+        if(custom.prop){
+          deskInfo.clueKey=custom.prop;
+          deskInfo.clueMeta=CLUE_INFO[custom.prop]||deskInfo.clueMeta;
+          const stands=seat.deskGroup.children.filter(c=>c.userData&&c.userData.isClueStand);
+          stands.forEach(s=>seat.deskGroup.remove(s));
+          decorateClueDesk(seat.deskGroup,seatIdx,seat.chairSide,custom.prop);
+        }
+      }
+
+      if(seat.deskGroup){
+        const {plateGroup,texture,material}=buildDeskNameplate(deskInfo);
+        plateGroup.position.set(-seat.chairSide*.485,1.44,0);
+        seat.deskGroup.add(plateGroup);
+        deskInfo.nameplateGroup=plateGroup;
+        deskInfo.texture=texture;
+        deskInfo.material=material;
+      }
+
+      officeDesks.push(deskInfo);
+    });
+
     officeLife=createOfficeLife(people,hero,nav,(person,text,time)=>{
       speech.say(person,text,time);
       if(text)notice((person.name||"Friend")+" · "+text);
@@ -328,7 +976,9 @@ export function mountOffice(host,profile,notice=()=>{}){
       )
     };
   }
-  function moveTo(x,z){
+  function moveTo(x,z,keepSitTarget=false){
+    if(hero?.seated) standUp(false);
+    if(!keepSitTarget) targetSitDesk=null;
     const target={x,z};
     const next=nav.find({x:hero.group.position.x,z:hero.group.position.z},target);
     if(!next.length){notice("Can't reach there.");return;}
@@ -352,14 +1002,26 @@ export function mountOffice(host,profile,notice=()=>{}){
       if(ray.ray.distanceToPoint(center)<.65&&depth<best){hit=p;best=depth;}
     }
     if(hit){
+      if(hero?.seated) standUp(false);
       const time=clock.elapsedTime;
       const target=hit.detailed.group.position,origin=hero.group.position;
       officeLife?.reserveForPlayer(hit,time);
       const distance=Math.hypot(target.x-origin.x,target.z-origin.z);
+      const GREETINGS=[
+        "Hey! Loving the festive office vibes! 🎄",
+        "Are you my Secret Santa? 🎅",
+        "Don't forget to check my wishlist in the Santa Hub! 🎁",
+        "Have you seen the clue prop on my desk? 💡",
+        "Merry Christmas and Happy Holidays! ✨",
+        "I'm so excited for the gift exchange! 🎉"
+      ];
+      const line=GREETINGS[Math.floor(Math.random()*GREETINGS.length)];
       if(distance<2.0){
         path=[];interactTarget=null;
         hero.play("hi",time);
-        officeLife?.interruptForHero(hit,"hi",time);
+        hit.detailed?.play("hi",time);
+        speech.say(hit,line,time);
+        notice(`${hit.name} · ${line}`);
         return;
       }
       const approach=officeLife?.findApproach(origin,target,hero,1.65);
@@ -374,10 +1036,61 @@ export function mountOffice(host,profile,notice=()=>{}){
       }
       return;
     }
+
+    // Christmas Tree hits (Spawn tree & Party stage tree)
+    const nearTreePos=new THREE.Vector3(6.45,1.5,4.75);
+    const mainTreePos=new THREE.Vector3(0,2.5,office.partyStart+3.8);
+    const dNear=ray.ray.distanceToPoint(nearTreePos);
+    const dMain=ray.ray.distanceToPoint(mainTreePos);
+    if(dNear<1.15||dMain<1.75){
+      if(hero?.seated) standUp(false);
+      const isMain=dMain<dNear;
+      const targetPos=isMain?{x:0,z:office.partyStart+2.2}:{x:5.2,z:4.75};
+      moveTo(targetPos.x,targetPos.z);
+      notice("🎄 Walking to the Christmas Tree!");
+      setTimeout(()=>{
+        if(!hero)return;
+        hero.play("cheer",clock.elapsedTime);
+        notice("🎄 Merry Christmas! You visited the Christmas Tree! Jingle bells & holiday cheer! ⭐");
+      },1000);
+      return;
+    }
+
+    // Secret Santa Stage Gift Table hits
+    const stageGiftsPos=new THREE.Vector3(-3.2,0.8,office.partyStart+3.66);
+    if(ray.ray.distanceToPoint(stageGiftsPos)<1.55){
+      if(hero?.seated) standUp(false);
+      moveTo(-3.2,office.partyStart+2.6);
+      notice("🎁 Walking to the Secret Santa Gift Table!");
+      setTimeout(()=>{
+        if(!hero)return;
+        hero.play("clap",clock.elapsedTime);
+        notice("🎁 The Secret Santa Gift Table! Wrapped presents will be revealed here at the party!");
+      },1000);
+      return;
+    }
+
+    // Desk and Clue Prop hits
+    let clickedDesk=null;
+    let bestDeskDepth=Infinity;
+    for(const d of officeDesks){
+      const center=new THREE.Vector3(d.deskPos.x,1.0,d.deskPos.z);
+      const depth=ray.ray.origin.distanceTo(center);
+      const rayDist=ray.ray.distanceToPoint(center);
+      if(rayDist<1.45&&depth<bestDeskDepth){
+        clickedDesk=d;
+        bestDeskDepth=depth;
+      }
+    }
+    if(clickedDesk){
+      sitAtDesk(clickedDesk);
+      return;
+    }
     const point=new THREE.Vector3();
     if(ray.ray.intersectPlane(ground,point)&&
        point.x>=office.room.left&&point.x<=office.room.right&&
        point.z>=office.room.front&&point.z<=office.room.back){
+      if(hero?.seated) standUp(false);
       moveTo(point.x,point.z);
     }
   }
@@ -470,14 +1183,139 @@ export function mountOffice(host,profile,notice=()=>{}){
   window.addEventListener("resize",resize);
   applyProfile(profile);resize();
   const start=clock.getElapsedTime();
+  const activeKeys=new Set();
+  function onKeyDown(e){
+    if(paused)return;
+    const tag=document.activeElement?.tagName;
+    if(tag==="INPUT"||tag==="TEXTAREA"||tag==="SELECT")return;
+    if(["KeyW","KeyA","KeyS","KeyD","ArrowUp","ArrowLeft","ArrowDown","ArrowRight"].includes(e.code)){
+      activeKeys.add(e.code);
+      e.preventDefault();
+    }
+  }
+  function onKeyUp(e){
+    activeKeys.delete(e.code);
+  }
+  window.addEventListener("keydown",onKeyDown);
+  window.addEventListener("keyup",onKeyUp);
+
+  const joystickVector={x:0,y:0};
+  const joystickBase=document.getElementById("joystick-base");
+  const joystickKnob=document.getElementById("joystick-knob");
+  let joystickPointerId=null;
+
+  function updateJoystickPos(clientX,clientY){
+    if(!joystickBase||!joystickKnob)return;
+    const rect=joystickBase.getBoundingClientRect();
+    const centerX=rect.left+rect.width/2;
+    const centerY=rect.top+rect.height/2;
+    const rawDx=clientX-centerX;
+    const rawDy=clientY-centerY;
+    const dist=Math.hypot(rawDx,rawDy);
+    const maxRadius=rect.width*0.38;
+    const clampedDist=Math.min(dist,maxRadius);
+    const angle=Math.atan2(rawDy,rawDx);
+    const knobX=Math.cos(angle)*clampedDist;
+    const knobY=Math.sin(angle)*clampedDist;
+
+    joystickKnob.style.transition="none";
+    joystickKnob.style.transform=`translate3d(${knobX}px,${knobY}px,0px)`;
+
+    const normDist=clampedDist/maxRadius;
+    joystickVector.x=Math.cos(angle)*normDist;
+    joystickVector.y=Math.sin(angle)*normDist;
+  }
+  function onJoyDown(e){
+    if(paused)return;
+    e.stopPropagation();
+    joystickPointerId=e.pointerId;
+    joystickBase?.classList.add("active");
+    try{joystickBase?.setPointerCapture(e.pointerId);}catch{}
+    updateJoystickPos(e.clientX,e.clientY);
+  }
+  function onJoyMove(e){
+    if(e.pointerId!==joystickPointerId)return;
+    e.stopPropagation();
+    updateJoystickPos(e.clientX,e.clientY);
+  }
+  function onJoyUp(e){
+    if(e.pointerId!==joystickPointerId)return;
+    e.stopPropagation();
+    joystickPointerId=null;
+    joystickBase?.classList.remove("active");
+    joystickVector.x=0;
+    joystickVector.y=0;
+    if(joystickKnob){
+      joystickKnob.style.transition="transform 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.275)";
+      joystickKnob.style.transform="translate3d(0px,0px,0px)";
+    }
+  }
+
+  if(joystickBase){
+    joystickBase.addEventListener("pointerdown",onJoyDown);
+    joystickBase.addEventListener("pointermove",onJoyMove);
+    joystickBase.addEventListener("pointerup",onJoyUp);
+    joystickBase.addEventListener("pointercancel",onJoyUp);
+  }
+
   function render(){
     if(!running)return;
     requestId=requestAnimationFrame(render);
     const dt=Math.min(clock.getDelta(),.06),elapsed=clock.elapsedTime;
     // Character studio has its own renderer; avoid double WebGL work behind Pause.
     if(paused)return;
+    confettiSystem?.update(dt);
     if(hero){
       let moving=false;
+      const hasKeyInput=activeKeys.size>0;
+      const hasJoyInput=joystickVector.x!==0||joystickVector.y!==0;
+      if(hasKeyInput||hasJoyInput){
+        if(hero.seated) standUp(false);
+        path=[];
+        interactTarget=null;
+        targetSitDesk=null;
+        clickMarker.group.visible=false;
+        let inputX=0,inputZ=0;
+        if(activeKeys.has("KeyW")||activeKeys.has("ArrowUp"))inputZ-=1;
+        if(activeKeys.has("KeyS")||activeKeys.has("ArrowDown"))inputZ+=1;
+        if(activeKeys.has("KeyA")||activeKeys.has("ArrowLeft"))inputX-=1;
+        if(activeKeys.has("KeyD")||activeKeys.has("ArrowRight"))inputX+=1;
+
+        if(hasJoyInput){
+          inputX+=joystickVector.x;
+          inputZ+=joystickVector.y;
+        }
+
+        if(inputX!==0||inputZ!==0){
+          const rawMag=Math.hypot(inputX,inputZ);
+          const mag=Math.min(1,rawMag);
+          const dirX=inputX/rawMag,dirZ=inputZ/rawMag;
+          const forwardX=-Math.sin(cameraYaw),forwardZ=-Math.cos(cameraYaw);
+          const rightX=-forwardZ,rightZ=forwardX;
+          const worldDirX=rightX*dirX+forwardX*(-dirZ);
+          const worldDirZ=rightZ*dirX+forwardZ*(-dirZ);
+
+          const step=dt*2.8*mag;
+          const proposedX=hero.group.position.x+worldDirX*step;
+          const proposedZ=hero.group.position.z+worldDirZ*step;
+
+          const collides=nav.collision(proposedX,proposedZ);
+          const tooClose=people.some(p=>{
+            const n=p.detailed.group.position;
+            return Math.hypot(n.x-proposedX,n.z-proposedZ)<.91;
+          });
+
+          if(!collides&&!tooClose){
+            hero.group.position.x=proposedX;
+            hero.group.position.z=proposedZ;
+            const desired=Math.atan2(worldDirX,worldDirZ);
+            hero.group.rotation.y+=Math.atan2(
+              Math.sin(desired-hero.group.rotation.y),
+              Math.cos(desired-hero.group.rotation.y))*Math.min(1,dt*10);
+            moving=true;
+          }
+        }
+      }
       while(path.length){
         const goal=path[0];
         const dx=goal.x-hero.group.position.x,dz=goal.z-hero.group.position.z;
@@ -505,6 +1343,13 @@ export function mountOffice(host,profile,notice=()=>{}){
           Math.cos(desired-hero.group.rotation.y))*Math.min(1,dt*10);
         moving=true;break;
       }
+      if(targetSitDesk){
+        const seatPos=targetSitDesk.seat.position;
+        const distToChair=Math.hypot(hero.group.position.x-seatPos.x,hero.group.position.z-seatPos.z);
+        if(distToChair<=1.8||path.length===0){
+          performSit(targetSitDesk);
+        }
+      }
       if(interactTarget){
         const other=interactTarget.detailed.group.position;
         const distance=Math.hypot(
@@ -523,6 +1368,81 @@ export function mountOffice(host,profile,notice=()=>{}){
       hero.update(elapsed,moving);
       officeLife?.update(elapsed,dt);
       speech.update(elapsed);
+
+      // Proximity Desk Card check
+      if(officeDesks.length){
+        let closestDesk=null;
+        let closestDist=Infinity;
+        const hPos=hero.group.position;
+        for(const d of officeDesks){
+          const dist=Math.hypot(hPos.x-d.deskPos.x,hPos.z-d.deskPos.z);
+          if(dist<closestDist){
+            closestDist=dist;
+            closestDesk=d;
+          }
+        }
+        const deskCard=document.getElementById("desk-card");
+        if(deskCard){
+          if(closestDesk&&closestDist<=2.6){
+            if(activeDesk!==closestDesk){
+              activeDesk=closestDesk;
+              deskCard.classList.remove("hidden");
+              const badge=document.getElementById("desk-card-badge");
+              const icon=document.getElementById("desk-card-icon");
+              const title=document.getElementById("desk-card-title");
+              const subtitle=document.getElementById("desk-card-subtitle");
+              const actionBtn=document.getElementById("desk-card-action");
+
+              if(closestDesk.isMe){
+                deskCard.classList.add("desk-card-me");
+                if(badge)badge.textContent="⭐ YOUR DESK";
+                if(icon)icon.textContent=closestDesk.clueMeta.icon;
+                if(title)title.textContent=closestDesk.ownerName+"'s Workspace";
+                if(subtitle)subtitle.textContent=`${closestDesk.code} · Clue Prop: ${closestDesk.clueMeta.icon} ${closestDesk.clueMeta.title}`;
+                const custBtn=document.getElementById("desk-card-customize");
+                if(custBtn)custBtn.classList.remove("hidden");
+              }else if(closestDesk.ownerName){
+                deskCard.classList.remove("desk-card-me");
+                if(badge)badge.textContent="💼 COLLEAGUE DESK";
+                if(icon)icon.textContent=closestDesk.clueMeta.icon;
+                if(title)title.textContent=closestDesk.ownerName+"'s Desk";
+                if(subtitle)subtitle.textContent=`${closestDesk.code} · Clue Prop: ${closestDesk.clueMeta.icon} ${closestDesk.clueMeta.title}`;
+                const custBtn=document.getElementById("desk-card-customize");
+                if(custBtn)custBtn.classList.add("hidden");
+              }else{
+                deskCard.classList.remove("desk-card-me");
+                if(badge)badge.textContent="🪑 OPEN DESK";
+                if(icon)icon.textContent="🪑";
+                if(title)title.textContent=closestDesk.code+" · Open Desk";
+                if(subtitle)subtitle.textContent="Unassigned Hot Desk";
+                const custBtn=document.getElementById("desk-card-customize");
+                if(custBtn)custBtn.classList.add("hidden");
+              }
+
+              if(actionBtn){
+                if(hero?.seated&&seatedDesk===closestDesk){
+                  actionBtn.textContent="Stand Up 🚶";
+                  actionBtn.classList.add("btn-seated");
+                }else{
+                  actionBtn.classList.remove("btn-seated");
+                  if(closestDesk.isMe){
+                    actionBtn.textContent="Sit at Desk";
+                  }else if(closestDesk.ownerName){
+                    actionBtn.textContent="Say Hello 👋";
+                  }else{
+                    actionBtn.textContent="Sit Here";
+                  }
+                }
+              }
+            }
+          }else if(closestDist>3.2&&(!hero||!hero.seated)){
+            if(activeDesk){
+              activeDesk=null;
+              deskCard.classList.add("hidden");
+            }
+          }
+        }
+      }
       cameraPitch+=(targetCameraPitch-cameraPitch)*Math.min(1,dt*10);
       const goal=cameraGoal();
       // Smooth translation while always aiming at the CURRENT position of
@@ -538,7 +1458,7 @@ export function mountOffice(host,profile,notice=()=>{}){
       if(path.length===0)clickMarker.group.visible=false;
     }
     for(let i=0;i<office.twinkle.length;i++){
-      office.twinkle[i].material.emissiveIntensity=.72+Math.sin(elapsed*2.5+i*1.8)*.35;
+      office.twinkle[i].material.emissiveIntensity=(.72+Math.sin(elapsed*2.5+i*1.8)*.35)*activeTwinkleScale;
     }
     renderer.render(scene,camera);
   }
@@ -594,6 +1514,8 @@ export function mountOffice(host,profile,notice=()=>{}){
     },
     playAction(name){
       if(!hero||!["hi","dance","clap","cheer"].includes(name))return false;
+      if(hero.seated) standUp(false);
+      targetSitDesk=null;
       // Perform immediately: clearing movement makes the selected animation
       // visible rather than being masked by walk motion.
       path=[];
@@ -610,11 +1532,35 @@ export function mountOffice(host,profile,notice=()=>{}){
     goHome(){
       if(hero)moveTo(office.spawn.x,office.spawn.z);
     },
+    goToDesk,
+    sitAtDesk,
+    standUp,
+    cycleTimeTheme,
+    applyTimeTheme,
+    setTimeTheme:applyTimeTheme,
+    togglePartyMode,
+    customizeMyDesk,
+    updateAvatarPhoto,
     dispose(){
       officeLife?.dispose();officeLife=null;
       speech.dispose();
       running=false;cancelAnimationFrame(requestId);observer?.disconnect();
       window.removeEventListener("resize",resize);
+      window.removeEventListener("keydown",onKeyDown);
+      window.removeEventListener("keyup",onKeyUp);
+      myDeskBtn?.removeEventListener("click",onMyDeskClick);
+      timeBtn?.removeEventListener("click",onTimeClick);
+      deskCardActionBtn?.removeEventListener("click",onDeskCardActionClick);
+      for(const d of officeDesks){
+        d.texture?.dispose();
+        d.material?.dispose();
+      }
+      if(joystickBase){
+        joystickBase.removeEventListener("pointerdown",onJoyDown);
+        joystickBase.removeEventListener("pointermove",onJoyMove);
+        joystickBase.removeEventListener("pointerup",onJoyUp);
+        joystickBase.removeEventListener("pointercancel",onJoyUp);
+      }
       canvas.removeEventListener("pointerdown",down);
       canvas.removeEventListener("pointermove",move);
       canvas.removeEventListener("pointerup",up);

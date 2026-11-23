@@ -2,6 +2,7 @@
 "use strict";
 import {createVisualAvatarEditor} from "./game/avatar-editor.js?v=face-refine-v4-studio-qa-v1";
 import {createChristmasMusic} from "./game/christmas-music.js?v=jingle-bells-v1";
+import {SKIN_COLORS,HAIR_COLORS,OUTFIT_COLORS} from "./game/palette.js?v=custom-v1";
 const GATEWAY="https://fwrievuhudjkeffmszqf.supabase.co/functions/v1/ss-gateway";
 const PUBLIC_KEY="sb_publishable_SJo2kgXdHNFZI65iAvQmxw_q56zuVLO";
 const PARAMS=new URLSearchParams(location.search);
@@ -662,7 +663,7 @@ async function enterOffice(info){
   }
   $("office-loading").classList.remove("hidden");
   officeLoading=(async()=>{
-    const module=await import("./game/main.js?v=player-follow-v1");
+    const module=await import("./game/main.js?v=gameplay-v2");
     officeRuntime=module.mountOffice($("office-canvas"),info,officeToast);
     officeRuntime.setCamera("wide");
     officeKey=identity;
@@ -776,6 +777,428 @@ visualEditor=createVisualAvatarEditor({
   }
 });
 visualEditor.refresh(activeStudioTab);
+
+const SKIN_NAMES=["Fair","Warm Ivory","Golden Bronze","Warm Chestnut","Deep Espresso","Porcelain","Obsidian","Peachy Cream","Rich Mahogany"];
+const HAIR_NAMES=["Jet Black","Mocha Brown","Chocolate Brown","Deep Auburn","Midnight Navy","Platinum","Classic Black","Silver Gray","Warm Brunette"];
+const OUTFIT_NAMES=["Pine Green","Festive Crimson","Royal Navy","Warm Ochre","Plum Purple","Winter Cream","Snow White","Classic Charcoal","Cranberry","Teal Frost","Caramel Tan","Cornflower Blue"];
+
+function analyzePhotoForAvatar(img){
+  const canvas=document.createElement("canvas");
+  const size=200;
+  canvas.width=size;
+  canvas.height=size;
+  const ctx=canvas.getContext("2d",{willReadFrequently:true});
+  if(!ctx)return null;
+
+  const scale=Math.max(size/img.naturalWidth,size/img.naturalHeight);
+  const w=img.naturalWidth*scale;
+  const h=img.naturalHeight*scale;
+  const x=(size-w)/2;
+  const y=(size-h)/2;
+  ctx.drawImage(img,x,y,w,h);
+
+  const imgData=ctx.getImageData(0,0,size,size).data;
+  function getPixel(px,py){
+    px=Math.max(0,Math.min(size-1,Math.round(px)));
+    py=Math.max(0,Math.min(size-1,Math.round(py)));
+    const idx=(py*size+px)*4;
+    return [imgData[idx],imgData[idx+1],imgData[idx+2]];
+  }
+
+  function getAverageRegion(x0,y0,x1,y1,filterOutliers=true){
+    let rSum=0,gSum=0,bSum=0,count=0;
+    const samples=[];
+    for(let py=y0;py<=y1;py+=2){
+      for(let px=x0;px<=x1;px+=2){
+        const [r,g,b]=getPixel(px,py);
+        const lum=0.299*r+0.587*g+0.114*b;
+        if(filterOutliers&&(lum<15||lum>245))continue;
+        samples.push([r,g,b,lum]);
+      }
+    }
+    if(!samples.length)return [180,140,110];
+    samples.sort((a,b)=>a[3]-b[3]);
+    const start=Math.floor(samples.length*0.15);
+    const end=Math.ceil(samples.length*0.85);
+    for(let i=start;i<end;i++){
+      rSum+=samples[i][0];
+      gSum+=samples[i][1];
+      bSum+=samples[i][2];
+      count++;
+    }
+    return count?[Math.round(rSum/count),Math.round(gSum/count),Math.round(bSum/count)]:[180,140,110];
+  }
+
+  function closestColorIndex(rgb,paletteHexList){
+    let bestIdx=0;
+    let bestDist=Infinity;
+    const [r1,g1,b1]=rgb;
+    for(let i=0;i<paletteHexList.length;i++){
+      const hex=paletteHexList[i];
+      const r2=(hex>>16)&0xff;
+      const g2=(hex>>8)&0xff;
+      const b2=hex&0xff;
+      const rMean=(r1+r2)/2;
+      const dr=r1-r2;
+      const dg=g1-g2;
+      const db=b1-b2;
+      const dist=(2+rMean/256)*dr*dr+4*dg*dg+(2+(255-rMean)/256)*db*db;
+      if(dist<bestDist){
+        bestDist=dist;
+        bestIdx=i;
+      }
+    }
+    return bestIdx;
+  }
+
+  // 1. Skin tone: Center face
+  const skinRgb=getAverageRegion(size*0.35,size*0.32,size*0.65,size*0.52);
+  const skinIdx=closestColorIndex(skinRgb,SKIN_COLORS);
+
+  // 2. Hair color: Crown of head
+  const hairRgb=getAverageRegion(size*0.25,size*0.06,size*0.75,size*0.22);
+  const hairIdx=closestColorIndex(hairRgb,HAIR_COLORS);
+
+  // 3. Outfit color: Upper torso
+  const outfitRgb=getAverageRegion(size*0.20,size*0.72,size*0.80,size*0.92);
+  const outfitColorIdx=closestColorIndex(outfitRgb,OUTFIT_COLORS);
+
+  // 4. Facial hair detection: compare lower jaw/chin luminance vs forehead skin
+  const jawRgb=getAverageRegion(size*0.38,size*0.56,size*0.62,size*0.68,false);
+  const skinLum=0.299*skinRgb[0]+0.587*skinRgb[1]+0.114*skinRgb[2];
+  const jawLum=0.299*jawRgb[0]+0.587*jawRgb[1]+0.114*jawRgb[2];
+  const beardDiff=skinLum-jawLum;
+
+  let facialHair="none";
+  let facialHairLabel="Clean shaven";
+  if(beardDiff>42){
+    facialHair="beard-boxed";
+    facialHairLabel="Full/Boxed beard";
+  }else if(beardDiff>24){
+    facialHair="combo-short";
+    facialHairLabel="Short beard";
+  }else if(beardDiff>14){
+    facialHair="stubble-light";
+    facialHairLabel="Light stubble";
+  }
+
+  // 5. Glasses / Spectacles detection
+  let eyeBridgeMinLum=255;
+  for(let px=size*0.44;px<=size*0.56;px+=2){
+    const [r,g,b]=getPixel(px,size*0.38);
+    const lum=0.299*r+0.587*g+0.114*b;
+    if(lum<eyeBridgeMinLum)eyeBridgeMinLum=lum;
+  }
+  const glassesDetected=(skinLum-eyeBridgeMinLum)>48;
+  const glassesStyle=glassesDetected?"rectangle":"none";
+
+  // 6. Hair length & Hairstyle estimation
+  const leftSideRgb=getAverageRegion(size*0.12,size*0.40,size*0.24,size*0.65,false);
+  const rightSideRgb=getAverageRegion(size*0.76,size*0.40,size*0.88,size*0.65,false);
+  const hairLum=0.299*hairRgb[0]+0.587*hairRgb[1]+0.114*hairRgb[2];
+  const leftLum=0.299*leftSideRgb[0]+0.587*leftSideRgb[1]+0.114*leftSideRgb[2];
+  const rightLum=0.299*rightSideRgb[0]+0.587*rightSideRgb[1]+0.114*rightSideRgb[2];
+  const sideHairMatch=(Math.abs(leftLum-hairLum)<32||Math.abs(rightLum-hairLum)<32);
+
+  let hairstyle=0;
+  let hairStyleLabel="Short classic";
+  let gender="male";
+  let outfit="shirt";
+
+  if(sideHairMatch&&hairLum<120){
+    hairstyle=2;
+    hairStyleLabel="Long hair";
+    gender="female";
+    outfit="salwar";
+  }else if(hairLum>180&&skinLum>160&&Math.abs(hairLum-skinLum)<25){
+    hairstyle=19;
+    hairStyleLabel="Bald / buzz cut";
+    gender="male";
+    outfit="tshirt";
+  }else if(facialHair!=="none"){
+    hairstyle=0;
+    hairStyleLabel="Short classic";
+    gender="male";
+    outfit="shirt";
+  }else{
+    hairstyle=1;
+    hairStyleLabel="Layered medium";
+    gender="female";
+    outfit="dress";
+  }
+
+  return {
+    skin:skinIdx,
+    hair:hairIdx,
+    color:outfitColorIdx,
+    hairstyle,
+    gender,
+    outfit,
+    facialHair,
+    facialHairLabel,
+    glassesStyle,
+    glasses:glassesDetected,
+    hairStyleLabel,
+    skinHex:SKIN_COLORS[skinIdx],
+    hairHex:HAIR_COLORS[hairIdx],
+    outfitHex:OUTFIT_COLORS[outfitColorIdx]
+  };
+}
+
+function hexToCss(hex){
+  return "#"+hex.toString(16).padStart(6,"0");
+}
+
+function applyMatchedPhoto(img,dataUrl){
+  const result=analyzePhotoForAvatar(img);
+  if(!result)return;
+  const thumb=$("photo-matcher-thumb");
+  const previewBox=$("photo-matcher-preview");
+  const summaryEl=$("photo-matcher-summary");
+  const chipsBox=$("photo-matcher-chips");
+
+  if(thumb)thumb.src=dataUrl;
+  if(previewBox)previewBox.classList.remove("hidden");
+
+  setAvatarEditor({
+    skin:result.skin,
+    hair:result.hair,
+    color:result.color,
+    hairstyle:result.hairstyle,
+    gender:result.gender,
+    outfit:result.outfit,
+    facialHair:result.facialHair,
+    glassesStyle:result.glassesStyle,
+    glasses:result.glasses
+  });
+  previewAvatarNow();
+
+  try{localStorage.setItem("vcf_ss_avatar_photo",dataUrl);}catch{}
+  if(officeRuntime?.updateAvatarPhoto)officeRuntime.updateAvatarPhoto(dataUrl);
+
+  if(chipsBox){
+    chipsBox.innerHTML="";
+    const chips=[
+      {label:`Skin: ${SKIN_NAMES[result.skin]||"Tone"}`,color:hexToCss(result.skinHex)},
+      {label:`Hair: ${HAIR_NAMES[result.hair]||"Tone"}`,color:hexToCss(result.hairHex)},
+      {label:`Style: ${result.hairStyleLabel}`},
+      {label:`Outfit: ${OUTFIT_NAMES[result.color]||"Tone"}`,color:hexToCss(result.outfitHex)}
+    ];
+    if(result.facialHair!=="none")chips.push({label:`🧔 ${result.facialHairLabel}`});
+    if(result.glasses)chips.push({label:"👓 Spectacles"});
+
+    for(const chip of chips){
+      const el=document.createElement("span");
+      el.className="photo-chip";
+      if(chip.color){
+        const dot=document.createElement("span");
+        dot.className="photo-chip-color";
+        dot.style.backgroundColor=chip.color;
+        el.appendChild(dot);
+      }
+      const text=document.createElement("span");
+      text.textContent=chip.label;
+      el.appendChild(text);
+      chipsBox.appendChild(el);
+    }
+  }
+
+  if(summaryEl)summaryEl.textContent=`Matched ${result.facialHair!=="none"||result.glasses?5:4} features! Avatar and 3D desk badge updated.`;
+  if(typeof officeToast==="function")officeToast("✨ Avatar & desk badge updated from photo!");
+  else toast("✨ Avatar & desk badge updated from photo!");
+}
+
+function setupPhotoAvatarMatcher(){
+  const fileInput=$("avatar-photo-input");
+  const previewBox=$("photo-matcher-preview");
+  const thumb=$("photo-matcher-thumb");
+  const chipsBox=$("photo-matcher-chips");
+  const clearBtn=$("photo-matcher-clear");
+  if(!fileInput)return;
+
+  fileInput.addEventListener("change",e=>{
+    const file=e.target.files?.[0];
+    if(!file)return;
+    const reader=new FileReader();
+    reader.onload=ev=>{
+      const img=new Image();
+      img.onload=()=>{
+        applyMatchedPhoto(img,ev.target.result);
+      };
+      img.src=ev.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+
+  clearBtn?.addEventListener("click",()=>{
+    fileInput.value="";
+    previewBox?.classList.add("hidden");
+    if(thumb)thumb.src="";
+    if(chipsBox)chipsBox.innerHTML="";
+    try{localStorage.removeItem("vcf_ss_avatar_photo");}catch{}
+    if(officeRuntime?.updateAvatarPhoto)officeRuntime.updateAvatarPhoto(null);
+  });
+}
+
+function setupWebcamSelfie(){
+  const openBtn=$("photo-webcam-btn");
+  const modal=$("webcam-modal");
+  const closeBtn=$("webcam-close-btn");
+  const cancelBtn=$("webcam-cancel-btn");
+  const snapBtn=$("webcam-snap-btn");
+  const video=$("webcam-video");
+  const deskSelfieBtn=$("customizer-take-selfie");
+  let stream=null;
+
+  async function startCamera(){
+    try{
+      if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){
+        toast("Webcam access is not supported in this browser. Please use file upload.");
+        return;
+      }
+      stream=await navigator.mediaDevices.getUserMedia({
+        video:{facingMode:"user",width:{ideal:640},height:{ideal:480}},
+        audio:false
+      });
+      if(video){
+        video.srcObject=stream;
+        await video.play();
+      }
+      if(modal){
+        if(typeof modal.showModal==="function") modal.showModal();
+        else modal.classList.remove("hidden");
+      }
+    }catch(err){
+      toast("Could not access camera ("+(err.name||"Permission denied")+"). You can upload a photo instead!");
+    }
+  }
+
+  function stopCamera(){
+    if(stream){
+      stream.getTracks().forEach(t=>t.stop());
+      stream=null;
+    }
+    if(video) video.srcObject=null;
+    if(modal){
+      if(typeof modal.close==="function") modal.close();
+      else modal.classList.add("hidden");
+    }
+  }
+
+  function snapPhoto(){
+    if(!video||!video.videoWidth)return;
+    const canvas=document.createElement("canvas");
+    const size=Math.min(video.videoWidth,video.videoHeight);
+    canvas.width=320;
+    canvas.height=320;
+    const ctx=canvas.getContext("2d");
+    const sx=(video.videoWidth-size)/2;
+    const sy=(video.videoHeight-size)/2;
+    ctx.drawImage(video,sx,sy,size,size,0,0,320,320);
+    const dataUrl=canvas.toDataURL("image/jpeg",0.88);
+
+    const img=new Image();
+    img.onload=()=>{
+      applyMatchedPhoto(img,dataUrl);
+      stopCamera();
+    };
+    img.src=dataUrl;
+  }
+
+  openBtn?.addEventListener("click",startCamera);
+  deskSelfieBtn?.addEventListener("click",startCamera);
+  closeBtn?.addEventListener("click",stopCamera);
+  cancelBtn?.addEventListener("click",stopCamera);
+  snapBtn?.addEventListener("click",snapPhoto);
+  modal?.addEventListener("cancel",stopCamera);
+}
+
+function setupDeskCustomizer(){
+  const dialog=$("desk-customizer-dialog");
+  const closeBtn=$("desk-customizer-close");
+  const cancelBtn=$("desk-customizer-cancel");
+  const saveBtn=$("desk-customizer-save");
+  const mottoInput=$("customizer-motto-input");
+  const showBadgeCheck=$("customizer-show-badge");
+  const propCards=document.querySelectorAll(".prop-choice-card");
+  const themeCards=document.querySelectorAll(".theme-choice-card");
+  const presetPills=document.querySelectorAll(".motto-preset-pill");
+
+  let selectedProp="mini-tree";
+  let selectedTheme="emerald";
+
+  function loadSavedSettings(){
+    let saved={};
+    try{saved=JSON.parse(localStorage.getItem("vcf_ss_desk_custom")||"{}");}catch{}
+    selectedProp=saved.prop||"mini-tree";
+    selectedTheme=saved.theme||"emerald";
+    if(mottoInput)mottoInput.value=saved.motto||"";
+    if(showBadgeCheck)showBadgeCheck.checked=saved.showBadge!==false;
+
+    propCards.forEach(c=>{
+      c.classList.toggle("active",c.dataset.prop===selectedProp);
+    });
+    themeCards.forEach(c=>{
+      c.classList.toggle("active",c.dataset.theme===selectedTheme);
+    });
+  }
+
+  propCards.forEach(card=>{
+    card.addEventListener("click",()=>{
+      propCards.forEach(c=>c.classList.remove("active"));
+      card.classList.add("active");
+      selectedProp=card.dataset.prop;
+    });
+  });
+
+  themeCards.forEach(card=>{
+    card.addEventListener("click",()=>{
+      themeCards.forEach(c=>c.classList.remove("active"));
+      card.classList.add("active");
+      selectedTheme=card.dataset.theme;
+    });
+  });
+
+  presetPills.forEach(pill=>{
+    pill.addEventListener("click",()=>{
+      if(mottoInput) mottoInput.value=pill.dataset.motto;
+    });
+  });
+
+  function closeDialog(){
+    if(dialog){
+      if(typeof dialog.close==="function")dialog.close();
+      else dialog.classList.add("hidden");
+    }
+  }
+
+  closeBtn?.addEventListener("click",closeDialog);
+  cancelBtn?.addEventListener("click",closeDialog);
+  dialog?.addEventListener("cancel",closeDialog);
+
+  saveBtn?.addEventListener("click",()=>{
+    const settings={
+      prop:selectedProp,
+      theme:selectedTheme,
+      motto:mottoInput?.value?.trim()||"",
+      showBadge:showBadgeCheck ? showBadgeCheck.checked : true
+    };
+    try{localStorage.setItem("vcf_ss_desk_custom",JSON.stringify(settings));}catch{}
+    if(officeRuntime?.customizeMyDesk){
+      officeRuntime.customizeMyDesk(settings);
+    }
+    closeDialog();
+    if(typeof officeToast==="function")officeToast("✨ Desk personalized & saved!");
+    else toast("✨ Desk personalized & saved!");
+  });
+
+  loadSavedSettings();
+}
+
+setupPhotoAvatarMatcher();
+setupWebcamSelfie();
+setupDeskCustomizer();
+
 $("avatar-reset").addEventListener("click",()=>{
   clearTimeout(avatarPreviewTimer);
   if(!avatarBaseline)return;
@@ -953,6 +1376,9 @@ async function loadPlayer(){
   }
   $("player-greeting").textContent="✦ "+player.me.display_name;
   $("player-event-title").textContent=player.event.title;
+  if($("hud-event-name")&&player.event?.title){
+    $("hud-event-name").textContent=player.event.title;
+  }
   $("personal-name").textContent=player.me.display_name;
   const child=player.myChild;
   $("my-assignment-status").classList.toggle("hidden",!!child);
@@ -1179,7 +1605,7 @@ $("assign-btn").addEventListener("click",run(async()=>{
   await openEvent(event);
   toast(res.assigned+" Santa–Child pairs assigned privately. No tasks created.");
 }));
-$("player-pause").addEventListener("click",()=>{
+$("player-pause")?.addEventListener("click",()=>{
   christmasMusic.unlock();
   const menu=$("player-menu");
   if(!menu.classList.contains("hidden")){closePlayerMenu();return;}
@@ -1188,22 +1614,89 @@ $("player-pause").addEventListener("click",()=>{
   officeRuntime?.setPaused(true);
   showPlayerTab("character");
 });
-$("player-close").addEventListener("click",closePlayerMenu);
-// One tap, one random action. No dropdown or action selection UI.
-const OFFICE_ACTIONS=["hi","dance","clap","cheer"];
-let lastOfficeAction=-1;
-$("player-action").addEventListener("click",()=>{
+$("hud-btn-santa")?.addEventListener("click",()=>{
   christmasMusic.unlock();
-  if(!$("player-menu").classList.contains("hidden"))return;
-  if(!officeRuntime){officeToast("Office is still loading.");return;}
-  // Four actions are equally likely on the first press. Subsequent presses
-  // randomly choose among the other three so the animation visibly changes.
-  const available=OFFICE_ACTIONS.map((name,index)=>({name,index}))
-    .filter(item=>item.index!==lastOfficeAction);
-  const pick=available[Math.floor(Math.random()*available.length)];
-  lastOfficeAction=pick.index;
-  officeRuntime.playAction(pick.name);
+  const menu=$("player-menu");
+  menu.classList.remove("hidden");
+  $("notebook-scroll").scrollTop=0;
+  officeRuntime?.setPaused(true);
+  showPlayerTab("personal");
 });
+$("hud-btn-avatar")?.addEventListener("click",()=>{
+  christmasMusic.unlock();
+  const menu=$("player-menu");
+  menu.classList.remove("hidden");
+  $("notebook-scroll").scrollTop=0;
+  officeRuntime?.setPaused(true);
+  showPlayerTab("character");
+});
+$("hud-btn-rules")?.addEventListener("click",()=>{
+  christmasMusic.unlock();
+  $("rules-dialog")?.showModal();
+});
+$("rules-dialog-close")?.addEventListener("click",()=>{$("rules-dialog")?.close();});
+$("rules-dialog-ok")?.addEventListener("click",()=>{$("rules-dialog")?.close();});
+
+$("hud-btn-help")?.addEventListener("click",()=>{
+  christmasMusic.unlock();
+  $("help-dialog")?.showModal();
+});
+$("help-dialog-close")?.addEventListener("click",()=>{$("help-dialog")?.close();});
+$("help-dialog-gotit")?.addEventListener("click",()=>{$("help-dialog")?.close();});
+
+$("hud-btn-mydesk")?.addEventListener("click",()=>{
+  christmasMusic.unlock();
+  officeRuntime?.goToDesk();
+});
+$("hud-btn-time")?.addEventListener("click",()=>{
+  christmasMusic.unlock();
+  officeRuntime?.cycleTimeTheme();
+});
+
+$("player-close").addEventListener("click",closePlayerMenu);
+
+// Multi-Action Buttons (Wave, Dance, Clap, Cheer)
+document.querySelectorAll(".action-pill").forEach(btn=>{
+  btn.addEventListener("click",()=>{
+    christmasMusic.unlock();
+    if(!$("player-menu").classList.contains("hidden"))return;
+    if(!officeRuntime){officeToast("Office is still loading.");return;}
+    const action=btn.dataset.action;
+    if(action){
+      officeRuntime.playAction(action);
+      btn.style.transform="scale(0.92)";
+      setTimeout(()=>btn.style.transform="",150);
+    }
+  });
+});
+
+// Keyboard shortcuts for emotes (1, 2, 3, 4, Space)
+window.addEventListener("keydown",e=>{
+  if(!officeRuntime||$("player").classList.contains("hidden"))return;
+  const menuOpen=!$("player-menu").classList.contains("hidden");
+  const dialogOpen=Boolean(document.querySelector("dialog[open]"));
+  if(menuOpen||dialogOpen)return;
+  const tag=document.activeElement?.tagName;
+  if(tag==="INPUT"||tag==="TEXTAREA"||tag==="SELECT")return;
+
+  if(e.key==="1"||e.code==="Digit1"){
+    e.preventDefault();
+    officeRuntime.playAction("hi");
+  }else if(e.key==="2"||e.code==="Digit2"){
+    e.preventDefault();
+    officeRuntime.playAction("dance");
+  }else if(e.key==="3"||e.code==="Digit3"){
+    e.preventDefault();
+    officeRuntime.playAction("clap");
+  }else if(e.key==="4"||e.code==="Digit4"){
+    e.preventDefault();
+    officeRuntime.playAction("cheer");
+  }else if(e.code==="Space"){
+    e.preventDefault();
+    officeRuntime.playAction("hi");
+  }
+});
+
 $("player-tab-character").addEventListener("click",()=>showPlayerTab("character"));
 $("player-tab-personal").addEventListener("click",()=>showPlayerTab("personal"));
 $("refresh-personal").addEventListener("click",run(async()=>{
