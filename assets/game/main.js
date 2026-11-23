@@ -1052,7 +1052,22 @@ export function mountOffice(host,profile,notice=()=>{}){
         if(!hero)return;
         hero.play("cheer",clock.elapsedTime);
         notice("🎄 Merry Christmas! You visited the Christmas Tree! Jingle bells & holiday cheer! ⭐");
+        window.dispatchEvent(new CustomEvent("christmastree:tap"));
       },1000);
+      return;
+    }
+
+    // Break-Room Arcade Console hits
+    const arcadePos=new THREE.Vector3(-6.35,1.0,office.partyStart+2.55);
+    if(ray.ray.distanceToPoint(arcadePos)<1.55){
+      if(hero?.seated) standUp(false);
+      moveTo(-5.25,office.partyStart+2.55);
+      notice("🕹️ Walking to the Break-Room Arcade Console!");
+      setTimeout(()=>{
+        if(!hero)return;
+        hero.play("cheer",clock.elapsedTime);
+        window.dispatchEvent(new CustomEvent("arcade:open"));
+      },850);
       return;
     }
 
@@ -1541,6 +1556,32 @@ export function mountOffice(host,profile,notice=()=>{}){
     togglePartyMode,
     customizeMyDesk,
     updateAvatarPhoto,
+    goToArcade(){
+      if(hero?.seated) standUp(false);
+      moveTo(-5.25,office.partyStart+2.55);
+      notice("🕹️ Approaching Break-Room Arcade Console!");
+      setTimeout(()=>{
+        if(!hero)return;
+        hero.play("cheer",clock.elapsedTime);
+        window.dispatchEvent(new CustomEvent("arcade:open"));
+      },900);
+    },
+    goToTree(){
+      if(hero?.seated) standUp(false);
+      moveTo(3.1,office.partyStart+2.6);
+      notice("🎄 Approaching the Christmas Tree!");
+      setTimeout(()=>{
+        if(!hero)return;
+        hero.play("cheer",clock.elapsedTime);
+        window.dispatchEvent(new CustomEvent("christmastree:tap"));
+      },1000);
+    },
+    triggerCelebration(){
+      if(!confettiSystem?.active){
+        confettiSystem?.start();
+      }
+      playFestiveChime("victory");
+    },
     dispose(){
       officeLife?.dispose();officeLife=null;
       speech.dispose();

@@ -1,7 +1,7 @@
 
 "use strict";
 import {createVisualAvatarEditor} from "./game/avatar-editor.js?v=face-refine-v4-studio-qa-v1";
-import {createChristmasMusic} from "./game/christmas-music.js?v=jingle-bells-v1";
+import {createChristmasMusic, playFestiveChime} from "./game/christmas-music.js?v=jingle-bells-v1";
 import {SKIN_COLORS,HAIR_COLORS,OUTFIT_COLORS} from "./game/palette.js?v=custom-v1";
 const GATEWAY="https://fwrievuhudjkeffmszqf.supabase.co/functions/v1/ss-gateway";
 const PUBLIC_KEY="sb_publishable_SJo2kgXdHNFZI65iAvQmxw_q56zuVLO";
@@ -1198,6 +1198,447 @@ function setupDeskCustomizer(){
 setupPhotoAvatarMatcher();
 setupWebcamSelfie();
 setupDeskCustomizer();
+
+function setupChildQuestAndArcade(){
+  const STORAGE_KEY="vcf_child_quest_data";
+  const DEFAULT_QUEST={
+    childName:"Holiday Explorer",
+    santaName:"Secret Santa",
+    activeGame:"voxel-racers",
+    tasks:[
+      {
+        id:"voxel-racers",
+        title:"Voxel Monster Racers",
+        icon:"🏎️",
+        gameUrl:"https://achallakiran.github.io/voxel-racers/",
+        goal:"Finish 1 lap on Dust Track or score over 500 points!",
+        clue:"Your Secret Santa sits on the bright window side of the office!",
+        completed:false
+      },
+      {
+        id:"voxel-bike",
+        title:"Voxel Bikes Redline",
+        icon:"🏍️",
+        gameUrl:"https://achallakiran.github.io/voxel-bike/",
+        goal:"Complete the Redline race course without crashing!",
+        clue:"Your Secret Santa always carries a blue water bottle and loves dark chocolate!",
+        completed:false
+      },
+      {
+        id:"cocoa-rush",
+        title:"Santa's Cocoa Barista",
+        icon:"☕",
+        gameUrl:"",
+        goal:"Serve 3 festive hot chocolates with marshmallows in the break room!",
+        clue:"Your Secret Santa gave you a big warm hug this morning!",
+        completed:false
+      }
+    ],
+    giftReveal:{
+      hidingLocation:"Look under the Christmas tree wrapped in shiny red paper with golden ribbons! 🎁",
+      message:"Ho Ho Ho! You solved all the mysteries! You are so clever! Merry Christmas!"
+    }
+  };
+
+  function loadQuestData(){
+    const urlParam=PARAMS.get("quest");
+    if(urlParam){
+      try{
+        const decoded=JSON.parse(decodeURIComponent(escape(atob(decodeURIComponent(urlParam)))));
+        if(decoded&&decoded.tasks){
+          localStorage.setItem(STORAGE_KEY,JSON.stringify(decoded));
+          return decoded;
+        }
+      }catch(_e){}
+    }
+    try{
+      const saved=JSON.parse(localStorage.getItem(STORAGE_KEY)||"null");
+      if(saved&&saved.tasks)return Object.assign({},DEFAULT_QUEST,saved);
+    }catch(_e){}
+    return JSON.parse(JSON.stringify(DEFAULT_QUEST));
+  }
+
+  let quest=loadQuestData();
+  function saveQuest(){
+    try{
+      localStorage.setItem(STORAGE_KEY,JSON.stringify(quest));
+    }catch(_e){}
+    updateUI();
+  }
+
+  function updateUI(){
+    const completedCount=quest.tasks.filter(t=>t.completed).length;
+    const badge=$("hud-quest-badge");
+    if(badge)badge.textContent=`${completedCount}/${quest.tasks.length}`;
+
+    const list=$("quest-tasks-list");
+    if(list){
+      list.innerHTML="";
+      quest.tasks.forEach((t,index)=>{
+        const card=document.createElement("div");
+        card.className=`quest-task-card ${t.completed?"completed":""}`;
+        card.innerHTML=`
+          <div class="task-left">
+            <span class="task-status-icon">${t.completed?"🔓":"🔒"}</span>
+            <div>
+              <p class="task-title">Task ${index+1}: ${t.icon} ${t.title}</p>
+              <p class="task-goal-text" style="font-size:11px;color:#a0aec0;margin:2px 0 0;">🎯 ${t.goal}</p>
+              ${t.completed?`<p class="task-clue-reveal">💡 Clue #${index+1}: "${t.clue}"</p>`:`<p style="font-size:11px;color:#cbd5cb;margin:2px 0 0;font-style:italic;">Play in Break-Room Arcade to unlock clue</p>`}
+            </div>
+          </div>
+          <button type="button" class="btn btn-secondary btn-sm" data-play-game="${t.id}">
+            ${t.completed?"Replay 🎮":"Play 🕹️"}
+          </button>
+        `;
+        list.appendChild(card);
+      });
+
+      list.querySelectorAll("[data-play-game]").forEach(btn=>{
+        btn.addEventListener("click",()=>{
+          const gameId=btn.getAttribute("data-play-game");
+          $("child-quest-modal")?.close();
+          openArcade(gameId);
+        });
+      });
+    }
+
+    const modalTitle=$("quest-modal-title");
+    if(modalTitle&&quest.childName){
+      modalTitle.textContent=`🎄 ${quest.childName}'s Secret Santa Quest`;
+    }
+
+    const finaleStatus=$("quest-finale-status");
+    const goTreeBtn=$("quest-go-tree-btn");
+    if(finaleStatus&&goTreeBtn){
+      if(completedCount===quest.tasks.length){
+        finaleStatus.textContent="✨ All 3 Clues Unlocked! The Christmas Tree is glowing in celebration!";
+        goTreeBtn.disabled=false;
+      }else{
+        finaleStatus.textContent=`🔒 ${completedCount} of ${quest.tasks.length} clues unlocked. Beat the tasks to unlock all clues!`;
+        goTreeBtn.disabled=true;
+      }
+    }
+  }
+
+  const arcadeModal=$("arcade-modal");
+  const arcadeIframe=$("arcade-iframe");
+  const arcadeFullscreen=$("arcade-fullscreen-link");
+  const arcadeGoalDesc=$("arcade-goal-desc");
+  const arcadeClaimBtn=$("arcade-claim-clue-btn");
+  const cocoaGamePanel=$("cocoa-rush-game");
+
+  function openArcade(gameId="voxel-racers"){
+    quest.activeGame=gameId;
+    document.querySelectorAll(".arcade-tab-btn").forEach(btn=>{
+      btn.classList.toggle("active",btn.getAttribute("data-game")===gameId);
+    });
+
+    const activeTask=quest.tasks.find(t=>t.id===gameId)||quest.tasks[0];
+    if(arcadeGoalDesc){
+      arcadeGoalDesc.textContent=`${activeTask.goal} (Unlocks Clue for: "${activeTask.title}")`;
+    }
+    if(arcadeClaimBtn){
+      arcadeClaimBtn.textContent=activeTask.completed?"✨ Clue Already Claimed!":"✨ Claim Clue!";
+      arcadeClaimBtn.style.opacity=activeTask.completed?"0.6":"1";
+    }
+
+    if(gameId==="cocoa-rush"){
+      arcadeIframe?.classList.add("hidden");
+      cocoaGamePanel?.classList.remove("hidden");
+      if(arcadeFullscreen)arcadeFullscreen.style.display="none";
+      startCocoaRush();
+    }else{
+      cocoaGamePanel?.classList.add("hidden");
+      arcadeIframe?.classList.remove("hidden");
+      if(arcadeFullscreen)arcadeFullscreen.style.display="inline-flex";
+      const url=gameId==="voxel-bike"
+        ?"https://achallakiran.github.io/voxel-bike/"
+        :"https://achallakiran.github.io/voxel-racers/";
+      if(arcadeIframe&&arcadeIframe.src!==url){
+        arcadeIframe.src=url;
+      }
+      if(arcadeFullscreen)arcadeFullscreen.href=url;
+    }
+
+    if(typeof arcadeModal.showModal==="function")arcadeModal.showModal();
+    else arcadeModal.classList.remove("hidden");
+  }
+
+  document.querySelectorAll(".arcade-tab-btn").forEach(tab=>{
+    tab.addEventListener("click",()=>{
+      const game=tab.getAttribute("data-game");
+      openArcade(game);
+    });
+  });
+
+  $("arcade-close-btn")?.addEventListener("click",()=>arcadeModal.close());
+  $("arcade-reload-btn")?.addEventListener("click",()=>{
+    if(arcadeIframe&&!arcadeIframe.classList.contains("hidden")){
+      const src=arcadeIframe.src;
+      arcadeIframe.src=src;
+    }
+  });
+
+  arcadeClaimBtn?.addEventListener("click",()=>{
+    const activeTask=quest.tasks.find(t=>t.id===quest.activeGame);
+    if(!activeTask)return;
+    activeTask.completed=true;
+    saveQuest();
+    playFestiveChime("unlock");
+    officeRuntime?.triggerCelebration?.();
+    if(typeof officeToast==="function"){
+      officeToast(`🎉 CLUE UNLOCKED! "${activeTask.clue}"`);
+    }else{
+      toast(`🎉 CLUE UNLOCKED! "${activeTask.clue}"`);
+    }
+    arcadeClaimBtn.textContent="✨ Clue Claimed! (Check Quest Log)";
+    arcadeClaimBtn.style.opacity="0.6";
+  });
+
+  let cocoaScore=0;
+  let cocoaTarget=3;
+  let currentCup=[];
+  const RECIPES=[
+    ["mug","cocoa","marshmallow"],
+    ["mug","cocoa","cinnamon"],
+    ["mug","cocoa","marshmallow","cinnamon"]
+  ];
+  let currentRecipeIndex=0;
+
+  function startCocoaRush(){
+    cocoaScore=0;
+    currentCup=[];
+    currentRecipeIndex=0;
+    updateCocoaOrder();
+  }
+
+  function updateCocoaOrder(){
+    const recipe=RECIPES[currentRecipeIndex%RECIPES.length];
+    const names={
+      mug:"Festive Mug",
+      cocoa:"Rich Cocoa",
+      marshmallow:"Marshmallows",
+      cinnamon:"Cinnamon"
+    };
+    $("cocoa-score").textContent=`${cocoaScore} / ${cocoaTarget}`;
+    $("cocoa-order-recipe").textContent=recipe.map(k=>names[k]).join(" ➔ ");
+    renderCup();
+  }
+
+  function renderCup(){
+    const names={
+      mug:"Mug",
+      cocoa:"Rich Cocoa",
+      marshmallow:"Marshmallows",
+      cinnamon:"Cinnamon"
+    };
+    const desc=currentCup.length===0?"Empty Counter":currentCup.map(k=>names[k]).join(" + ");
+    $("cup-contents").textContent=desc;
+  }
+
+  document.querySelectorAll(".ingredient-btn[data-ingredient]").forEach(btn=>{
+    btn.addEventListener("click",()=>{
+      const ing=btn.getAttribute("data-ingredient");
+      currentCup.push(ing);
+      playFestiveChime("bell");
+      renderCup();
+    });
+  });
+
+  $("cocoa-serve-btn")?.addEventListener("click",()=>{
+    const targetRecipe=RECIPES[currentRecipeIndex%RECIPES.length];
+    const isMatch=JSON.stringify(currentCup)===JSON.stringify(targetRecipe);
+    if(isMatch){
+      cocoaScore++;
+      currentCup=[];
+      currentRecipeIndex++;
+      playFestiveChime("victory");
+      $("cocoa-feedback").textContent=`✨ Delicious! Drink served! (${cocoaScore}/${cocoaTarget})`;
+      $("cocoa-feedback").style.color="#48bb78";
+      if(cocoaScore>=cocoaTarget){
+        const cocoaTask=quest.tasks.find(t=>t.id==="cocoa-rush");
+        if(cocoaTask&&!cocoaTask.completed){
+          cocoaTask.completed=true;
+          saveQuest();
+          officeRuntime?.triggerCelebration?.();
+          toast(`🎉 Cocoa Goal Reached! Clue #3 Unlocked: "${cocoaTask.clue}"`);
+        }
+        $("cocoa-feedback").textContent="🏆 All orders served! Goal achieved!";
+      }else{
+        updateCocoaOrder();
+      }
+    }else{
+      currentCup=[];
+      renderCup();
+      $("cocoa-feedback").textContent="Oops! Recipe didn't match the order. Try assembling again!";
+      $("cocoa-feedback").style.color="#fc8181";
+    }
+  });
+
+  const workshopModal=$("parent-workshop-modal");
+  function openWorkshop(){
+    $("workshop-child-name").value=quest.childName||"Holiday Explorer";
+    $("workshop-santa-name").value=quest.santaName||"Secret Santa";
+    $("workshop-goal-1").value=quest.tasks[0]?.goal||"";
+    $("workshop-clue-1").value=quest.tasks[0]?.clue||"";
+    $("workshop-goal-2").value=quest.tasks[1]?.goal||"";
+    $("workshop-clue-2").value=quest.tasks[1]?.clue||"";
+    $("workshop-goal-3").value=quest.tasks[2]?.goal||"";
+    $("workshop-clue-3").value=quest.tasks[2]?.clue||"";
+    $("workshop-gift-location").value=quest.giftReveal?.hidingLocation||"";
+    $("workshop-gift-message").value=quest.giftReveal?.message||"";
+
+    if(typeof workshopModal.showModal==="function")workshopModal.showModal();
+    else workshopModal.classList.remove("hidden");
+  }
+
+  function readWorkshopForm(){
+    quest.childName=$("workshop-child-name").value.trim()||"Holiday Explorer";
+    quest.santaName=$("workshop-santa-name").value.trim()||"Secret Santa";
+    if(quest.tasks[0]){
+      quest.tasks[0].goal=$("workshop-goal-1").value.trim();
+      quest.tasks[0].clue=$("workshop-clue-1").value.trim();
+    }
+    if(quest.tasks[1]){
+      quest.tasks[1].goal=$("workshop-goal-2").value.trim();
+      quest.tasks[1].clue=$("workshop-clue-2").value.trim();
+    }
+    if(quest.tasks[2]){
+      quest.tasks[2].goal=$("workshop-goal-3").value.trim();
+      quest.tasks[2].clue=$("workshop-clue-3").value.trim();
+    }
+    quest.giftReveal={
+      hidingLocation:$("workshop-gift-location").value.trim(),
+      message:$("workshop-gift-message").value.trim()
+    };
+  }
+
+  $("workshop-close-btn")?.addEventListener("click",()=>workshopModal.close());
+  $("workshop-cancel-btn")?.addEventListener("click",()=>workshopModal.close());
+
+  $("workshop-start-quest-btn")?.addEventListener("click",()=>{
+    readWorkshopForm();
+    quest.tasks.forEach(t=>t.completed=false);
+    saveQuest();
+    workshopModal.close();
+    toast(`🎅 Child Quest armed for ${quest.childName}!`);
+  });
+
+  $("workshop-share-link-btn")?.addEventListener("click",async()=>{
+    readWorkshopForm();
+    saveQuest();
+    const encoded=encodeURIComponent(btoa(unescape(encodeURIComponent(JSON.stringify(quest)))));
+    const fullUrl=`${location.origin}${location.pathname}?quest=${encoded}`;
+    try{
+      await navigator.clipboard.writeText(fullUrl);
+      toast("📋 Shareable Child Quest Link copied to clipboard!");
+    }catch(_e){
+      prompt("Copy your shareable quest link:",fullUrl);
+    }
+  });
+
+  const treeModal=$("tree-guess-modal");
+  function openTreeGuessing(){
+    const cluesBox=$("tree-unlocked-clues-box");
+    if(cluesBox){
+      cluesBox.innerHTML="";
+      const unlocked=quest.tasks.filter(t=>t.completed);
+      if(unlocked.length===0){
+        cluesBox.innerHTML=`<p style="font-size:12px;color:#a0aec0;margin:0;">No clues unlocked yet! Visit the Break-Room Arcade to unlock your first clue.</p>`;
+      }else{
+        unlocked.forEach((t,i)=>{
+          const pill=document.createElement("div");
+          pill.className="clue-pill";
+          pill.textContent=`💡 Clue #${i+1}: ${t.clue}`;
+          cluesBox.appendChild(pill);
+        });
+      }
+    }
+    $("tree-guess-feedback").textContent="";
+    $("tree-guess-input").value="";
+    $("tree-guess-view")?.classList.remove("hidden");
+    $("tree-reveal-view")?.classList.add("hidden");
+
+    if(typeof treeModal.showModal==="function")treeModal.showModal();
+    else treeModal.classList.remove("hidden");
+  }
+
+  $("tree-guess-close-btn")?.addEventListener("click",()=>treeModal.close());
+
+  $("tree-guess-submit-btn")?.addEventListener("click",()=>{
+    const input=$("tree-guess-input").value.trim().toLowerCase();
+    const santa=(quest.santaName||"Secret Santa").trim().toLowerCase();
+    const feedback=$("tree-guess-feedback");
+    if(!input){
+      if(feedback)feedback.textContent="Please type your guess!";
+      return;
+    }
+    const isCorrect=input===santa||santa.includes(input)||input.includes(santa);
+    if(isCorrect){
+      playFestiveChime("victory");
+      officeRuntime?.triggerCelebration?.();
+      $("tree-guess-view")?.classList.add("hidden");
+      $("tree-reveal-view")?.classList.remove("hidden");
+      $("unwrapping-box-container")?.classList.remove("hidden");
+      $("tree-gift-content")?.classList.add("hidden");
+    }else{
+      if(feedback){
+        feedback.textContent="🤔 Good guess, but not quite! Re-read your clues and try again!";
+        feedback.style.color="#fc8181";
+      }
+    }
+  });
+
+  $("tree-unwrap-action-btn")?.addEventListener("click",()=>{
+    playFestiveChime("fanfare");
+    officeRuntime?.triggerCelebration?.();
+    $("unwrapping-box-container")?.classList.add("hidden");
+    const content=$("tree-gift-content");
+    content?.classList.remove("hidden");
+    $("gift-santa-reveal").textContent=`Your Secret Santa is ${quest.santaName}!`;
+    $("gift-location-text").textContent=quest.giftReveal?.hidingLocation||"Look under the tree!";
+    $("gift-blessing-text").textContent=quest.giftReveal?.message||"Merry Christmas!";
+  });
+
+  $("tree-finish-celebration-btn")?.addEventListener("click",()=>{
+    treeModal.close();
+  });
+
+  $("hud-btn-quest")?.addEventListener("click",()=>{
+    updateUI();
+    const questModal=$("child-quest-modal");
+    if(typeof questModal.showModal==="function")questModal.showModal();
+    else questModal.classList.remove("hidden");
+  });
+
+  $("quest-close-btn")?.addEventListener("click",()=>$("child-quest-modal")?.close());
+
+  $("quest-go-tree-btn")?.addEventListener("click",()=>{
+    $("child-quest-modal")?.close();
+    officeRuntime?.goToTree?.();
+    setTimeout(openTreeGuessing,1200);
+  });
+
+  $("hud-btn-arcade")?.addEventListener("click",()=>{
+    officeRuntime?.goToArcade?.();
+  });
+
+  $("hud-btn-workshop")?.addEventListener("click",()=>{
+    openWorkshop();
+  });
+
+  window.addEventListener("arcade:open",()=>{
+    openArcade("voxel-racers");
+  });
+
+  window.addEventListener("christmastree:tap",()=>{
+    openTreeGuessing();
+  });
+
+  updateUI();
+}
+
+setupChildQuestAndArcade();
 
 $("avatar-reset").addEventListener("click",()=>{
   clearTimeout(avatarPreviewTimer);

@@ -827,8 +827,35 @@ export function buildOffice(count=12){
   }
   plant(party,6.75,.9,.75);plant(party,-6.85,5.35,.92);
   for(const x of [-6.7,6.7])wreath(party,x,2.30,6.15,x<0?Math.PI/2:-Math.PI/2);
-  // Treat stage, gift-table and snowman as real solid objects. The carpet
-  // remains walkable and the player can approach the stage for the ceremony.
+  // 🕹️ Break-Room Retro Arcade Gaming Cabinet (Voxel Racers & Bikes)
+  const arcade=new THREE.Group();
+  arcade.position.set(-6.35,0,2.55);
+  arcade.rotation.y=Math.PI/2;
+  arcade.name="arcadeCabinet";
+  party.add(arcade);
+  block(arcade,0,.95,0,.72,1.90,.76,0x181e26);
+  block(arcade,-.37,.95,0,.03,1.86,.74,0x00f0ff);
+  block(arcade,.37,.95,0,.03,1.86,.74,0xff0055);
+  const screen=block(arcade,0,1.25,.22,.58,.44,.08,0x0a1420);
+  screen.rotation.x=-.22;
+  const screenMesh=block(arcade,0,1.25,.24,.52,.38,.02,0x00ffff);
+  screenMesh.rotation.x=-.22;
+  const deck=block(arcade,0,.92,.38,.64,.08,.36,0x222a36);
+  deck.rotation.x=.15;
+  cyl(arcade,-.16,.98,.36,.015,.015,.09,0xd0d8e0);
+  ball(arcade,-.16,1.03,.36,.038,0xff2244);
+  cyl(arcade,.08,.96,.33,.024,.024,.02,0x00ff88);
+  cyl(arcade,.16,.96,.33,.024,.024,.02,0xffcc00);
+  cyl(arcade,.12,.96,.40,.024,.024,.02,0x00ccff);
+  block(arcade,0,1.78,.18,.66,.20,.12,0xffea78);
+  block(arcade,0,.45,.39,.36,.42,.02,0x11161d);
+  block(arcade,-.07,.52,.41,.02,.06,.02,0xffaa00);
+  block(arcade,.07,.52,.41,.02,.06,.02,0xffaa00);
+  const arcadeLight=new THREE.PointLight(0x00e1ff,.85,3.2);
+  arcadeLight.position.set(0,1.3,.6);
+  arcade.add(arcadeLight);
+
+  colliders.push({x:-6.35,z:partyStart+2.55,hx:.55,hz:.60});
   colliders.push({x:-3.23,z:partyStart+5.03,hx:3.48,hz:1.15});
   colliders.push({x:-3.2,z:partyStart+3.66,hx:2.40,hz:.67});
   colliders.push({x:.15,z:partyStart+4.75,hx:1.23,hz:.61});
@@ -853,6 +880,7 @@ export function buildOffice(count=12){
   sculptCelebrationStage(party,{twinkle},{softBlock,block,ball,mat});
   const optimizedBatches=batchOfficeStaticGeometry(root,twinkle,viewWalls);
   return {root,colliders,seats,spawn,bays,optimizedBatches,
+    arcadeStation:{x:-6.35,z:partyStart+2.55,approachX:-5.25,approachZ:partyStart+2.55},
     // Structural wall passages are not additional explorable rooms.
     room:{left,right,front,back},
     partyStart,twinkle,viewWalls,passageCenters,rowZ,deskPitch:step,passageGap};

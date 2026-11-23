@@ -103,20 +103,35 @@ export function playFestiveChime(type="bell"){
     const ctx=new AudioContext();
     if(ctx.state==="suspended")ctx.resume().catch(()=>{});
 
-    if(type==="party"||type==="fanfare"){
-      const notes=[523.25,659.25,783.99,987.77,1046.50];
+    if(type==="party"||type==="fanfare"||type==="victory"){
+      const notes=[523.25,659.25,783.99,1046.50,1318.51];
+      notes.forEach((freq,i)=>{
+        const osc=ctx.createOscillator();
+        const g=ctx.createGain();
+        osc.type="triangle";
+        osc.frequency.setValueAtTime(freq,ctx.currentTime+i*0.08);
+        g.gain.setValueAtTime(0,ctx.currentTime+i*0.08);
+        g.gain.linearRampToValueAtTime(0.22,ctx.currentTime+i*0.08+0.02);
+        g.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+i*0.08+0.75);
+        osc.connect(g);
+        g.connect(ctx.destination);
+        osc.start(ctx.currentTime+i*0.08);
+        osc.stop(ctx.currentTime+i*0.08+0.8);
+      });
+    }else if(type==="unlock"){
+      const notes=[440,554.37,659.25,880,1108.73];
       notes.forEach((freq,i)=>{
         const osc=ctx.createOscillator();
         const g=ctx.createGain();
         osc.type="sine";
-        osc.frequency.setValueAtTime(freq,ctx.currentTime+i*0.07);
-        g.gain.setValueAtTime(0,ctx.currentTime+i*0.07);
-        g.gain.linearRampToValueAtTime(0.18,ctx.currentTime+i*0.07+0.02);
-        g.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+i*0.07+0.55);
+        osc.frequency.setValueAtTime(freq,ctx.currentTime+i*0.06);
+        g.gain.setValueAtTime(0,ctx.currentTime+i*0.06);
+        g.gain.linearRampToValueAtTime(0.20,ctx.currentTime+i*0.06+0.015);
+        g.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+i*0.06+0.5);
         osc.connect(g);
         g.connect(ctx.destination);
-        osc.start(ctx.currentTime+i*0.07);
-        osc.stop(ctx.currentTime+i*0.07+0.6);
+        osc.start(ctx.currentTime+i*0.06);
+        osc.stop(ctx.currentTime+i*0.06+0.55);
       });
     }else if(type==="sit"){
       const notes=[659.25,783.99];

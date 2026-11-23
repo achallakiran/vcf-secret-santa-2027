@@ -134,6 +134,9 @@
           <button id="hud-btn-help" class="hud-pill" type="button" title="Movement & Controls Guide">🎮 <span>How to Play</span></button>
           <button id="hud-btn-mydesk" class="hud-pill hud-pill-gold" type="button" title="Find & Walk to My Desk">⭐ <span>My Desk</span></button>
           <button id="hud-btn-party" class="hud-pill hud-pill-party" type="button" title="Toggle Holiday Party Celebration & 3D Confetti">🎉 <span>Party Mode</span></button>
+          <button id="hud-btn-quest" class="hud-pill hud-pill-quest" type="button" title="Holiday Secret Santa Quest Log">🧭 <span>Quest</span> <span id="hud-quest-badge" class="hud-counter-badge">0/3</span></button>
+          <button id="hud-btn-arcade" class="hud-pill hud-pill-arcade" type="button" title="Break-Room Arcade Console">🕹️ <span>Arcade</span></button>
+          <button id="hud-btn-workshop" class="hud-pill hud-pill-workshop" type="button" title="Parent / Secret Santa Setup Workshop">🎅 <span>Santa Setup</span></button>
         </div>
         <div class="hud-group-right">
           <button id="hud-btn-time" class="hud-pill" type="button" title="Office Time of Day (Click to toggle)">🌙 <span>Night</span></button>
@@ -740,6 +743,261 @@
       <div class="desk-customizer-footer">
         <button type="button" id="desk-customizer-save" class="btn btn-primary customizer-save-btn">✨ Save &amp; Apply to Desk</button>
         <button type="button" id="desk-customizer-cancel" class="btn btn-secondary">Cancel</button>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- Break-Room Arcade Cabinet Modal -->
+  <dialog id="arcade-modal" class="office-dialog-modal arcade-dialog">
+    <div class="arcade-container">
+      <div class="arcade-header">
+        <div class="arcade-title-wrap">
+          <span class="arcade-icon">🕹️</span>
+          <div>
+            <h3>Office Break-Room Arcade</h3>
+            <p class="arcade-subtitle">Play games, beat the goals, and unlock Secret Santa clues!</p>
+          </div>
+        </div>
+        <button type="button" class="arcade-close-btn" id="arcade-close-btn" aria-label="Close Arcade">✕</button>
+      </div>
+
+      <!-- Game Selector Tabs -->
+      <div class="arcade-tabs">
+        <button type="button" class="arcade-tab-btn active" data-game="voxel-racers">
+          <span>🏎️</span> Voxel Racers
+        </button>
+        <button type="button" class="arcade-tab-btn" data-game="voxel-bike">
+          <span>🏍️</span> Voxel Bikes
+        </button>
+        <button type="button" class="arcade-tab-btn" data-game="cocoa-rush">
+          <span>☕</span> Cocoa Rush
+        </button>
+      </div>
+
+      <!-- Active Goal & Clue Unlocking Banner -->
+      <div class="arcade-goal-banner" id="arcade-goal-banner">
+        <div class="goal-info">
+          <span class="goal-badge">🎯 SANTA'S GOAL</span>
+          <span class="goal-desc" id="arcade-goal-desc">Finish 1 lap on Dust Track to unlock Clue #1!</span>
+        </div>
+        <button type="button" class="btn btn-primary btn-claim-clue" id="arcade-claim-clue-btn">
+          ✨ Claim Clue!
+        </button>
+      </div>
+
+      <!-- Game Screen Viewport -->
+      <div class="arcade-screen-viewport">
+        <!-- Iframe for external games -->
+        <iframe id="arcade-iframe" class="arcade-iframe" src="https://achallakiran.github.io/voxel-racers/" allow="autoplay; fullscreen" loading="lazy"></iframe>
+        
+        <!-- Built-in Cocoa Rush Mini-Game Panel -->
+        <div id="cocoa-rush-game" class="cocoa-rush-game hidden">
+          <div class="cocoa-game-header">
+            <h4>☕ Pantry Hot Cocoa Rush</h4>
+            <div class="cocoa-timer-wrap">
+              <span>Time: <strong id="cocoa-timer">30s</strong></span>
+              <span>Orders: <strong id="cocoa-score">0 / 3</strong></span>
+            </div>
+          </div>
+          <div class="cocoa-order-card" id="cocoa-order-card">
+            <span class="order-label">Incoming Order:</span>
+            <div class="order-recipe" id="cocoa-order-recipe">1 Mug + 🍫 Rich Cocoa + 🍬 2 Marshmallows</div>
+          </div>
+          <div class="cocoa-assembly-area">
+            <div class="cup-display" id="cocoa-cup-display">
+              <span class="cup-icon" id="cup-icon">☕</span>
+              <div class="cup-contents" id="cup-contents">Empty Festive Mug</div>
+            </div>
+          </div>
+          <div class="cocoa-ingredient-buttons">
+            <button type="button" class="ingredient-btn" data-ingredient="mug">☕ Festive Mug</button>
+            <button type="button" class="ingredient-btn" data-ingredient="cocoa">🍫 Rich Cocoa</button>
+            <button type="button" class="ingredient-btn" data-ingredient="marshmallow">🍬 Marshmallows</button>
+            <button type="button" class="ingredient-btn" data-ingredient="cinnamon">✨ Cinnamon</button>
+            <button type="button" class="ingredient-btn ingredient-serve" id="cocoa-serve-btn">🛎️ Serve Drink!</button>
+          </div>
+          <p class="cocoa-hint" id="cocoa-feedback">Assemble ingredients in order and tap Serve!</p>
+        </div>
+      </div>
+
+      <div class="arcade-footer">
+        <a id="arcade-fullscreen-link" href="https://achallakiran.github.io/voxel-racers/" target="_blank" rel="noopener" class="btn btn-secondary btn-sm">⛶ Open Fullscreen in New Tab</a>
+        <button type="button" class="btn btn-secondary btn-sm" id="arcade-reload-btn">↻ Restart Game</button>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- Parent / Secret Santa Setup Workshop -->
+  <dialog id="parent-workshop-modal" class="office-dialog-modal workshop-dialog">
+    <div class="workshop-container">
+      <div class="workshop-header">
+        <div class="workshop-title-wrap">
+          <span class="workshop-icon">🎅</span>
+          <div>
+            <h3>Secret Santa &amp; Parent Workshop</h3>
+            <p class="workshop-subtitle">Customize break-room tasks, holiday clues, and the grand gift reveal for your child!</p>
+          </div>
+        </div>
+        <button type="button" class="workshop-close-btn" id="workshop-close-btn" aria-label="Close Workshop">✕</button>
+      </div>
+
+      <div class="workshop-content">
+        <!-- 1. Player & Santa Profile -->
+        <div class="workshop-section">
+          <h4>1. Explorer &amp; Secret Santa</h4>
+          <div class="workshop-row">
+            <label class="workshop-label">
+              Child's Name
+              <input type="text" id="workshop-child-name" class="workshop-input" placeholder="e.g. Aarav" value="Holiday Explorer" maxlength="40" />
+            </label>
+            <label class="workshop-label">
+              Secret Santa Identity
+              <input type="text" id="workshop-santa-name" class="workshop-input" placeholder="e.g. Dad / Mom / Pranav" value="Secret Santa" maxlength="40" />
+            </label>
+          </div>
+        </div>
+
+        <!-- 2. Tasks & Progressive Clues -->
+        <div class="workshop-section">
+          <h4>2. Tasks, Goals &amp; Clues to Unlock</h4>
+          
+          <div class="task-setup-card">
+            <div class="task-setup-header">
+              <span class="task-pill">Task 1: 🏎️ Voxel Monster Racers</span>
+            </div>
+            <label class="workshop-label">Goal to Complete:
+              <input type="text" id="workshop-goal-1" class="workshop-input" value="Finish 1 lap on Dust Track or score over 500 points!" />
+            </label>
+            <label class="workshop-label">🔓 Clue #1 Revealed Upon Completion:
+              <input type="text" id="workshop-clue-1" class="workshop-input" value="Your Secret Santa sits on the bright window side of the office!" />
+            </label>
+          </div>
+
+          <div class="task-setup-card">
+            <div class="task-setup-header">
+              <span class="task-pill">Task 2: 🏍️ Voxel Bikes Redline</span>
+            </div>
+            <label class="workshop-label">Goal to Complete:
+              <input type="text" id="workshop-goal-2" class="workshop-input" value="Complete the Redline race course without crashing!" />
+            </label>
+            <label class="workshop-label">🔓 Clue #2 Revealed Upon Completion:
+              <input type="text" id="workshop-clue-2" class="workshop-input" value="Your Secret Santa always carries a blue water bottle and loves dark chocolate!" />
+            </label>
+          </div>
+
+          <div class="task-setup-card">
+            <div class="task-setup-header">
+              <span class="task-pill">Task 3: ☕ Santa's Cocoa Barista</span>
+            </div>
+            <label class="workshop-label">Goal to Complete:
+              <input type="text" id="workshop-goal-3" class="workshop-input" value="Serve 3 hot cocoas with marshmallows in the break room!" />
+            </label>
+            <label class="workshop-label">🔓 Clue #3 Revealed Upon Completion:
+              <input type="text" id="workshop-clue-3" class="workshop-input" value="Your Secret Santa gave you a big warm hug this morning!" />
+            </label>
+          </div>
+        </div>
+
+        <!-- 3. The Grand Gift Reveal -->
+        <div class="workshop-section">
+          <h4>3. 🎁 The Grand Special Gift Reveal</h4>
+          <p class="workshop-desc">Revealed only when your child correctly guesses who their Secret Santa is!</p>
+          <label class="workshop-label">Real-World Gift Hiding Location:
+            <input type="text" id="workshop-gift-location" class="workshop-input" value="Look under the Christmas tree wrapped in shiny red paper with golden ribbons! 🎁" />
+          </label>
+          <label class="workshop-label">Holiday Blessing &amp; Message:
+            <textarea id="workshop-gift-message" class="workshop-textarea" rows="2">Ho Ho Ho! You solved all the mysteries! You are so clever! Merry Christmas!</textarea>
+          </label>
+        </div>
+      </div>
+
+      <div class="workshop-footer">
+        <button type="button" id="workshop-start-quest-btn" class="btn btn-primary">▶️ Start Child Quest on this Device</button>
+        <button type="button" id="workshop-share-link-btn" class="btn btn-gold">🔗 Copy Shareable Quest Link</button>
+        <button type="button" id="workshop-cancel-btn" class="btn btn-secondary">Close</button>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- Child Quest Notebook Modal -->
+  <dialog id="child-quest-modal" class="office-dialog-modal quest-notebook-dialog">
+    <div class="quest-notebook-container">
+      <div class="quest-header">
+        <span class="quest-icon">🧭</span>
+        <div>
+          <h3 id="quest-modal-title">Secret Santa Mystery Quest</h3>
+          <p class="quest-subtitle">Complete break-room tasks to unlock clues. Solve them to find your Secret Santa!</p>
+        </div>
+        <button type="button" class="quest-close-btn" id="quest-close-btn" aria-label="Close Notebook">✕</button>
+      </div>
+
+      <div class="quest-tasks-list" id="quest-tasks-list">
+        <!-- Rendered dynamically -->
+      </div>
+
+      <div class="quest-finale-card">
+        <div class="finale-status" id="quest-finale-status">
+          🔒 Complete all 3 tasks to unlock the Christmas Tree Guessing Chamber!
+        </div>
+        <button type="button" id="quest-go-tree-btn" class="btn btn-primary btn-tree-guess" disabled>
+          🎄 Go to Christmas Tree &amp; Guess Santa!
+        </button>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- Christmas Tree Guessing Chamber & Gift Unboxing Modal -->
+  <dialog id="tree-guess-modal" class="office-dialog-modal tree-guess-dialog">
+    <div class="tree-guess-container">
+      <div class="tree-guess-header">
+        <span class="tree-guess-icon">🎄</span>
+        <div>
+          <h3>Christmas Tree Guessing Chamber</h3>
+          <p class="tree-guess-subtitle">Use your unlocked clues to guess who your Secret Santa is!</p>
+        </div>
+        <button type="button" class="tree-guess-close-btn" id="tree-guess-close-btn" aria-label="Close">✕</button>
+      </div>
+
+      <!-- Guessing View -->
+      <div id="tree-guess-view" class="tree-guess-view">
+        <div class="unlocked-clues-box" id="tree-unlocked-clues-box">
+          <!-- Filled with unlocked clues -->
+        </div>
+
+        <div class="guess-input-wrap">
+          <label for="tree-guess-input">Who do you think your Secret Santa is?</label>
+          <div class="guess-input-row">
+            <input type="text" id="tree-guess-input" placeholder="Type Santa's name..." />
+            <button type="button" id="tree-guess-submit-btn" class="btn btn-primary">🎁 Submit Guess</button>
+          </div>
+          <p class="guess-feedback" id="tree-guess-feedback"></p>
+        </div>
+      </div>
+
+      <!-- Unwrapping & Grand Gift Reveal View (hidden initially) -->
+      <div id="tree-reveal-view" class="tree-reveal-view hidden">
+        <div class="unwrapping-box-container" id="unwrapping-box-container">
+          <div class="present-3d-box" id="present-3d-box">
+            <div class="present-ribbon-vertical"></div>
+            <div class="present-ribbon-horizontal"></div>
+            <div class="present-bow">🎀</div>
+            <div class="present-sparkle-halo"></div>
+          </div>
+          <button type="button" id="tree-unwrap-action-btn" class="btn btn-gold btn-unwrap-pulse">
+            ✨ Tap to Unwrap Your Special Gift! ✨
+          </button>
+        </div>
+
+        <div id="tree-gift-content" class="tree-gift-content hidden">
+          <div class="trophy-badge">🏆 CORRECT GUESS! 🏆</div>
+          <h2 class="gift-santa-reveal" id="gift-santa-reveal">Your Secret Santa is Dad!</h2>
+          <div class="gift-location-card">
+            <span class="location-badge">📍 REAL-WORLD GIFT LOCATION</span>
+            <p class="gift-location-text" id="gift-location-text"></p>
+          </div>
+          <p class="gift-blessing-text" id="gift-blessing-text"></p>
+          <button type="button" id="tree-finish-celebration-btn" class="btn btn-primary">🎉 Celebrate &amp; Play More!</button>
+        </div>
       </div>
     </div>
   </dialog>
