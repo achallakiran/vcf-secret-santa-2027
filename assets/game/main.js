@@ -324,17 +324,17 @@ export function mountOffice(host,profile,notice=()=>{}){
 
   function drawNameplate(canvas,deskInfo){
     const ctx=canvas.getContext("2d");
-    ctx.clearRect(0,0,512,160);
+    ctx.clearRect(0,0,640,200);
 
-    const r=24;
+    const r=28;
     ctx.beginPath();
     ctx.moveTo(r,0);
-    ctx.lineTo(512-r,0);
-    ctx.quadraticCurveTo(512,0,512,r);
-    ctx.lineTo(512,160-r);
-    ctx.quadraticCurveTo(512,160,512-r,160);
-    ctx.lineTo(r,160);
-    ctx.quadraticCurveTo(0,160,0,160-r);
+    ctx.lineTo(640-r,0);
+    ctx.quadraticCurveTo(640,0,640,r);
+    ctx.lineTo(640,200-r);
+    ctx.quadraticCurveTo(640,200,640-r,200);
+    ctx.lineTo(r,200);
+    ctx.quadraticCurveTo(0,200,0,200-r);
     ctx.lineTo(0,r);
     ctx.quadraticCurveTo(0,0,r,0);
     ctx.closePath();
@@ -356,7 +356,7 @@ export function mountOffice(host,profile,notice=()=>{}){
       };
       const th=THEMES[themeKey]||THEMES.emerald;
 
-      const grad=ctx.createLinearGradient(0,0,512,160);
+      const grad=ctx.createLinearGradient(0,0,640,200);
       grad.addColorStop(0,th.bg1);
       grad.addColorStop(1,th.bg2);
       ctx.fillStyle=grad;
@@ -366,22 +366,22 @@ export function mountOffice(host,profile,notice=()=>{}){
       ctx.stroke();
 
       ctx.fillStyle=th.sub;
-      ctx.font="bold 20px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
-      const dispMotto=mottoText.length>28?mottoText.slice(0,26)+"…":mottoText;
-      ctx.fillText(dispMotto,28,42);
+      ctx.font="bold 22px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+      const dispMotto=mottoText.length>30?mottoText.slice(0,28)+"…":mottoText;
+      ctx.fillText(dispMotto,32,46);
 
       ctx.fillStyle=th.text;
-      ctx.font="bold 38px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
-      const maxChars=showBadge?13:17;
+      ctx.font="bold 44px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+      const maxChars=showBadge?14:18;
       const displayName=deskInfo.ownerName.length>maxChars?deskInfo.ownerName.slice(0,maxChars-1)+"…":deskInfo.ownerName;
-      ctx.fillText(displayName,28,92);
+      ctx.fillText(displayName,32,106);
 
       ctx.fillStyle=th.sub;
-      ctx.font="500 23px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
-      ctx.fillText(`${deskInfo.code} · ${deskInfo.clueMeta.icon} ${deskInfo.clueMeta.title}`,28,132);
+      ctx.font="600 25px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+      ctx.fillText(`${deskInfo.code} · ${deskInfo.clueMeta.icon} ${deskInfo.clueMeta.title}`,32,158);
 
       if(showBadge){
-        const bx=432,by=80,br=46;
+        const bx=540,by=100,br=64;
         ctx.save();
         ctx.beginPath();
         ctx.arc(bx,by,br,0,Math.PI*2);
@@ -401,7 +401,7 @@ export function mountOffice(host,profile,notice=()=>{}){
 
             ctx.beginPath();
             ctx.arc(bx,by,br,0,Math.PI*2);
-            ctx.lineWidth=5;
+            ctx.lineWidth=6;
             ctx.strokeStyle=th.border;
             ctx.stroke();
 
@@ -415,7 +415,7 @@ export function mountOffice(host,profile,notice=()=>{}){
           ctx.fillStyle="#1c3a2c";
           ctx.fillRect(bx-br,by-br,br*2,br*2);
           ctx.fillStyle="#fcd890";
-          ctx.font="bold 28px sans-serif";
+          ctx.font="bold 34px sans-serif";
           ctx.textAlign="center";
           ctx.textBaseline="middle";
           const initial=(deskInfo.ownerName||"U").trim().charAt(0).toUpperCase();
@@ -425,53 +425,76 @@ export function mountOffice(host,profile,notice=()=>{}){
 
         ctx.beginPath();
         ctx.arc(bx,by,br,0,Math.PI*2);
-        ctx.lineWidth=5;
+        ctx.lineWidth=6;
         ctx.strokeStyle=th.border;
         ctx.stroke();
       }
     }else if(deskInfo.ownerName){
-      const grad=ctx.createLinearGradient(0,0,512,160);
+      const grad=ctx.createLinearGradient(0,0,640,200);
       grad.addColorStop(0,"#192f42");
       grad.addColorStop(1,"#0f1d2a");
       ctx.fillStyle=grad;
       ctx.fill();
-      ctx.lineWidth=6;
+      ctx.lineWidth=7;
       ctx.strokeStyle="#4d7aa6";
       ctx.stroke();
 
       ctx.fillStyle="#8fb6dc";
-      ctx.font="bold 20px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
-      ctx.fillText("💼 COLLEAGUE DESK",28,42);
+      ctx.font="bold 22px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+      ctx.fillText("💼 COLLEAGUE DESK",32,46);
 
       ctx.fillStyle="#f5f9fc";
-      ctx.font="bold 38px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+      ctx.font="bold 44px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
       const displayName=deskInfo.ownerName.length>18?deskInfo.ownerName.slice(0,16)+"…":deskInfo.ownerName;
-      ctx.fillText(displayName,28,92);
+      ctx.fillText(displayName,32,106);
 
       ctx.fillStyle="#bad2e8";
-      ctx.font="500 23px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
-      ctx.fillText(`${deskInfo.code} · Clue: ${deskInfo.clueMeta.icon} ${deskInfo.clueMeta.title}`,28,132);
+      ctx.font="600 25px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+      ctx.fillText(`${deskInfo.code} · Clue: ${deskInfo.clueMeta.icon} ${deskInfo.clueMeta.title}`,32,158);
+
+      // Colleague initial badge
+      const bx=540,by=100,br=60;
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(bx,by,br,0,Math.PI*2);
+      ctx.closePath();
+      ctx.clip();
+      ctx.fillStyle="#1a3248";
+      ctx.fillRect(bx-br,by-br,br*2,br*2);
+      ctx.fillStyle="#9bc4e8";
+      ctx.font="bold 34px sans-serif";
+      ctx.textAlign="center";
+      ctx.textBaseline="middle";
+      const initial=(deskInfo.ownerName||"C").trim().charAt(0).toUpperCase();
+      ctx.fillText(initial,bx,by);
+      ctx.restore();
+
+      ctx.beginPath();
+      ctx.arc(bx,by,br,0,Math.PI*2);
+      ctx.lineWidth=5;
+      ctx.strokeStyle="#4d7aa6";
+      ctx.stroke();
     }else{
       ctx.fillStyle="#222c36";
       ctx.fill();
-      ctx.lineWidth=4;
+      ctx.lineWidth=5;
       ctx.strokeStyle="#415161";
       ctx.stroke();
 
       ctx.fillStyle="#c5d2de";
-      ctx.font="bold 34px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
-      ctx.fillText(`${deskInfo.code} · Open Desk`,28,76);
+      ctx.font="bold 40px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+      ctx.fillText(`${deskInfo.code} · Open Desk`,32,88);
 
       ctx.fillStyle="#7b91a3";
-      ctx.font="500 23px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
-      ctx.fillText("Hot Desk · Available",28,120);
+      ctx.font="600 25px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+      ctx.fillText("Hot Desk · Available",32,148);
     }
   }
 
   function buildDeskNameplate(deskInfo){
     const canvas=document.createElement("canvas");
-    canvas.width=512;
-    canvas.height=160;
+    canvas.width=640;
+    canvas.height=200;
     deskInfo.canvas=canvas;
 
     drawNameplate(canvas,deskInfo);
@@ -480,23 +503,33 @@ export function mountOffice(host,profile,notice=()=>{}){
     texture.colorSpace=THREE.SRGBColorSpace;
     deskInfo.texture=texture;
 
-    const material=new THREE.MeshBasicMaterial({map:texture,side:THREE.DoubleSide});
+    // Sprite automatically billboards to active camera, ensuring nameplate is NEVER reversed/mirrored
+    const material=new THREE.SpriteMaterial({
+      map:texture,
+      transparent:true,
+      depthTest:true,
+      depthWrite:false
+    });
     deskInfo.material=material;
 
-    const mesh=new THREE.Mesh(new THREE.PlaneGeometry(1.02,0.32),material);
+    const sprite=new THREE.Sprite(material);
+    sprite.scale.set(1.42,0.44,1.0);
+    sprite.position.y=0.26;
 
     const plateGroup=new THREE.Group();
-    mesh.position.y=0.22;
-    plateGroup.add(mesh);
+    plateGroup.add(sprite);
 
     const postMat=new THREE.MeshStandardMaterial({
       color:deskInfo.isMe?0xcaa35a:0x4a5d70,
       metalness:0.6,
       roughness:0.3
     });
-    const post=new THREE.Mesh(new THREE.CylinderGeometry(0.012,0.012,0.24,8),postMat);
-    post.position.y=0.10;
-    plateGroup.add(post);
+    // Twin polished metallic posts securely anchoring the floating sign above the partition
+    for(const px of [-0.38,0.38]){
+      const post=new THREE.Mesh(new THREE.CylinderGeometry(0.012,0.012,0.34,8),postMat);
+      post.position.set(px,0.12,0);
+      plateGroup.add(post);
+    }
 
     deskInfo.redraw=()=>{
       drawNameplate(canvas,deskInfo);
@@ -921,7 +954,7 @@ export function mountOffice(host,profile,notice=()=>{}){
 
       if(seat.deskGroup){
         const {plateGroup,texture,material}=buildDeskNameplate(deskInfo);
-        plateGroup.position.set(-seat.chairSide*.485,1.44,0);
+        plateGroup.position.set(-seat.chairSide*.485,1.48,0);
         seat.deskGroup.add(plateGroup);
         deskInfo.nameplateGroup=plateGroup;
         deskInfo.texture=texture;

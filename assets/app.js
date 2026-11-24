@@ -1685,13 +1685,16 @@ function setupChildQuestAndArcade(){
     const url=gameId==="voxel-bike"
       ?"./games/voxel-bike/index.html"
       :"./games/voxel-racers/index.html";
-    if(arcadeIframe&&!arcadeIframe.src.endsWith(url.replace("./",""))){
-      arcadeIframe.src=url;
-    }
-    if(arcadeFullscreen)arcadeFullscreen.href=url;
 
     if(typeof arcadeModal?.showModal==="function")arcadeModal.showModal();
     else arcadeModal?.classList.remove("hidden");
+
+    if(arcadeIframe){
+      if(!arcadeIframe.src || !arcadeIframe.src.endsWith(url.replace("./",""))){
+        arcadeIframe.src=url;
+      }
+    }
+    if(arcadeFullscreen)arcadeFullscreen.href=url;
   }
 
   document.querySelectorAll(".arcade-tab-btn").forEach(tab=>{
@@ -1705,9 +1708,10 @@ function setupChildQuestAndArcade(){
     arcadeModal.close();
   });
   $("arcade-reload-btn")?.addEventListener("click",()=>{
-    if(arcadeIframe&&!arcadeIframe.classList.contains("hidden")){
+    if(arcadeIframe){
       const src=arcadeIframe.src;
-      arcadeIframe.src=src;
+      arcadeIframe.src="";
+      setTimeout(()=>{ arcadeIframe.src=src; },60);
     }
   });
 
@@ -1813,7 +1817,8 @@ function setupChildQuestAndArcade(){
     quest.tasks.forEach(t=>t.completed=false);
     saveQuest();
     workshopModal.close();
-    toast(`🎅 Child Quest armed for ${quest.childName}!`);
+    toast(`🎮 Testing mode active! Previewing quest for ${quest.childName}.`);
+    openQuestNotebook();
   });
 
   $("workshop-share-link-btn")?.addEventListener("click",async()=>{
@@ -1823,7 +1828,7 @@ function setupChildQuestAndArcade(){
     const fullUrl=`${location.origin}${location.pathname}?quest=${encoded}`;
     try{
       await navigator.clipboard.writeText(fullUrl);
-      toast("📋 Shareable Child Quest Link copied to clipboard!");
+      toast("📋 Recipient Quest Link copied to clipboard! Share it with your teammate.");
     }catch(_e){
       prompt("Copy your shareable quest link:",fullUrl);
     }

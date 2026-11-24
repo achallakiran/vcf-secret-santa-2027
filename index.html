@@ -428,7 +428,7 @@
             <span class="menu-card-icon">🎁</span>
             <div class="menu-card-text">
               <strong>Secret Santa Hub</strong>
-              <span>Check your secret child, wishlists &amp; gift budget</span>
+              <span>Check your secret recipient, wishlists &amp; gift budget</span>
             </div>
           </button>
 
@@ -444,8 +444,8 @@
           <button type="button" class="more-menu-card" id="menu-item-workshop">
             <span class="menu-card-icon">🎅</span>
             <div class="menu-card-text">
-              <strong>Santa Workshop (Parent Setup)</strong>
-              <span>Design tasks, goals &amp; clues for your secret child</span>
+              <strong>Santa Workshop (Recipient Clues Setup)</strong>
+              <span>Design tasks, goals &amp; clues for your assigned recipient</span>
             </div>
           </button>
 
@@ -1004,7 +1004,7 @@
 
       <!-- Game Screen Viewport -->
       <div class="arcade-screen-viewport">
-        <iframe id="arcade-iframe" class="arcade-iframe" src="./games/voxel-racers/index.html" allow="autoplay; fullscreen" loading="lazy"></iframe>
+        <iframe id="arcade-iframe" class="arcade-iframe" src="" allow="autoplay; fullscreen" loading="lazy"></iframe>
       </div>
 
       <div class="arcade-footer">
@@ -1028,8 +1028,8 @@
         <div class="workshop-title-wrap">
           <span class="workshop-icon">🎅</span>
           <div>
-            <h3>Secret Santa &amp; Parent Workshop</h3>
-            <p class="workshop-subtitle">Customize break-room tasks, holiday clues, and the grand gift reveal for your child!</p>
+            <h3>Secret Santa Workshop</h3>
+            <p class="workshop-subtitle">Customize break-room tasks, holiday clues, and the grand gift reveal for your assigned teammate!</p>
           </div>
         </div>
         <button type="button" class="workshop-close-btn" id="workshop-close-btn" aria-label="Close Workshop">✕</button>
@@ -1038,10 +1038,10 @@
       <div class="workshop-content">
         <!-- 1. Player & Santa Profile -->
         <div class="workshop-section">
-          <h4>1. Explorer &amp; Secret Santa</h4>
+          <h4>1. Teammate &amp; Secret Santa</h4>
           <div class="workshop-row">
             <label class="workshop-label">
-              Child's Name
+              Assigned Teammate's Name
               <input type="text" id="workshop-child-name" class="workshop-input" placeholder="e.g. Aarav" value="Holiday Explorer" maxlength="40" />
             </label>
             <label class="workshop-label">
@@ -1083,7 +1083,7 @@
         <!-- 3. The Grand Gift Reveal -->
         <div class="workshop-section">
           <h4>3. 🎁 The Grand Special Gift Reveal</h4>
-          <p class="workshop-desc">Revealed only when your child correctly guesses who their Secret Santa is!</p>
+          <p class="workshop-desc">Revealed only when your teammate correctly guesses who their Secret Santa is!</p>
           <label class="workshop-label">Real-World Gift Hiding Location:
             <input type="text" id="workshop-gift-location" class="workshop-input" value="Look under the Christmas tree wrapped in shiny red paper with golden ribbons! 🎁" />
           </label>
@@ -1094,10 +1094,13 @@
       </div>
 
       <div class="workshop-footer">
-        <button type="button" id="workshop-start-quest-btn" class="btn btn-primary">▶️ Start Child Quest on this Device</button>
-        <button type="button" id="workshop-share-link-btn" class="btn btn-gold">🔗 Copy Shareable Quest Link</button>
+        <button type="button" id="workshop-start-quest-btn" class="btn btn-primary">🎮 Preview Recipient Quest (Test on this Device)</button>
+        <button type="button" id="workshop-share-link-btn" class="btn btn-gold">🔗 Copy Recipient Quest Link</button>
         <button type="button" id="workshop-cancel-btn" class="btn btn-secondary">Close</button>
       </div>
+      <p style="margin:8px 18px 14px;font-size:12px;color:#a0aec0;line-height:1.4;">
+        💡 <strong>Test on this Device:</strong> Arms this browser with the recipient's quest so you can preview the clues and arcade mini-game challenges before sharing the link.
+      </p>
     </div>
   </dialog>
 

@@ -234,8 +234,8 @@ export function sculptCelebrationStage(party,config,kit){
   block(party,-3.23,.84,3.92,5.87,.047,.09,
     0xebcd90,false);
   // Big inset alcoves and oversized decorative gold medallions on the
-  // opposite back wall. They make the celebration room feel finished.
-  for(const x of [1.55,5.98]){
+  // outer celebration walls, kept well clear of the central arcade portal.
+  for(const x of [-6.40,6.20]){
     softBlock(party,x,2.35,6.77,1.66,2.95,.13,
       0x765d55,.13,false);
     softBlock(party,x,2.38,6.68,1.46,2.75,.08,
@@ -257,7 +257,7 @@ export function sculptCelebrationStage(party,config,kit){
   // with a prominent readable floor medallion and red/green nested geometry.
   for(let n=0;n<20;n++){
     const t=n*Math.PI*2/20;
-    const x=4.45+Math.cos(t)*2.05,z=3.22+Math.sin(t)*2.05;
+    const x=5.60+Math.cos(t)*2.05,z=2.80+Math.sin(t)*2.05;
     const flake=ball(party,x,.079,z,.072,
       n%2?0xeac37d:0xf8ecd1,1);
     flake.scale.y=.11;flake.castShadow=false;

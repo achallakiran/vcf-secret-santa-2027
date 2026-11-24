@@ -202,9 +202,10 @@ function start() {
   function frameCamera() {
     const len = truckMesh ? truckMesh.userData.length : 3.7;
     const h = truckMesh ? truckMesh.userData.height : 2.2;
-    const aspect = camera.aspect;
+    const aspect = Math.max(0.1, isNaN(camera.aspect) ? 1.0 : camera.aspect);
     let dist = Math.max(5.2, len * 1.5, h * 3.0);
     if (aspect < 1) dist = dist / aspect * 0.62;
+    if (isNaN(dist) || dist <= 0) dist = 8.0;
     Object.assign(camBase, { x: 0, y: dist * 0.42, z: dist, ly: Math.max(0.9, h * 0.52) });
     camera.position.set(0, camBase.y, camBase.z);
     camera.lookAt(0, camBase.ly, 0);
@@ -280,10 +281,11 @@ function start() {
   });
 
   function resize() {
-    const w = window.innerWidth;
-    const h = window.innerHeight;
+    const w = Math.max(window.innerWidth || 0, canvas.clientWidth || 0, 480);
+    const h = Math.max(window.innerHeight || 0, canvas.clientHeight || 0, 320);
     renderer.setSize(w, h, false);
-    camera.aspect = w / h;
+    camera.aspect = Math.max(0.1, w / h);
+    camera.updateProjectionMatrix();
     frameCamera();
   }
   window.addEventListener('resize', resize);
@@ -383,12 +385,21 @@ function start() {
   let mazeZoom = 0;                      // labyrinth camera: 0 = close, 1 = wide (the camera icon toggles it)
   let explored = new Set(); let trail = [];   // labyrinth fog-of-war: cells driven through, and a breadcrumb trail
   function snapCamera() {
-    const t = { x: vehicle.x, y: vehicle.y, z: vehicle.z, heading: vehicle.heading, speed: 0 };
+    if (!vehicle) return;
+    const t = { x: vehicle.x || 0, y: vehicle.y || 0, z: vehicle.z || 0, heading: vehicle.heading || 0, speed: 0 };
     camState = newCameraState(t);
     const g = TR.maze && driveMode === 'race' ? mazeCameraGoal(t, mazeZoom) : cameraGoal(camMode, t, camState);
-    camPos.set(g.pos.x, g.pos.y, g.pos.z);
-    camLook.set(g.look.x, g.look.y, g.look.z);
-    camFov = g.fov;
+    if (g && g.pos && !isNaN(g.pos.x)) {
+      camPos.set(g.pos.x, g.pos.y, g.pos.z);
+      camLook.set(g.look.x, g.look.y, g.look.z);
+      camFov = g.fov || 40;
+    } else {
+      camPos.set(t.x, (t.y || 0) + 4, (t.z || 0) + 8);
+      camLook.set(t.x, t.y || 0, t.z);
+      camFov = 40;
+    }
+    viewPos.copy(camPos);
+    viewLook.copy(camLook);
   }
 
   function enterDrive() {
@@ -1519,9 +1530,14 @@ function start() {
     if (TR.maze && driveMode === 'race') {
       g = mazeCameraGoal({ x: v.x, y: 0, z: v.z, heading: v.heading, speed: v.f }, mazeZoom);
     } else g = cameraGoal(camMode, { x: v.x, y: v.y, z: v.z, heading: v.heading, speed: v.f, loop: v.loop ? v.loop.L : null, loopTh: v.loop ? v.loop.th : 0, loopLat: v.loop ? v.loop.lat : 0, aim: driveMode === 'race' && TR.env.camAim ? TR.env.camAim.yaw : null, aimLift: driveMode === 'race' && TR.env.camAim ? TR.env.camAim.lift : 0 }, camState);
-    const kp = v.loop ? 6 : camMode === 'iso-fixed' ? 7 : (camMode === 'chase' ? 6 : 5);
-    camPos.lerp(tmp.set(g.pos.x, g.pos.y, g.pos.z), 1 - Math.exp(-kp * dt));
-    camLook.lerp(tmp.set(g.look.x, g.look.y, g.look.z), 1 - Math.exp(-(kp + 2) * dt));
+    if (isNaN(camPos.x) || isNaN(camLook.x)) {
+      snapCamera();
+    }
+    if (g && g.pos && !isNaN(g.pos.x)) {
+      const kp = v.loop ? 6 : camMode === 'iso-fixed' ? 7 : (camMode === 'chase' ? 6 : 5);
+      camPos.lerp(tmp.set(g.pos.x, g.pos.y, g.pos.z), 1 - Math.exp(-kp * dt));
+      camLook.lerp(tmp.set(g.look.x, g.look.y, g.look.z), 1 - Math.exp(-(kp + 2) * dt));
+    }
     // labyrinth overview: blended in AFTER the normal smoothing and eased on its own clock, so it arrives exactly and then holds still
     // (the old way chased the overview with the chase-camera smoothing and was still moving 3 s later: that was the jitter)
     viewPos.copy(camPos); viewLook.copy(camLook);
@@ -1602,9 +1618,25 @@ function start() {
     last = now;
     clock += dt;
 
+    // Watchdog: If dimensions changed or camera has NaN, force a clean resize/snap
+    const curW = window.innerWidth || canvas.clientWidth || 0;
+    const curH = window.innerHeight || canvas.clientHeight || 0;
+    if (curW > 50 && curH > 50) {
+      if (isNaN(camera.aspect) || isNaN(camera.position.x) || isNaN(camPos.x) || Math.abs((renderer.domElement.width / renderer.getPixelRatio()) - curW) > 10) {
+        resize();
+        if (isNaN(camPos.x) || isNaN(camLook.x)) {
+          snapCamera();
+        }
+      }
+    }
+
     const { steps } = stepper.advance(dt);
     if (flow.state === 'drive' && vehicle) {
-      driveFrame(dt, steps);
+      try {
+        driveFrame(dt, steps);
+      } catch (err) {
+        console.warn("driveFrame recovered:", err);
+      }
       world.update(dt, clock, spin);
       pool.update(dt);
       particles.update();
@@ -1646,7 +1678,14 @@ function start() {
     }
 
     // the intro is fully opaque: skip drawing the 3D scene behind it
-    if (flow.state !== 'boot' && flow.state !== 'intro') { renderer.render(scene, camera); drawn++; }
+    if (flow.state !== 'boot' && flow.state !== 'intro') {
+      try {
+        renderer.render(scene, camera);
+        drawn++;
+      } catch (err) {
+        console.warn("render recovered:", err);
+      }
+    }
     frames++;
     requestAnimationFrame(frame);
   }
@@ -1654,11 +1693,19 @@ function start() {
 
   // The intro starts by itself once the phone is in landscape (portrait shows the rotate prompt).
   function maybeStart() {
-    if (flow.state === 'boot' && !needsRotate(window.innerWidth, window.innerHeight)) flow.send('ready');
+    if (flow.state === 'boot') {
+      const w = window.innerWidth || canvas.clientWidth || 0;
+      const h = window.innerHeight || canvas.clientHeight || 0;
+      if (w > 50 && h > 50) {
+        flow.send('ready');
+      }
+    }
   }
   window.addEventListener('resize', maybeStart);
   window.addEventListener('orientationchange', maybeStart);
   maybeStart();
+  setTimeout(maybeStart, 150);
+  setTimeout(maybeStart, 500);
 
   // Handle for tests / debugging
   window.__voxelRacers = {
