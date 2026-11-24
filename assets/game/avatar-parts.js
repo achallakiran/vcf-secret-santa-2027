@@ -93,7 +93,7 @@ export function sculptHead(head,p,kit){
   for(const side of [-1,1])
     orb(head,.017,skinShade,side*.137,.171,.412,.75,.6,.6).castShadow=false;
   // Distinct cheek/jaw/chin/moustache components, independent of hairstyle.
-  if(!female){
+  if(!female || (p.facialHair && p.facialHair !== "none")){
     const beard=facialHairShape(p.facialHair);
     if(beard.sideburns)for(const sign of [-1,1]){
       part(head,.13,.15+.17*beard.sideburns,.10,deep,sign*.465,

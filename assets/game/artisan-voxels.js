@@ -101,7 +101,7 @@ export function sculptFaceVoxels(head,p){
   // Facial hair is selected independently of hairstyle. Draw distinct
   // patterned cheeks, jaw, moustache and isolated soul patches; the full
   // beard includes the moustache by definition.
-  if(p.gender==="male"){
+  if(p.gender==="male" || (p.facialHair && p.facialHair !== "none")){
     const facial=facialHairShape(p.facialHair);
     const shadeHair=(r,c)=>colorHex(hair,seeded(r,c)*.13-.09);
     if(facial.cheeks>0){

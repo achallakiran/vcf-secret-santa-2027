@@ -848,12 +848,18 @@ function analyzePhotoForAvatar(img){
   const ctx=canvas.getContext("2d",{willReadFrequently:true});
   if(!ctx)return null;
 
-  const scale=Math.max(size/img.naturalWidth,size/img.naturalHeight);
-  const w=img.naturalWidth*scale;
-  const h=img.naturalHeight*scale;
-  const x=(size-w)/2;
-  const y=(size-h)/2;
-  ctx.drawImage(img,x,y,w,h);
+  const w=img.naturalWidth||img.width||size;
+  const h=img.naturalHeight||img.height||size;
+  const cropSize=Math.min(w,h);
+  let sx=Math.max(0,Math.floor((w-cropSize)/2));
+  let sy=0;
+  if(h>w){
+    // Faces in portrait selfies are positioned in upper 60%
+    sy=Math.floor((h-cropSize)*0.24);
+  }else{
+    sy=Math.max(0,Math.floor((h-cropSize)/2));
+  }
+  ctx.drawImage(img,sx,sy,cropSize,cropSize,0,0,size,size);
 
   const imgData=ctx.getImageData(0,0,size,size).data;
   function getPixel(px,py){
@@ -866,18 +872,18 @@ function analyzePhotoForAvatar(img){
   function getAverageRegion(x0,y0,x1,y1,filterOutliers=true){
     let rSum=0,gSum=0,bSum=0,count=0;
     const samples=[];
-    for(let py=y0;py<=y1;py+=2){
-      for(let px=x0;px<=x1;px+=2){
+    for(let py=Math.round(y0);py<=Math.round(y1);py+=2){
+      for(let px=Math.round(x0);px<=Math.round(x1);px+=2){
         const [r,g,b]=getPixel(px,py);
         const lum=0.299*r+0.587*g+0.114*b;
-        if(filterOutliers&&(lum<15||lum>245))continue;
+        if(filterOutliers&&(lum<12||lum>248))continue;
         samples.push([r,g,b,lum]);
       }
     }
     if(!samples.length)return [180,140,110];
     samples.sort((a,b)=>a[3]-b[3]);
-    const start=Math.floor(samples.length*0.15);
-    const end=Math.ceil(samples.length*0.85);
+    const start=Math.floor(samples.length*0.12);
+    const end=Math.ceil(samples.length*0.88);
     for(let i=start;i<end;i++){
       rSum+=samples[i][0];
       gSum+=samples[i][1];
@@ -909,80 +915,118 @@ function analyzePhotoForAvatar(img){
     return bestIdx;
   }
 
-  // 1. Skin tone: Center face
-  const skinRgb=getAverageRegion(size*0.35,size*0.32,size*0.65,size*0.52);
+  // 1. Forehead and upper cheek skin tone (avoids mouth, beard, eyes & hair)
+  const foreheadRgb=getAverageRegion(size*0.35,size*0.22,size*0.65,size*0.32);
+  const leftCheekRgb=getAverageRegion(size*0.22,size*0.44,size*0.32,size*0.54);
+  const rightCheekRgb=getAverageRegion(size*0.68,size*0.44,size*0.78,size*0.54);
+  const skinRgb=[
+    Math.round((foreheadRgb[0]+leftCheekRgb[0]+rightCheekRgb[0])/3),
+    Math.round((foreheadRgb[1]+leftCheekRgb[1]+rightCheekRgb[1])/3),
+    Math.round((foreheadRgb[2]+leftCheekRgb[2]+rightCheekRgb[2])/3)
+  ];
   const skinIdx=closestColorIndex(skinRgb,SKIN_COLORS);
+  const skinLum=0.299*skinRgb[0]+0.587*skinRgb[1]+0.114*skinRgb[2];
 
-  // 2. Hair color: Crown of head
-  const hairRgb=getAverageRegion(size*0.25,size*0.06,size*0.75,size*0.22);
+  // 2. Hair tone (crown of head)
+  const hairRgb=getAverageRegion(size*0.28,size*0.04,size*0.72,size*0.18);
   const hairIdx=closestColorIndex(hairRgb,HAIR_COLORS);
+  const hairLum=0.299*hairRgb[0]+0.587*hairRgb[1]+0.114*hairRgb[2];
 
-  // 3. Outfit color: Upper torso
-  const outfitRgb=getAverageRegion(size*0.20,size*0.72,size*0.80,size*0.92);
+  // 3. Outfit tone (lower torso)
+  const outfitRgb=getAverageRegion(size*0.22,size*0.82,size*0.78,size*0.96);
   const outfitColorIdx=closestColorIndex(outfitRgb,OUTFIT_COLORS);
 
-  // 4. Facial hair detection: compare lower jaw/chin luminance vs forehead skin
-  const jawRgb=getAverageRegion(size*0.38,size*0.56,size*0.62,size*0.68,false);
-  const skinLum=0.299*skinRgb[0]+0.587*skinRgb[1]+0.114*skinRgb[2];
-  const jawLum=0.299*jawRgb[0]+0.587*jawRgb[1]+0.114*jawRgb[2];
-  const beardDiff=skinLum-jawLum;
+  // 4. Moustache zone (upper lip between nose and mouth)
+  const moustRgb=getAverageRegion(size*0.38,size*0.54,size*0.62,size*0.63,false);
+  const moustLum=0.299*moustRgb[0]+0.587*moustRgb[1]+0.114*moustRgb[2];
+  const moustDiff=skinLum-moustLum;
 
+  // 5. Chin beard zone (chin pad from lower lip down)
+  const chinRgb=getAverageRegion(size*0.38,size*0.66,size*0.62,size*0.79,false);
+  const chinLum=0.299*chinRgb[0]+0.587*chinRgb[1]+0.114*chinRgb[2];
+  const chinDiff=skinLum-chinLum;
+
+  // 6. Jawline beard zone (sides of lower jaw)
+  const leftJawRgb=getAverageRegion(size*0.24,size*0.60,size*0.36,size*0.76,false);
+  const rightJawRgb=getAverageRegion(size*0.64,size*0.60,size*0.76,size*0.76,false);
+  const jawLum=(0.299*(leftJawRgb[0]+rightJawRgb[0])+0.587*(leftJawRgb[1]+rightJawRgb[1])+0.114*(leftJawRgb[2]+rightJawRgb[2]))/2;
+  const jawDiff=skinLum-jawLum;
+
+  // Multi-band facial hair classification
   let facialHair="none";
   let facialHairLabel="Clean shaven";
-  if(beardDiff>42){
-    facialHair="beard-boxed";
-    facialHairLabel="Full/Boxed beard";
-  }else if(beardDiff>24){
+  const fullBeardScore=0.35*moustDiff+0.45*chinDiff+0.20*jawDiff;
+
+  if(fullBeardScore>22||(chinDiff>20&&moustDiff>15)){
+    if(fullBeardScore>30||chinDiff>30||jawDiff>26){
+      facialHair="beard-boxed";
+      facialHairLabel="Short boxed beard";
+    }else{
+      facialHair="combo-short";
+      facialHairLabel="Short beard + moustache";
+    }
+  }else if(chinDiff>18&&moustDiff>12){
     facialHair="combo-short";
+    facialHairLabel="Short beard + moustache";
+  }else if(chinDiff>18){
+    facialHair="beard-short";
     facialHairLabel="Short beard";
-  }else if(beardDiff>14){
-    facialHair="stubble-light";
-    facialHairLabel="Light stubble";
+  }else if(moustDiff>18){
+    facialHair="moustache-classic";
+    facialHairLabel="Classic moustache";
+  }else if(fullBeardScore>8||chinDiff>10||moustDiff>10){
+    facialHair="stubble-full";
+    facialHairLabel="Full stubble";
   }
 
-  // 5. Glasses / Spectacles detection
-  let eyeBridgeMinLum=255;
-  for(let px=size*0.44;px<=size*0.56;px+=2){
-    const [r,g,b]=getPixel(px,size*0.38);
-    const lum=0.299*r+0.587*g+0.114*b;
-    if(lum<eyeBridgeMinLum)eyeBridgeMinLum=lum;
+  // 7. Spectacles / Eyeglasses detection:
+  // Check eye bridge and rim dips across y in [0.38, 0.46]
+  let bridgeMinLum=255;
+  for(let px=Math.round(size*0.44);px<=Math.round(size*0.56);px+=2){
+    for(let py=Math.round(size*0.38);py<=Math.round(size*0.44);py+=2){
+      const [r,g,b]=getPixel(px,py);
+      const lum=0.299*r+0.587*g+0.114*b;
+      if(lum<bridgeMinLum)bridgeMinLum=lum;
+    }
   }
-  const glassesDetected=(skinLum-eyeBridgeMinLum)>48;
+  let rimMinLum=255;
+  for(let px of [size*0.30,size*0.36,size*0.64,size*0.70]){
+    for(let py=Math.round(size*0.38);py<=Math.round(size*0.44);py+=2){
+      const [r,g,b]=getPixel(px,py);
+      const lum=0.299*r+0.587*g+0.114*b;
+      if(lum<rimMinLum)rimMinLum=lum;
+    }
+  }
+  const glassesDetected=(skinLum-bridgeMinLum>30)||(skinLum-rimMinLum>38);
   const glassesStyle=glassesDetected?"rectangle":"none";
 
-  // 6. Hair length & Hairstyle estimation
-  const leftSideRgb=getAverageRegion(size*0.12,size*0.40,size*0.24,size*0.65,false);
-  const rightSideRgb=getAverageRegion(size*0.76,size*0.40,size*0.88,size*0.65,false);
-  const hairLum=0.299*hairRgb[0]+0.587*hairRgb[1]+0.114*hairRgb[2];
+  // 8. Hairstyle & Gender estimation
+  const leftSideRgb=getAverageRegion(size*0.12,size*0.36,size*0.22,size*0.60,false);
+  const rightSideRgb=getAverageRegion(size*0.78,size*0.36,size*0.88,size*0.60,false);
   const leftLum=0.299*leftSideRgb[0]+0.587*leftSideRgb[1]+0.114*leftSideRgb[2];
   const rightLum=0.299*rightSideRgb[0]+0.587*rightSideRgb[1]+0.114*rightSideRgb[2];
-  const sideHairMatch=(Math.abs(leftLum-hairLum)<32||Math.abs(rightLum-hairLum)<32);
+  const sideHairMatch=(Math.abs(leftLum-hairLum)<36||Math.abs(rightLum-hairLum)<36);
 
   let hairstyle=0;
   let hairStyleLabel="Short classic";
   let gender="male";
   let outfit="shirt";
 
-  if(sideHairMatch&&hairLum<120){
-    hairstyle=2;
-    hairStyleLabel="Long hair";
-    gender="female";
-    outfit="salwar";
-  }else if(hairLum>180&&skinLum>160&&Math.abs(hairLum-skinLum)<25){
-    hairstyle=19;
-    hairStyleLabel="Bald / buzz cut";
-    gender="male";
-    outfit="tshirt";
-  }else if(facialHair!=="none"){
-    hairstyle=0;
-    hairStyleLabel="Short classic";
+  if(facialHair!=="none"){
     gender="male";
     outfit="shirt";
-  }else{
-    hairstyle=1;
-    hairStyleLabel="Layered medium";
+    hairstyle=hairLum<110?14:0; // 14 = Textured quiff, 0 = Short classic
+    hairStyleLabel=hairstyle===14?"Textured quiff":"Short classic";
+  }else if(sideHairMatch&&hairLum<125){
     gender="female";
-    outfit="dress";
+    outfit="salwar";
+    hairstyle=2;
+    hairStyleLabel="Long classic";
+  }else{
+    gender="male";
+    outfit="shirt";
+    hairstyle=0;
+    hairStyleLabel="Short classic";
   }
 
   return {
@@ -1028,6 +1072,144 @@ function cropFaceDataUrl(img){
   return canvas.toDataURL("image/jpeg",0.92);
 }
 
+function renderPhotoQuickTune(container, currentSettings){
+  if(!container)return;
+  container.innerHTML="";
+
+  const quicktune=document.createElement("div");
+  quicktune.className="photo-matcher-quicktune";
+
+  const rows=[
+    {
+      label:"🧔 Facial Hair / Beard",
+      field:"facialHair",
+      options:[
+        {val:"none",label:"Clean"},
+        {val:"stubble-full",label:"Stubble"},
+        {val:"combo-short",label:"Short Beard"},
+        {val:"beard-boxed",label:"Boxed Beard"},
+        {val:"beard-full",label:"Full Beard"},
+        {val:"moustache-classic",label:"Moustache"}
+      ]
+    },
+    {
+      label:"👓 Spectacles",
+      field:"glassesStyle",
+      options:[
+        {val:"none",label:"None"},
+        {val:"rectangle",label:"👓 Rectangle"},
+        {val:"round",label:"👓 Round"},
+        {val:"aviator",label:"🕶 Aviator"}
+      ]
+    },
+    {
+      label:"💇 Hairstyle",
+      field:"hairstyle",
+      options:[
+        {val:0,label:"Short Classic"},
+        {val:14,label:"Textured Quiff"},
+        {val:13,label:"Low Fade"},
+        {val:18,label:"Slick Back"},
+        {val:2,label:"Long Hair"}
+      ]
+    },
+    {
+      label:"🧑 Base Model",
+      field:"gender",
+      options:[
+        {val:"male",label:"👨 Male"},
+        {val:"female",label:"👩 Female"}
+      ]
+    }
+  ];
+
+  for(const row of rows){
+    const group=document.createElement("div");
+    group.className="quicktune-group";
+
+    const label=document.createElement("span");
+    label.className="quicktune-label";
+    label.textContent=row.label;
+    group.appendChild(label);
+
+    const pills=document.createElement("div");
+    pills.className="quicktune-pills";
+
+    for(const opt of row.options){
+      const btn=document.createElement("button");
+      btn.type="button";
+      btn.className="qt-pill";
+      btn.dataset.field=row.field;
+      btn.dataset.val=String(opt.val);
+      btn.textContent=opt.label;
+
+      const curVal=currentSettings[row.field];
+      if(String(curVal)===String(opt.val)){
+        btn.classList.add("active");
+      }
+
+      pills.appendChild(btn);
+    }
+    group.appendChild(pills);
+    quicktune.appendChild(group);
+  }
+
+  // Skin swatches row
+  const skinGroup=document.createElement("div");
+  skinGroup.className="quicktune-group";
+  const skinLabel=document.createElement("span");
+  skinLabel.className="quicktune-label";
+  skinLabel.textContent="🎨 Skin Tone";
+  skinGroup.appendChild(skinLabel);
+
+  const swatches=document.createElement("div");
+  swatches.className="quicktune-swatches";
+  for(let i=0;i<SKIN_COLORS.length;i++){
+    const swatch=document.createElement("button");
+    swatch.type="button";
+    swatch.className="qt-swatch"+(Number(currentSettings.skin)===i?" active":"");
+    swatch.dataset.field="skin";
+    swatch.dataset.val=String(i);
+    swatch.title=SKIN_NAMES[i]||`Skin Tone ${i+1}`;
+    swatch.style.backgroundColor=hexToCss(SKIN_COLORS[i]);
+    swatches.appendChild(swatch);
+  }
+  skinGroup.appendChild(swatches);
+  quicktune.appendChild(skinGroup);
+
+  // Attach interactive click handler
+  quicktune.addEventListener("click",e=>{
+    const pill=e.target.closest(".qt-pill, .qt-swatch");
+    if(!pill)return;
+    const field=pill.dataset.field;
+    let val=pill.dataset.val;
+
+    const input=$("avatar-"+field);
+    if(input)input.value=val;
+
+    if(field==="glassesStyle"){
+      const isGlasses=val!=="none";
+      if($("avatar-glasses"))$("avatar-glasses").checked=isGlasses;
+    }
+    if(field==="facialHair"&&val!=="none"){
+      if($("avatar-gender")&&$("avatar-gender").value!=="male"){
+        $("avatar-gender").value="male";
+        if($("avatar-outfit")&&$("avatar-outfit").value==="salwar")$("avatar-outfit").value="shirt";
+        if($("avatar-bottom")&&$("avatar-bottom").value==="leggings")$("avatar-bottom").value="jeans";
+      }
+    }
+
+    pill.parentElement.querySelectorAll(".qt-pill, .qt-swatch").forEach(p=>p.classList.remove("active"));
+    pill.classList.add("active");
+
+    previewAvatarNow();
+    visualEditor?.refresh(activeStudioTab);
+    syncShapeOutputs();
+  });
+
+  container.appendChild(quicktune);
+}
+
 function applyMatchedPhoto(img,rawDataUrl){
   const faceDataUrl=cropFaceDataUrl(img)||rawDataUrl;
   const result=analyzePhotoForAvatar(img);
@@ -1039,7 +1221,6 @@ function applyMatchedPhoto(img,rawDataUrl){
   if(thumb)thumb.src=faceDataUrl;
   if(previewBox)previewBox.classList.remove("hidden");
 
-  // Keep existing user-selected gender, outfit, hairstyle
   const current=readAvatarEditor();
   if($("avatar-facePhoto"))$("avatar-facePhoto").value=faceDataUrl;
 
@@ -1050,18 +1231,25 @@ function applyMatchedPhoto(img,rawDataUrl){
     hair:result?result.hair:current.hair
   };
 
-  // Sync beard / stubble from photo if detected
   if(result?.facialHair&&result.facialHair!=="none"){
     updateSettings.facialHair=result.facialHair;
+    updateSettings.gender="male";
+    if(updateSettings.outfit==="salwar")updateSettings.outfit="shirt";
+    if(updateSettings.bottom==="leggings")updateSettings.bottom="jeans";
   }
 
-  // Sync glasses from photo if detected
   if(result?.glasses){
     updateSettings.glasses=true;
     updateSettings.glassesStyle=result.glassesStyle||"rectangle";
+  }else if(result&&!result.glasses){
+    updateSettings.glasses=false;
+    updateSettings.glassesStyle="none";
   }
 
-  // Sync clothing color if detected
+  if(result?.hairstyle!==undefined){
+    updateSettings.hairstyle=result.hairstyle;
+  }
+
   if(result?.color!==undefined&&result.color>=0){
     updateSettings.color=result.color;
   }
@@ -1073,40 +1261,12 @@ function applyMatchedPhoto(img,rawDataUrl){
   if(officeRuntime?.updateAvatarPhoto)officeRuntime.updateAvatarPhoto(faceDataUrl);
 
   if(chipsBox){
-    chipsBox.innerHTML="";
-    const chips=[
-      {label:"📷 Desk Photo Badge Active",color:"#ecc888"},
-      {label:`Skin: ${SKIN_NAMES[updateSettings.skin]||"Tone"}`,color:hexToCss(result?.skinHex??SKIN_COLORS[updateSettings.skin]??0xdec1a2)},
-      {label:`Hair: ${HAIR_NAMES[updateSettings.hair]||"Tone"}`,color:hexToCss(result?.hairHex??HAIR_COLORS[updateSettings.hair]??0x1f1a17)}
-    ];
-    if(updateSettings.facialHair!=="none"){
-      chips.push({label:`🧔 ${result?.facialHairLabel||updateSettings.facialHair}`});
-    }
-    if(updateSettings.glasses){
-      chips.push({label:"👓 Spectacles"});
-    }
-    chips.push({label:`Gender: ${current.gender==="female"?"Female (Preserved)":"Male (Preserved)"}`});
-    chips.push({label:`Outfit: ${current.outfit} (Preserved)`});
-
-    for(const chip of chips){
-      const el=document.createElement("span");
-      el.className="photo-chip";
-      if(chip.color){
-        const dot=document.createElement("span");
-        dot.className="photo-chip-color";
-        dot.style.backgroundColor=chip.color;
-        el.appendChild(dot);
-      }
-      const text=document.createElement("span");
-      text.textContent=chip.label;
-      el.appendChild(text);
-      chipsBox.appendChild(el);
-    }
+    renderPhotoQuickTune(chipsBox,updateSettings);
   }
 
-  if(summaryEl)summaryEl.textContent="✨ Automatically tuned your 3D voxel avatar (skin, hair, beard & glasses)! Real photo displayed on your Desk Nameplate.";
-  if(typeof officeToast==="function")officeToast("✨ Voxel avatar & desk photo badge updated!");
-  else toast("✨ Voxel avatar & desk photo badge updated!");
+  if(summaryEl)summaryEl.textContent="✨ Features auto-matched! Click any pill below to fine-tune beard, glasses, or hair in real-time.";
+  if(typeof officeToast==="function")officeToast("✨ Voxel look-alike updated! Quick-tune ready.");
+  else toast("✨ Voxel look-alike updated! Quick-tune ready.");
 }
 
 function setupPhotoAvatarMatcher(){
@@ -1124,7 +1284,8 @@ function setupPhotoAvatarMatcher(){
     if(existingPhoto&&thumb&&previewBox){
       thumb.src=existingPhoto;
       previewBox.classList.remove("hidden");
-      if(summaryEl)summaryEl.textContent="✨ Photo badge active on your desk nameplate. Features synced to your 3D avatar.";
+      if(summaryEl)summaryEl.textContent="✨ Photo badge active on your desk. Fine-tune your voxel features below:";
+      if(chipsBox)renderPhotoQuickTune(chipsBox,readAvatarEditor());
     }
   }catch{}
 
