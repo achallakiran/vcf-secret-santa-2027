@@ -740,7 +740,7 @@ async function enterOffice(info){
     console.error("VCF office error:",error);
   }finally{officeLoading=null;}
 }
-const AVATAR_FIELDS=["gender","outfit","bottom","hairstyle","skin","hair","height","build","footwear","bottomColor","shoeColor","facialHair","glassesStyle","glassesColor","bindiStyle","bindiColor"];
+const AVATAR_FIELDS=["gender","outfit","bottom","hairstyle","skin","hair","height","build","footwear","bottomColor","shoeColor","facialHair","glassesStyle","glassesColor","bindiStyle","bindiColor","facePhoto"];
 // 50 means natural proportions. Slider bounds are visual, not stored
 // percentages: existing profiles remain valid and keep their measurements.
 const SHAPE_BOUNDS={height:[.80,1.30],build:[.65,1.55]};
@@ -759,22 +759,27 @@ function readAvatarEditor(){
   const result={schema_version:4};
   for(const field of AVATAR_FIELDS){
     const input=$("avatar-"+field);
+    if(!input)continue;
     result[field]=["skin","hair","hairstyle","bottomColor","shoeColor","glassesColor","bindiColor"].includes(field)?Number(input.value):
       ["height","build"].includes(field)?shapeFromSlider(field,input.value):input.value;
   }
   result.color=Number($("avatar-color").value);
   result.glasses=result.glassesStyle!=="none";
+  if(!result.facePhoto&&typeof localStorage!=="undefined"){
+    result.facePhoto=localStorage.getItem("vcf_ss_avatar_photo")||"";
+  }
   return result;
 }
 function setAvatarEditor(values){
   const avatar=values&&typeof values==="object"?values:{};
-  const defaults={gender:"female",outfit:"salwar",bottom:"leggings",hairstyle:2,skin:2,hair:0,color:1,height:1,build:1,footwear:"auto",bottomColor:-1,shoeColor:-1,facialHair:"none",glassesStyle:"none",glassesColor:0,bindiStyle:"none",bindiColor:0,glasses:false};
+  const defaults={gender:"female",outfit:"salwar",bottom:"leggings",hairstyle:2,skin:2,hair:0,color:1,height:1,build:1,footwear:"auto",bottomColor:-1,shoeColor:-1,facialHair:"none",glassesStyle:"none",glassesColor:0,bindiStyle:"none",bindiColor:0,facePhoto:(typeof localStorage!=="undefined"?localStorage.getItem("vcf_ss_avatar_photo"):"")||"",glasses:false};
   const settings={...defaults,...avatar};
   // Backward compatibility: pre-v3 stored profiles only had a glasses boolean.
   if(!Object.hasOwn(avatar,"glassesStyle") && avatar.glasses)settings.glassesStyle="rectangle";
   for(const field of AVATAR_FIELDS){
     const el=$("avatar-"+field);
-    el.value=String(["height","build"].includes(field)?sliderFromShape(field,settings[field]):settings[field]);
+    if(!el)continue;
+    el.value=String(["height","build"].includes(field)?sliderFromShape(field,settings[field]):(settings[field]??defaults[field]??""));
   }
   $("avatar-color").value=String(settings.color);
   $("avatar-glasses").checked=!!settings.glasses;
@@ -1002,43 +1007,63 @@ function hexToCss(hex){
   return "#"+hex.toString(16).padStart(6,"0");
 }
 
-function applyMatchedPhoto(img,dataUrl){
+function cropFaceDataUrl(img){
+  const canvas=document.createElement("canvas");
+  canvas.width=256;
+  canvas.height=256;
+  const ctx=canvas.getContext("2d");
+  if(!ctx)return "";
+  const w=img.naturalWidth||img.width||256;
+  const h=img.naturalHeight||img.height||256;
+  const cropSize=Math.min(w,h);
+  let sx=Math.max(0,Math.floor((w-cropSize)/2));
+  let sy=0;
+  if(h>w){
+    // Faces in portrait orientation are positioned towards the upper-center
+    sy=Math.floor((h-cropSize)*0.26);
+  }else{
+    sy=Math.max(0,Math.floor((h-cropSize)/2));
+  }
+  ctx.drawImage(img,sx,sy,cropSize,cropSize,0,0,256,256);
+  return canvas.toDataURL("image/jpeg",0.92);
+}
+
+function applyMatchedPhoto(img,rawDataUrl){
+  const faceDataUrl=cropFaceDataUrl(img)||rawDataUrl;
   const result=analyzePhotoForAvatar(img);
-  if(!result)return;
   const thumb=$("photo-matcher-thumb");
   const previewBox=$("photo-matcher-preview");
   const summaryEl=$("photo-matcher-summary");
   const chipsBox=$("photo-matcher-chips");
 
-  if(thumb)thumb.src=dataUrl;
+  if(thumb)thumb.src=faceDataUrl;
   if(previewBox)previewBox.classList.remove("hidden");
 
+  // Keep existing user-selected gender, outfit, hairstyle
+  const current=readAvatarEditor();
+  if($("avatar-facePhoto"))$("avatar-facePhoto").value=faceDataUrl;
+
   setAvatarEditor({
-    skin:result.skin,
-    hair:result.hair,
-    color:result.color,
-    hairstyle:result.hairstyle,
-    gender:result.gender,
-    outfit:result.outfit,
-    facialHair:result.facialHair,
-    glassesStyle:result.glassesStyle,
-    glasses:result.glasses
+    ...current,
+    facePhoto:faceDataUrl,
+    skin:result?result.skin:current.skin,
+    glassesStyle:(result?.glasses&&current.glassesStyle==="none")?result.glassesStyle:current.glassesStyle,
+    glasses:Boolean(result?.glasses||current.glasses)
   });
   previewAvatarNow();
 
-  try{localStorage.setItem("vcf_ss_avatar_photo",dataUrl);}catch{}
-  if(officeRuntime?.updateAvatarPhoto)officeRuntime.updateAvatarPhoto(dataUrl);
+  try{localStorage.setItem("vcf_ss_avatar_photo",faceDataUrl);}catch{}
+  if(officeRuntime?.updateAvatarPhoto)officeRuntime.updateAvatarPhoto(faceDataUrl);
 
   if(chipsBox){
     chipsBox.innerHTML="";
     const chips=[
-      {label:`Skin: ${SKIN_NAMES[result.skin]||"Tone"}`,color:hexToCss(result.skinHex)},
-      {label:`Hair: ${HAIR_NAMES[result.hair]||"Tone"}`,color:hexToCss(result.hairHex)},
-      {label:`Style: ${result.hairStyleLabel}`},
-      {label:`Outfit: ${OUTFIT_NAMES[result.color]||"Tone"}`,color:hexToCss(result.outfitHex)}
+      {label:"👤 Face Photo Applied to 3D Avatar",color:"#ecc888"},
+      {label:`Skin: ${SKIN_NAMES[result?.skin??current.skin]||"Tone"}`,color:hexToCss(result?.skinHex??SKIN_COLORS[current.skin]??0xdec1a2)},
+      {label:`Gender: ${current.gender==="female"?"Female (Preserved)":"Male (Preserved)"}`},
+      {label:`Outfit: ${current.outfit} (Preserved)`}
     ];
-    if(result.facialHair!=="none")chips.push({label:`🧔 ${result.facialHairLabel}`});
-    if(result.glasses)chips.push({label:"👓 Spectacles"});
+    if(result?.glasses)chips.push({label:"👓 Spectacles"});
 
     for(const chip of chips){
       const el=document.createElement("span");
@@ -1056,9 +1081,9 @@ function applyMatchedPhoto(img,dataUrl){
     }
   }
 
-  if(summaryEl)summaryEl.textContent=`Matched ${result.facialHair!=="none"||result.glasses?5:4} features! Avatar and 3D desk badge updated.`;
-  if(typeof officeToast==="function")officeToast("✨ Avatar & desk badge updated from photo!");
-  else toast("✨ Avatar & desk badge updated from photo!");
+  if(summaryEl)summaryEl.textContent="✨ Face photo mapped onto 3D avatar head! Your chosen gender and outfit are kept.";
+  if(typeof officeToast==="function")officeToast("✨ Face photo mapped to 3D avatar!");
+  else toast("✨ Face photo mapped to 3D avatar!");
 }
 
 function setupPhotoAvatarMatcher(){
@@ -1067,7 +1092,18 @@ function setupPhotoAvatarMatcher(){
   const thumb=$("photo-matcher-thumb");
   const chipsBox=$("photo-matcher-chips");
   const clearBtn=$("photo-matcher-clear");
+  const summaryEl=$("photo-matcher-summary");
   if(!fileInput)return;
+
+  // Restore existing photo if saved
+  try{
+    const existingPhoto=localStorage.getItem("vcf_ss_avatar_photo");
+    if(existingPhoto&&thumb&&previewBox){
+      thumb.src=existingPhoto;
+      previewBox.classList.remove("hidden");
+      if(summaryEl)summaryEl.textContent="✨ Face photo active on 3D avatar. Click ✕ to revert to voxel face.";
+    }
+  }catch{}
 
   fileInput.addEventListener("change",e=>{
     const file=e.target.files?.[0];
@@ -1088,8 +1124,15 @@ function setupPhotoAvatarMatcher(){
     previewBox?.classList.add("hidden");
     if(thumb)thumb.src="";
     if(chipsBox)chipsBox.innerHTML="";
+    if($("avatar-facePhoto"))$("avatar-facePhoto").value="";
     try{localStorage.removeItem("vcf_ss_avatar_photo");}catch{}
-    if(officeRuntime?.updateAvatarPhoto)officeRuntime.updateAvatarPhoto(null);
+    if(officeRuntime?.updateAvatarPhoto)officeRuntime.updateAvatarPhoto("");
+    const current=readAvatarEditor();
+    current.facePhoto="";
+    setAvatarEditor(current);
+    previewAvatarNow();
+    if(typeof officeToast==="function")officeToast("Reverted to 3D voxel face.");
+    else toast("Reverted to 3D voxel face.");
   });
 }
 

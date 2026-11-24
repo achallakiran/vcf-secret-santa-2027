@@ -2736,13 +2736,9 @@ body.office-playing #player-menu textarea{
   border-radius:12px;
 }
 
-/* Action Dock with Multi-emotes */
+/* Action Dock with Multi-emotes (Base styling handled in Section 3) */
 .office-action-dock{
-  position:absolute;
-  right:calc(16px + env(safe-area-inset-right,0px));
-  bottom:calc(18px + env(safe-area-inset-bottom,0px));
-  z-index:22;
-  pointer-events:none;
+  pointer-events:auto;
 }
 .action-buttons-wrap{
   display:flex;
@@ -3939,19 +3935,38 @@ body.office-playing #player-menu textarea{
 /* More Menu Dialog */
 .more-menu-dialog{
   width:min(580px, 94vw);
-  max-height:88vh;
+  max-height:min(86vh, 680px);
   background:#14221b;
   color:#f4eee2;
   border:2px solid #ecc888;
   border-radius:20px;
   box-shadow:0 16px 48px rgba(0,0,0,0.65);
   padding:0;
-  overflow:hidden;
+  overflow-y:auto;
+  overscroll-behavior:contain;
+  -webkit-overflow-scrolling:touch;
+}
+.more-menu-dialog::-webkit-scrollbar{
+  width:8px;
+}
+.more-menu-dialog::-webkit-scrollbar-track{
+  background:rgba(10, 20, 16, 0.7);
+  border-radius:8px;
+}
+.more-menu-dialog::-webkit-scrollbar-thumb{
+  background:#3c6553;
+  border-radius:8px;
+  border:1px solid rgba(236, 200, 136, 0.3);
+}
+.more-menu-dialog::-webkit-scrollbar-thumb:hover{
+  background:#ecc888;
 }
 .more-menu-container{
   display:flex;
   flex-direction:column;
-  padding:22px;
+  padding:22px 22px 36px;
+  min-height:100%;
+  box-sizing:border-box;
   background:linear-gradient(160deg, #172d24 0%, #0e1e17 100%);
 }
 .more-menu-header{
@@ -4648,11 +4663,14 @@ body.office-playing #player-menu textarea{
 .office-action-dock{
   position:absolute !important;
   right:calc(16px + env(safe-area-inset-right, 0px)) !important;
-  bottom:calc(16px + env(safe-area-inset-bottom, 0px)) !important;
+  bottom:calc(24px + env(safe-area-inset-bottom, 0px)) !important;
   z-index:25 !important;
   display:flex !important;
+  flex-direction:row-reverse !important;
   align-items:center !important;
   pointer-events:auto !important;
+  max-width:calc(100vw - 32px) !important;
+  overflow:visible !important;
 }
 .action-toggle-btn{
   display:inline-flex;
@@ -4691,13 +4709,21 @@ body.office-playing #player-menu textarea{
   display:inline-flex;
   align-items:center;
   gap:6px;
-  overflow:hidden;
+  overflow-x:auto;
+  overflow-y:hidden;
+  white-space:nowrap;
+  -webkit-overflow-scrolling:touch;
   transition:max-width 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.25s ease, margin 0.25s ease;
+  scrollbar-width:none;
+}
+.action-buttons-wrap::-webkit-scrollbar{
+  display:none;
 }
 
 .office-action-dock.collapsed .action-buttons-wrap{
   max-width:0 !important;
   opacity:0 !important;
+  margin-left:0 !important;
   margin-right:0 !important;
   pointer-events:none !important;
 }
@@ -4706,9 +4732,10 @@ body.office-playing #player-menu textarea{
 }
 
 .office-action-dock.expanded .action-buttons-wrap{
-  max-width:440px !important;
+  max-width:min(440px, calc(100vw - 140px)) !important;
   opacity:1 !important;
-  margin-right:8px !important;
+  margin-left:8px !important;
+  margin-right:0 !important;
   pointer-events:auto !important;
 }
 .office-action-dock.expanded .action-toggle-arrow{

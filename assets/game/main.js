@@ -806,6 +806,9 @@ export function mountOffice(host,profile,notice=()=>{}){
     if(myDesk&&myDesk.redraw){
       myDesk.redraw();
     }
+    if(hero&&hero.parameters){
+      previewAvatar({...hero.parameters,facePhoto:photoUrl||""});
+    }
   }
 
   function applyProfile(next){
@@ -857,13 +860,13 @@ export function mountOffice(host,profile,notice=()=>{}){
     }
     people=[];
     if(!hero){
-      hero=createAvatar(avatarFromPerson({...next.me,id:myId}));
+      hero=createAvatar(avatarFromPerson({...next.me,id:myId,isMe:true}));
       hero.group.position.set(office.spawn.x,0,office.spawn.z);
       hero.group.rotation.y=Math.PI;
       scene.add(hero.group);
     }else{
       scene.remove(hero.group);
-      hero=createAvatar(avatarFromPerson({...next.me,id:myId}));
+      hero=createAvatar(avatarFromPerson({...next.me,id:myId,isMe:true}));
       hero.group.position.copy(oldPos||new THREE.Vector3(office.spawn.x,0,office.spawn.z));
       hero.group.position.x=clamp(hero.group.position.x,office.room.left+.4,office.room.right-.4);
       hero.group.position.z=clamp(hero.group.position.z,office.room.front+.4,office.room.back-.4);

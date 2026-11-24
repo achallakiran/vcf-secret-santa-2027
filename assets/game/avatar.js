@@ -58,6 +58,7 @@ function ellipse(parent,w,h,color,x,y,z){
 function resolve(opts={}){
   const n=typeof opts==="object" && opts ? opts:{};
   return {
+    facePhoto:typeof n.facePhoto==="string"?n.facePhoto:(typeof opts.photoUrl==="string"?opts.photoUrl:(typeof opts.avatar?.facePhoto==="string"?opts.avatar.facePhoto:"")),
     gender:n.gender==="female"?"female":"male",
     skin:Math.abs(Number(n.skin)||0)%SKINS.length,
     hair:Math.abs(Number(n.hair)||0)%HAIR.length,
@@ -78,6 +79,101 @@ function resolve(opts={}){
     build:Math.min(1.55,Math.max(.65,Number(n.build)||1))
   };
 }
+
+function attachPhotoFace(head,photoDataUrl,p,kit){
+  if(!photoDataUrl||typeof photoDataUrl!=="string")return;
+  const canvas=document.createElement("canvas");
+  canvas.width=256;canvas.height=256;
+  const ctx=canvas.getContext("2d");
+  if(!ctx)return;
+
+  const texture=new THREE.CanvasTexture(canvas);
+  if(THREE.SRGBColorSpace)texture.colorSpace=THREE.SRGBColorSpace;
+  texture.minFilter=THREE.LinearFilter;
+  texture.magFilter=THREE.LinearFilter;
+
+  const img=new Image();
+  img.crossOrigin="anonymous";
+  img.onload=()=>{
+    const w=256,h=256,r=44;
+    ctx.clearRect(0,0,w,h);
+    ctx.save();
+    // Rounded squircle cutout matching head shape
+    ctx.beginPath();
+    ctx.moveTo(r,0);
+    ctx.lineTo(w-r,0);
+    ctx.quadraticCurveTo(w,0,w,r);
+    ctx.lineTo(w,h-r);
+    ctx.quadraticCurveTo(w,h,w-r,h);
+    ctx.lineTo(r,h);
+    ctx.quadraticCurveTo(0,h,0,h-r);
+    ctx.lineTo(0,r);
+    ctx.quadraticCurveTo(0,0,r,0);
+    ctx.closePath();
+    ctx.clip();
+
+    // Center crop & cover
+    const aspect=img.width/img.height;
+    let sw,sh,sx,sy;
+    if(aspect>1){
+      sh=img.height;
+      sw=img.height;
+      sx=(img.width-sw)/2;
+      sy=0;
+    }else{
+      sw=img.width;
+      sh=img.width;
+      sx=0;
+      sy=(img.height-sh)/2;
+    }
+    ctx.drawImage(img,sx,sy,sw,sh,0,0,w,h);
+
+    // Subtle edge vignette
+    const grad=ctx.createRadialGradient(128,128,88,128,128,128);
+    grad.addColorStop(0,"rgba(0,0,0,0)");
+    grad.addColorStop(1,"rgba(0,0,0,0.22)");
+    ctx.fillStyle=grad;
+    ctx.fill();
+
+    // Soft border stroke
+    ctx.restore();
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(r,0);
+    ctx.lineTo(w-r,0);
+    ctx.quadraticCurveTo(w,0,w,r);
+    ctx.lineTo(w,h-r);
+    ctx.quadraticCurveTo(w,h,w-r,h);
+    ctx.lineTo(r,h);
+    ctx.quadraticCurveTo(0,h,0,h-r);
+    ctx.lineTo(0,r);
+    ctx.quadraticCurveTo(0,0,r,0);
+    ctx.closePath();
+    ctx.lineWidth=6;
+    ctx.strokeStyle="rgba(255,255,255,0.22)";
+    ctx.stroke();
+    ctx.restore();
+
+    texture.needsUpdate=true;
+  };
+  img.src=photoDataUrl;
+
+  const faceGeo=new THREE.PlaneGeometry(0.72,0.72);
+  const faceMat=new THREE.MeshStandardMaterial({
+    map:texture,
+    roughness:0.60,
+    metalness:0.04,
+    transparent:true,
+    polygonOffset:true,
+    polygonOffsetFactor:-2,
+    polygonOffsetUnits:-2
+  });
+  const faceMesh=new THREE.Mesh(faceGeo,faceMat);
+  faceMesh.position.set(0,0.33,0.438);
+  faceMesh.name="photoFaceMesh";
+  head.add(faceMesh);
+}
+
 export function createAvatar(input={},mini=false){
   const p=resolve(input),root=new THREE.Group(),body=new THREE.Group();
   root.add(body);
@@ -195,8 +291,12 @@ export function createAvatar(input={},mini=false){
   const headPivot=new THREE.Group();headPivot.position.set(0,.96,.01);
   headPivot.scale.setScalar(1.08);hips.add(headPivot);
   sculptHead(headPivot,sculptParams,kit);
-  // Real modeled voxels sculpt the expressive face and stepped full-volume hair.
-  sculptFaceVoxels(headPivot,sculptParams);
+  if(p.facePhoto){
+    attachPhotoFace(headPivot,p.facePhoto,sculptParams,kit);
+  }else{
+    // Real modeled voxels sculpt the expressive face and stepped full-volume hair.
+    sculptFaceVoxels(headPivot,sculptParams);
+  }
   sculptHairVoxels(headPivot,sculptParams);
   // Seams, embroidered cuffs and a miniature pocket create believable
   // contemporary garments when seen close-up in the 3D avatar studio.
@@ -415,5 +515,7 @@ export function avatarFromPerson(person,i=0){
     bottom:["jeans","trousers","leggings","palazzo"][(hash>>>11)%4],
     height:.91+((hash>>>23)%16)/100,build:.9+((hash>>>27)%22)/100
   };
-  return resolve({...fallback,...(person.avatar&&typeof person.avatar==="object"?person.avatar:{})});
+  const personAvatar=person.avatar&&typeof person.avatar==="object"?person.avatar:{};
+  const facePhoto=person.facePhoto||personAvatar.facePhoto||(person.isMe&&typeof localStorage!=="undefined"?localStorage.getItem("vcf_ss_avatar_photo"):"")||"";
+  return resolve({...fallback,...personAvatar,facePhoto});
 }
