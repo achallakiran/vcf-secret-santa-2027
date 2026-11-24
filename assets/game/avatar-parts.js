@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import {facialHairShape} from "./facial-hair.js?v=face-refine-v4";
+import {facialHairShape} from "./facial-hair.js?v=face-refine-v5";
 
 /**
  * Art Hero v3 — sculpted storybook adults.
@@ -110,13 +110,14 @@ export function sculptHead(head,p,kit){
     }
     if(beard.chin){
       const length=beard.chin,extra=Math.max(0,length-1);
-      const core=part(head,.27+.18*Math.min(1,length),.085+.20*length,.127,deep,
-        0,-.10-.050*extra,.386,.040);
+      const isLong=extra>.10;
+      const core=part(head,.20+.10*Math.min(1,length),.045+.04*Math.min(1,length)+.14*extra,.092,deep,
+        0,-.045-.045*extra,.395,.025);
       if(beard.pointed)core.scale.x=.74;
-      part(head,.19,.06+.15*extra,.071,hair,0,-.173-.099*extra,.449,.025);
-      if(extra>.10){
-        const tip=part(head,beard.pointed?.15:.245,.09+.25*extra,.14,
-          hair,0,-.265-.18*extra,.357,.040);
+      part(head,.15,.032+.08*extra,.052,hair,0,-.065-.08*extra,.428,.020);
+      if(isLong){
+        const tip=part(head,beard.pointed?.14:.20,.07+.20*extra,.11,
+          hair,0,-.18-.15*extra,.357,.030);
         if(beard.pointed)tip.scale.x=.77;
       }
     }

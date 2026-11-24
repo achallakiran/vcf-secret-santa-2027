@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import {createAvatar,avatarFromPerson} from "./avatar.js?v=face-refine-v4-studio-qa-v1";
+import {createAvatar,avatarFromPerson} from "./avatar.js?v=beard-trim-v5";
 
 /**
  * Organizer-only cinematic Christmas reveal.

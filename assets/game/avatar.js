@@ -1,10 +1,10 @@
 import * as THREE from "three";
-import {FACIAL_HAIR_OPTIONS,BINDI_STYLES,BINDI_COLORS} from "./facial-hair.js?v=face-refine-v4";
-import {sculptHead,sculptFoot} from "./avatar-parts.js?v=face-refine-v4-studio-qa-v1";
+import {FACIAL_HAIR_OPTIONS,BINDI_STYLES,BINDI_COLORS} from "./facial-hair.js?v=face-refine-v5";
+import {sculptHead,sculptFoot} from "./avatar-parts.js?v=beard-trim-v5";
 import {sculptWardrobe} from "./wardrobe.js?v=studio-qa-v1";
 import {SKIN_COLORS as SKINS,HAIR_COLORS as HAIR,OUTFIT_COLORS as COLORS,FOOTWEAR_OPTIONS} from "./palette.js?v=visual-atelier-v3";
 import {clothMaterial} from "./visual-materials.js?v=visual-atelier-v3";
-import {sculptFaceVoxels,sculptHairVoxels,sculptGarmentVoxels,sculptSleeveVoxels,sculptShoeVoxels} from "./artisan-voxels.js?v=face-refine-v4-studio-qa-v1";
+import {sculptFaceVoxels,sculptHairVoxels,sculptGarmentVoxels,sculptSleeveVoxels,sculptShoeVoxels} from "./artisan-voxels.js?v=beard-trim-v5";
 /**
  * Hybrid voxel adults with modular, richly sculpted faces and contemporary Indian garments. No external or unverified character assets.
  * The body is rigged with real limb pivots and features layered face and hair meshes.

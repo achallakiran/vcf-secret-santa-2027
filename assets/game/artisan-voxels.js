@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import {facialHairShape} from "./facial-hair.js?v=face-refine-v4";
+import {facialHairShape} from "./facial-hair.js?v=face-refine-v5";
 
 /**
  * Full-resolution sculpted voxel detailing shared by the player, every
@@ -132,13 +132,15 @@ export function sculptFaceVoxels(head,p){
         }
     }
     if(facial.chin>0){
-      const layers=Math.ceil(3+facial.chin*7);
+      const isLong=facial.chin>1.0;
+      const layers=isLong?Math.min(5,Math.ceil(2+(facial.chin-1.0)*3)):Math.min(2,Math.ceil(1+facial.chin*2));
       for(let row=0;row<layers;row++){
         const t=row/layers;
-        const width=(facial.pointed?.19:.24)*(1-(facial.pointed?.79:.38)*t);
-        for(let col=-3;col<=3;col++){
-          const x=col*width/3,y=-.115-row*.045;
-          b.voxel(x,y,.447-t*.05,.040+width/8,.052,.025,
+        const width=(facial.pointed?.16:.20)*(1-(facial.pointed?.70:.22)*t);
+        for(let col=-2;col<=2;col++){
+          const x=col*width/2;
+          const y=isLong?(-.04-row*.038):(-.012-row*.026);
+          b.voxel(x,y,.438-t*.03,.034+width/7,.032,.022,
             shadeHair(row,col));
         }
       }

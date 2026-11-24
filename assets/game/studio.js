@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import {createAvatar} from "./avatar.js?v=face-refine-v4-studio-qa-v1";
+import {createAvatar} from "./avatar.js?v=beard-trim-v5";
 
 /** Dedicated procedural character studio: a rotatable, fully rendered model. */
 export function mountAvatarStudio(host,appearance){

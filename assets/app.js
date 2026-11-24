@@ -927,10 +927,57 @@ function analyzePhotoForAvatar(img){
   const skinIdx=closestColorIndex(skinRgb,SKIN_COLORS);
   const skinLum=0.299*skinRgb[0]+0.587*skinRgb[1]+0.114*skinRgb[2];
 
-  // 2. Hair tone (crown of head)
-  const hairRgb=getAverageRegion(size*0.28,size*0.04,size*0.72,size*0.18);
-  const hairIdx=closestColorIndex(hairRgb,HAIR_COLORS);
-  const hairLum=0.299*hairRgb[0]+0.587*hairRgb[1]+0.114*hairRgb[2];
+  // 2. Intelligent hair color detection:
+  // Discard white/light wall and ceiling pixels (lum > 180) to avoid false white hair.
+  // Sample directly above forehead (hairline) and at the temples.
+  const hairSamples=[];
+  for(let py=Math.round(size*0.11);py<=Math.round(size*0.22);py+=2){
+    for(let px=Math.round(size*0.34);px<=Math.round(size*0.66);px+=2){
+      const [r,g,b]=getPixel(px,py);
+      const lum=0.299*r+0.587*g+0.114*b;
+      if(lum>180)continue; // Background wall/ceiling
+      const skinDist=Math.abs(r-skinRgb[0])+Math.abs(g-skinRgb[1])+Math.abs(b-skinRgb[2]);
+      if(skinDist<40 && lum>skinLum-15)continue; // Forehead skin
+      hairSamples.push([r,g,b,lum]);
+    }
+  }
+  for(let py=Math.round(size*0.20);py<=Math.round(size*0.34);py+=2){
+    for(const px of [Math.round(size*0.20),Math.round(size*0.25),Math.round(size*0.75),Math.round(size*0.80)]){
+      const [r,g,b]=getPixel(px,py);
+      const lum=0.299*r+0.587*g+0.114*b;
+      if(lum>180)continue;
+      const skinDist=Math.abs(r-skinRgb[0])+Math.abs(g-skinRgb[1])+Math.abs(b-skinRgb[2]);
+      if(skinDist<40 && lum>skinLum-15)continue;
+      hairSamples.push([r,g,b,lum]);
+    }
+  }
+
+  let hairRgb=[26,20,25]; // Default Jet Black (HAIR_COLORS[0])
+  let hairIdx=0;
+  let hairLum=22;
+  if(hairSamples.length>0){
+    hairSamples.sort((a,b)=>a[3]-b[3]);
+    let rSum=0,gSum=0,bSum=0,count=0;
+    const take=Math.min(hairSamples.length,Math.max(4,Math.floor(hairSamples.length*0.65)));
+    for(let i=0;i<take;i++){
+      rSum+=hairSamples[i][0];
+      gSum+=hairSamples[i][1];
+      bSum+=hairSamples[i][2];
+      count++;
+    }
+    const avgR=Math.round(rSum/count),avgG=Math.round(gSum/count),avgB=Math.round(bSum/count);
+    hairLum=0.299*avgR+0.587*avgG+0.114*avgB;
+    hairRgb=[avgR,avgG,avgB];
+    let matchedIdx=closestColorIndex(hairRgb,HAIR_COLORS);
+    // Disallow pure white (index 5) from background wall bleed; only pick white if intentionally gray/white
+    if(matchedIdx===5 && hairLum<210){
+      matchedIdx=0; // Jet Black default
+    }
+    if(hairLum<70 && matchedIdx!==0 && matchedIdx!==6){
+      matchedIdx=0;
+    }
+    hairIdx=matchedIdx;
+  }
 
   // 3. Outfit tone (lower torso)
   const outfitRgb=getAverageRegion(size*0.22,size*0.82,size*0.78,size*0.96);
@@ -1088,6 +1135,7 @@ function renderPhotoQuickTune(container, currentSettings){
         {val:"stubble-full",label:"Stubble"},
         {val:"combo-short",label:"Short Beard"},
         {val:"beard-boxed",label:"Boxed Beard"},
+        {val:"beard-goatee",label:"Goatee"},
         {val:"beard-full",label:"Full Beard"},
         {val:"moustache-classic",label:"Moustache"}
       ]
@@ -1099,7 +1147,8 @@ function renderPhotoQuickTune(container, currentSettings){
         {val:"none",label:"None"},
         {val:"rectangle",label:"👓 Rectangle"},
         {val:"round",label:"👓 Round"},
-        {val:"aviator",label:"🕶 Aviator"}
+        {val:"aviator",label:"🕶 Aviator"},
+        {val:"square",label:"👓 Square"}
       ]
     },
     {
@@ -1154,6 +1203,29 @@ function renderPhotoQuickTune(container, currentSettings){
     quicktune.appendChild(group);
   }
 
+  // Hair & Beard color swatches row
+  const hairGroup=document.createElement("div");
+  hairGroup.className="quicktune-group";
+  const hairLabel=document.createElement("span");
+  hairLabel.className="quicktune-label";
+  hairLabel.textContent="💇 Hair & Beard Color";
+  hairGroup.appendChild(hairLabel);
+
+  const hairSwatches=document.createElement("div");
+  hairSwatches.className="quicktune-swatches";
+  for(let i=0;i<HAIR_COLORS.length;i++){
+    const swatch=document.createElement("button");
+    swatch.type="button";
+    swatch.className="qt-swatch"+(Number(currentSettings.hair)===i?" active":"");
+    swatch.dataset.field="hair";
+    swatch.dataset.val=String(i);
+    swatch.title=HAIR_NAMES[i]||`Hair Color ${i+1}`;
+    swatch.style.backgroundColor=hexToCss(HAIR_COLORS[i]);
+    hairSwatches.appendChild(swatch);
+  }
+  hairGroup.appendChild(hairSwatches);
+  quicktune.appendChild(hairGroup);
+
   // Skin swatches row
   const skinGroup=document.createElement("div");
   skinGroup.className="quicktune-group";
@@ -1190,6 +1262,10 @@ function renderPhotoQuickTune(container, currentSettings){
     if(field==="glassesStyle"){
       const isGlasses=val!=="none";
       if($("avatar-glasses"))$("avatar-glasses").checked=isGlasses;
+      if(isGlasses && $("avatar-glassesColor") && Number($("avatar-glassesColor").value)===0){
+        // Default to clean charcoal/black frame (7) rather than green (0)
+        $("avatar-glassesColor").value="7";
+      }
     }
     if(field==="facialHair"&&val!=="none"){
       if($("avatar-gender")&&$("avatar-gender").value!=="male"){
@@ -1241,6 +1317,7 @@ function applyMatchedPhoto(img,rawDataUrl){
   if(result?.glasses){
     updateSettings.glasses=true;
     updateSettings.glassesStyle=result.glassesStyle||"rectangle";
+    updateSettings.glassesColor=7; // Classic Charcoal / Black
   }else if(result&&!result.glasses){
     updateSettings.glasses=false;
     updateSettings.glassesStyle="none";
@@ -2079,6 +2156,11 @@ function showPlayerTab(name){
   if(!personal){
     setStudioTab(activeStudioTab);
     void ensureAvatarStudio();
+    const chipsBox=$("photo-matcher-chips");
+    const previewBox=$("photo-matcher-preview");
+    if(chipsBox&&previewBox&&!previewBox.classList.contains("hidden")){
+      renderPhotoQuickTune(chipsBox,readAvatarEditor());
+    }
   }else if(avatarStudio){
     avatarStudio.dispose();avatarStudio=null;
   }

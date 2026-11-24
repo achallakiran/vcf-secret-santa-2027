@@ -1,5 +1,5 @@
 import {SKIN_COLORS,HAIR_COLORS,OUTFIT_COLORS,FOOTWEAR_OPTIONS} from "./palette.js?v=custom-v1";
-import {FACIAL_HAIR_OPTIONS,BINDI_STYLES,BINDI_COLORS,facialHairShape} from "./facial-hair.js?v=face-refine-v4";
+import {FACIAL_HAIR_OPTIONS,BINDI_STYLES,BINDI_COLORS,facialHairShape} from "./facial-hair.js?v=face-refine-v5";
 
 /** One 3D avatar factory for full model and style thumbnails.
  * Face accessories use isolated vector silhouettes, not full portrait thumbnails.
