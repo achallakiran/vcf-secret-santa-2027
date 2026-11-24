@@ -1431,7 +1431,7 @@ function setupChildQuestAndArcade(){
       }
     }else if(data.type==="VOXEL_BIKE_COMPLETED"){
       if(statEl){
-        statEl.textContent=`🏍️ Moto Race Finished! Time: ${data.resultTime || "Completed"}`;
+        statEl.textContent=`🏍️ Moto Race Finished! Time: ${data.resultTime || data.finishTimeText || "Completed"}`;
       }
       const bikeTask=quest.tasks.find(t=>t.id==="voxel-bike");
       if(bikeTask&&!bikeTask.completed){
@@ -1638,6 +1638,11 @@ function setupChildQuestAndArcade(){
     $("notebook-scroll").scrollTop=0;
     officeRuntime?.setPaused(true);
     showPlayerTab("personal");
+  });
+  $("menu-item-tree")?.addEventListener("click",()=>{
+    $("more-menu-dialog")?.close();
+    officeRuntime?.goToTree?.();
+    setTimeout(openTreeGuessing,850);
   });
   $("menu-item-workshop")?.addEventListener("click",()=>{
     $("more-menu-dialog")?.close();

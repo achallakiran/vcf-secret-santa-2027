@@ -4755,6 +4755,10 @@ body.office-playing #player-menu textarea{
   border-color:#00f0ff;
   background:rgba(0,240,255,0.08);
 }
+.more-menu-card.highlight-tree{
+  border-color:#48bb78;
+  background:rgba(72,187,120,0.08);
+}
 .menu-pill-badge{
   font-size:10px;
   font-weight:800;

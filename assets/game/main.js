@@ -1558,6 +1558,7 @@ export function mountOffice(host,profile,notice=()=>{}){
     applyTimeTheme,
     setTimeTheme:applyTimeTheme,
     togglePartyMode,
+    toggleParty:togglePartyMode,
     customizeMyDesk,
     updateAvatarPhoto,
     goToArcade(){
