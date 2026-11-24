@@ -4548,3 +4548,332 @@ body.office-playing #player-menu textarea{
   font-style:italic;
   margin:0;
 }
+
+/* =========================================================================
+   HOLIDAY OFFICE UPGRADES: Clean UI, Expandable Actions & Retro Arcade
+   ========================================================================= */
+
+/* 1. Welcome Screen: Instant Play Demo & Organizer Link */
+.welcome-actions{
+  margin-top:14px;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:10px;
+  width:100%;
+}
+.demo-entry-btn{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:10px;
+  width:100%;
+  padding:12px 18px;
+  background:linear-gradient(135deg, #1f4a37 0%, #122d22 100%);
+  border:1.5px solid #ecc888;
+  border-radius:14px;
+  color:#fffaeb;
+  font-size:14px;
+  font-weight:700;
+  cursor:pointer;
+  box-shadow:0 6px 20px rgba(0,0,0,0.35);
+  transition:all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+.demo-entry-btn:hover{
+  background:linear-gradient(135deg, #2b654a 0%, #1a3f2f 100%);
+  border-color:#fff1ce;
+  transform:translateY(-2px);
+  box-shadow:0 8px 24px rgba(236,200,136,0.3);
+}
+.demo-btn-icon{
+  font-size:18px;
+}
+.welcome-organizer-row{
+  margin-top:12px;
+  text-align:center;
+}
+.welcome-admin-link{
+  display:inline-block;
+  color:#d4e5db;
+  font-size:12.5px;
+  font-weight:600;
+  text-decoration:none;
+  padding:5px 12px;
+  border-radius:10px;
+  background:rgba(255,255,255,0.06);
+  border:1px solid rgba(255,255,255,0.15);
+  transition:all 0.15s ease;
+}
+.welcome-admin-link:hover{
+  color:#ecc888;
+  border-color:#ecc888;
+  background:rgba(236,200,136,0.12);
+  text-decoration:none;
+}
+
+/* 2. Top Bar Menu Button */
+.office-pause{
+  display:inline-flex !important;
+  align-items:center !important;
+  gap:6px !important;
+  padding:6px 14px !important;
+  background:rgba(18, 36, 27, 0.90) !important;
+  border:1.5px solid #ecc888 !important;
+  border-radius:20px !important;
+  color:#fffaeb !important;
+  font-size:13px !important;
+  font-weight:700 !important;
+  cursor:pointer !important;
+  box-shadow:0 4px 16px rgba(0,0,0,0.35) !important;
+  backdrop-filter:blur(8px) !important;
+  transition:all 0.18s ease !important;
+  width:auto !important;
+  height:auto !important;
+}
+.office-pause:hover{
+  background:rgba(32, 62, 47, 0.96) !important;
+  border-color:#fff0ce !important;
+  transform:translateY(-1px) !important;
+  box-shadow:0 6px 18px rgba(236,200,136,0.25) !important;
+}
+.pause-icon{
+  font-size:14px;
+}
+.pause-label{
+  font-size:12.5px;
+  letter-spacing:0.02em;
+}
+
+/* 3. Horizontally Expandable & Collapsible Action Emotes */
+.office-action-dock{
+  position:absolute !important;
+  right:calc(16px + env(safe-area-inset-right, 0px)) !important;
+  bottom:calc(16px + env(safe-area-inset-bottom, 0px)) !important;
+  z-index:25 !important;
+  display:flex !important;
+  align-items:center !important;
+  pointer-events:auto !important;
+}
+.action-toggle-btn{
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  padding:8px 14px;
+  border-radius:24px;
+  background:linear-gradient(135deg, #1b3528, #11241b);
+  border:1.5px solid #ecc888;
+  color:#fffaeb;
+  font-size:13px;
+  font-weight:700;
+  cursor:pointer;
+  box-shadow:0 6px 20px rgba(0,0,0,0.45);
+  backdrop-filter:blur(10px);
+  transition:all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  user-select:none;
+}
+.action-toggle-btn:hover{
+  background:linear-gradient(135deg, #274d3a, #183326);
+  border-color:#fff1ce;
+  transform:scale(1.04);
+}
+.action-toggle-icon{
+  font-size:16px;
+}
+.action-toggle-label{
+  font-size:12.5px;
+}
+.action-toggle-arrow{
+  font-size:11px;
+  transition:transform 0.2s ease;
+}
+
+.action-buttons-wrap{
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  overflow:hidden;
+  transition:max-width 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.25s ease, margin 0.25s ease;
+}
+
+.office-action-dock.collapsed .action-buttons-wrap{
+  max-width:0 !important;
+  opacity:0 !important;
+  margin-right:0 !important;
+  pointer-events:none !important;
+}
+.office-action-dock.collapsed .action-toggle-arrow{
+  transform:rotate(0deg);
+}
+
+.office-action-dock.expanded .action-buttons-wrap{
+  max-width:440px !important;
+  opacity:1 !important;
+  margin-right:8px !important;
+  pointer-events:auto !important;
+}
+.office-action-dock.expanded .action-toggle-arrow{
+  transform:rotate(180deg);
+}
+
+.action-collapse-btn{
+  background:rgba(255,255,255,0.12);
+  border:1px solid rgba(255,255,255,0.25);
+  color:#f7eed8;
+  width:28px;
+  height:28px;
+  border-radius:50%;
+  cursor:pointer;
+  font-size:12px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  transition:all 0.15s ease;
+  padding:0;
+}
+.action-collapse-btn:hover{
+  background:rgba(255,255,255,0.25);
+  border-color:#ecc888;
+}
+
+/* 4. More Options Menu Dialog Enhancements */
+.more-menu-section-title{
+  font-size:11px;
+  font-weight:900;
+  letter-spacing:0.06em;
+  color:#dfc38f;
+  margin:14px 0 8px;
+  padding-left:4px;
+}
+.more-menu-section-title:first-of-type{
+  margin-top:0;
+}
+.more-menu-card.highlight-quest{
+  border-color:#ecc888;
+  background:rgba(236,200,136,0.10);
+}
+.more-menu-card.highlight-arcade{
+  border-color:#00f0ff;
+  background:rgba(0,240,255,0.08);
+}
+.menu-pill-badge{
+  font-size:10px;
+  font-weight:800;
+  padding:3px 8px;
+  border-radius:10px;
+  background:rgba(236,200,136,0.25);
+  color:#fff2d4;
+  margin-left:auto;
+  flex-shrink:0;
+}
+.menu-pill-badge.arcade-badge{
+  background:rgba(0,240,255,0.25);
+  color:#00ffff;
+  border:1px solid rgba(0,240,255,0.4);
+}
+
+/* 5. Arcade Lounge Modal Telemetry & Controls */
+.arcade-telemetry-bar{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:8px 14px;
+  background:rgba(12, 18, 26, 0.75);
+  border-radius:10px;
+  margin-bottom:12px;
+  border:1px solid rgba(0,240,255,0.25);
+  font-size:12px;
+}
+.telemetry-pill{
+  display:flex;
+  align-items:center;
+  gap:6px;
+  color:#00f0ff;
+  font-weight:600;
+}
+.telemetry-dot{
+  width:8px;
+  height:8px;
+  border-radius:50%;
+  background:#00f0ff;
+  box-shadow:0 0 8px #00f0ff;
+  animation:telemetryPulse 1.6s infinite ease-in-out;
+}
+@keyframes telemetryPulse{
+  0%,100%{opacity:1;transform:scale(1);}
+  50%{opacity:0.35;transform:scale(0.85);}
+}
+.telemetry-stat{
+  color:#fcf5e5;
+  display:flex;
+  gap:6px;
+  font-size:11.5px;
+}
+.telemetry-stat .stat-label{
+  color:#a0b8aa;
+}
+.telemetry-stat .stat-value{
+  color:#fffaeb;
+  font-weight:600;
+}
+.telemetry-badge{
+  font-size:10.5px;
+  color:#ecc888;
+  background:rgba(236,200,136,0.12);
+  padding:2px 8px;
+  border-radius:10px;
+  border:1px solid rgba(236,200,136,0.25);
+}
+.arcade-footer{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  margin-top:12px;
+}
+.arcade-footer-hints{
+  display:flex;
+  gap:12px;
+  font-size:11.5px;
+  color:#b0c4ba;
+}
+.arcade-footer-hints strong{
+  color:#fffaeb;
+}
+.arcade-footer-buttons{
+  display:flex;
+  gap:8px;
+}
+
+/* 6. Secret Santa Quest Automatic Verification */
+.quest-auto-banner{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  padding:8px 12px;
+  background:rgba(0, 240, 255, 0.08);
+  border:1px solid rgba(0, 240, 255, 0.3);
+  border-radius:10px;
+  font-size:11.5px;
+  color:#c8f5f9;
+  margin-bottom:12px;
+}
+.btn-play-arcade{
+  display:inline-flex;
+  align-items:center;
+  gap:5px;
+  padding:6px 14px;
+  background:linear-gradient(135deg, #0e7490, #0891b2);
+  border:1px solid #67e8f9;
+  border-radius:14px;
+  color:#fff;
+  font-size:12px;
+  font-weight:700;
+  cursor:pointer;
+  transition:all 0.15s ease;
+  margin-top:6px;
+}
+.btn-play-arcade:hover{
+  background:linear-gradient(135deg, #0891b2, #06b6d4);
+  transform:scale(1.04);
+  box-shadow:0 4px 12px rgba(8,145,178,0.35);
+}

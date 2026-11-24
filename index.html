@@ -16,8 +16,20 @@
       <div class="hat" aria-hidden="true"><i></i></div>
       <div class="title-wrap"><h1 class="voxel-title"><span class="red">SECRET</span><span class="green">SANTA</span></h1><div class="year" id="hero-year">2026</div></div>
       <form id="entry-form" class="entry-form">
-        <p id="entry-event" class="field-note">Enter the code shared by your organizer.</p>
-        <div class="entry-row"><input id="entry-code" type="text" maxlength="4" inputmode="numeric" autocomplete="one-time-code" placeholder="••••" pattern="[0-9]{4}" required aria-label="Four-digit invitation code"/><button type="submit" class="arrow-button" aria-label="Enter office">➜</button></div>
+        <p id="entry-event" class="field-note">Enter your 4-digit code if invited to an event, or explore instantly below.</p>
+        <div class="entry-row">
+          <input id="entry-code" type="text" maxlength="4" inputmode="numeric" autocomplete="one-time-code" placeholder="••••" pattern="[0-9]{4}" aria-label="Four-digit invitation code"/>
+          <button type="submit" class="arrow-button" aria-label="Enter office">➜</button>
+        </div>
+        <div class="welcome-actions">
+          <button type="button" id="demo-entry-btn" class="demo-entry-btn" title="Explore the full 3D office, retro arcade room, and avatar studio">
+            <span class="demo-btn-icon">🎄</span>
+            <span class="demo-btn-text">Instant Play · Explore Holiday Office (Demo)</span>
+          </button>
+        </div>
+        <div class="welcome-organizer-row">
+          <a href="?admin=1" class="welcome-admin-link">⚙️ Event Organizer Console (?admin=1)</a>
+        </div>
       </form>
     </section>
     <section class="rules" aria-label="Secret Santa rules"><div class="rule-icon">🎁</div><div><h2>THE SPIRIT OF SECRET SANTA</h2><p>We recommend keeping your gift within <strong>₹500</strong>. The intention is to buy something thoughtful rather than something expensive.</p><p>Your Santa may assign you small, fun daily tasks. Enjoy the surprises and look for clues around the office.</p><p class="rule-last">Above all, leave your warm wishes and make your Secret Child feel special!</p></div></section>
@@ -134,7 +146,7 @@
         <div class="hud-group-right">
           <button id="player-clue" class="office-clue" type="button" aria-label="View Secret Santa clue" title="Santa Clue">💡</button>
           <button id="player-music" class="office-music" type="button" aria-label="Mute Jingle Bells" aria-pressed="false" title="Mute Jingle Bells">🔊</button>
-          <button id="player-pause" class="office-pause" type="button" aria-label="Open pause menu" title="Pause / Menu">☰</button>
+          <button id="player-pause" class="office-pause" type="button" aria-label="Open options menu" title="Office Menu &amp; Features"><span class="pause-icon">☰</span><span class="pause-label">Menu</span></button>
         </div>
       </header>
 
@@ -251,21 +263,27 @@
         </div>
       </dialog>
 
-      <!-- Upgraded Multi-Action Dock -->
-      <div class="office-action-dock" role="toolbar" aria-label="Character emotions and actions">
-        <div class="action-buttons-wrap">
+      <!-- Horizontally Expandable / Collapsible Action Dock -->
+      <div id="office-action-dock" class="office-action-dock collapsed" role="toolbar" aria-label="Character emotions and actions">
+        <button id="action-toggle-btn" class="action-toggle-btn" type="button" aria-expanded="false" title="Toggle Character Actions &amp; Emotes">
+          <span class="action-toggle-icon">🎭</span>
+          <span class="action-toggle-label">Emotes</span>
+          <span class="action-toggle-arrow">▸</span>
+        </button>
+        <div id="action-buttons-wrap" class="action-buttons-wrap">
           <button id="action-wave" class="action-pill" type="button" data-action="hi" title="Wave / Say Hi (Key 1)">
             <span class="action-emoji">👋</span><span class="action-label">Wave</span><span class="action-hotkey">1</span>
           </button>
           <button id="action-dance" class="action-pill" type="button" data-action="dance" title="Dance (Key 2)">
             <span class="action-emoji">💃</span><span class="action-label">Dance</span><span class="action-hotkey">2</span>
           </button>
-          <button id="action-clap" class="action-pill" type="button" data-action="clap" title="Clap & Celebrate (Key 3)">
+          <button id="action-clap" class="action-pill" type="button" data-action="clap" title="Clap &amp; Celebrate (Key 3)">
             <span class="action-emoji">👏</span><span class="action-label">Clap</span><span class="action-hotkey">3</span>
           </button>
           <button id="action-cheer" class="action-pill" type="button" data-action="cheer" title="Cheer Merry Christmas (Key 4)">
             <span class="action-emoji">🎉</span><span class="action-label">Cheer</span><span class="action-hotkey">4</span>
           </button>
+          <button id="action-collapse-btn" class="action-collapse-btn" type="button" title="Collapse Emotes">✕</button>
         </div>
       </div>
 
@@ -282,63 +300,34 @@
         </div>
       </div>
 
-      <!-- Sleek Floating Bottom Navigation Dock -->
-      <nav id="office-nav-bottom" class="office-nav-bottom" role="navigation" aria-label="Main navigation bar">
-        <button id="nav-btn-quest" class="nav-tab nav-tab-quest" type="button" title="Holiday Secret Santa Quest">
-          <span class="nav-tab-icon">🧭</span>
-          <span class="nav-tab-label">Quest</span>
-          <span id="hud-quest-badge" class="hud-counter-badge">0/2</span>
-        </button>
-        <button id="nav-btn-arcade" class="nav-tab nav-tab-arcade" type="button" title="Break-Room Arcade Console">
-          <span class="nav-tab-icon">🕹️</span>
-          <span class="nav-tab-label">Arcade</span>
-        </button>
-        <button id="nav-btn-mydesk" class="nav-tab nav-tab-gold" type="button" title="Walk to My Workspace">
-          <span class="nav-tab-icon">⭐</span>
-          <span class="nav-tab-label">My Desk</span>
-        </button>
-        <button id="nav-btn-workshop" class="nav-tab nav-tab-santa" type="button" title="Secret Santa &amp; Parent Workshop">
-          <span class="nav-tab-icon">🎅</span>
-          <span class="nav-tab-label">Santa Setup</span>
-        </button>
-        <button id="nav-btn-more" class="nav-tab nav-tab-more" type="button" title="More Features &amp; Settings">
-          <span class="nav-tab-icon">✨</span>
-          <span class="nav-tab-label">Menu</span>
-        </button>
-      </nav>
+
 
       <div id="office-toast" class="office-toast hidden" role="status" aria-live="polite"></div>
     </div>
 
-    <!-- More Features & Office Settings Dialog -->
+    <!-- Comprehensive Office Options Menu Dialog -->
     <dialog id="more-menu-dialog" class="office-dialog-modal more-menu-dialog" aria-labelledby="more-menu-title">
       <div class="more-menu-container">
         <div class="more-menu-header">
           <div class="more-menu-title-wrap">
             <span class="more-menu-icon">✨</span>
             <div>
-              <h3 id="more-menu-title">Office Hub &amp; Settings</h3>
-              <p class="more-menu-subtitle">Atmosphere controls, wishlists, rules &amp; character customization</p>
+              <h3 id="more-menu-title">Office Menu &amp; Activities</h3>
+              <p class="more-menu-subtitle">Explore activities, Secret Santa quests, arcade games, and office settings</p>
             </div>
           </div>
           <button type="button" class="more-menu-close-btn" id="more-menu-close-btn" aria-label="Close Menu">✕</button>
         </div>
 
+        <div class="more-menu-section-title">🎄 SECRET SANTA ACTIVITIES</div>
         <div class="more-menu-grid">
-          <button type="button" class="more-menu-card" id="menu-item-party">
-            <span class="menu-card-icon">🎉</span>
+          <button type="button" class="more-menu-card highlight-quest" id="menu-item-quest">
+            <span class="menu-card-icon">🧭</span>
             <div class="menu-card-text">
-              <strong>Holiday Party Mode</strong>
-              <span>Toggle party celebration, music &amp; 3D confetti</span>
+              <strong>Secret Santa Quest &amp; Clues</strong>
+              <span>View daily holiday tasks, progress &amp; clue reveals</span>
             </div>
-          </button>
-
-          <button type="button" class="more-menu-card" id="menu-item-time">
-            <span class="menu-card-icon">🌙</span>
-            <div class="menu-card-text">
-              <strong>Day / Night Lighting</strong>
-              <span>Toggle warm evening glow or bright morning sun</span>
-            </div>
+            <span id="menu-quest-badge" class="menu-pill-badge">Tasks</span>
           </button>
 
           <button type="button" class="more-menu-card" id="menu-item-santahub">
@@ -349,11 +338,55 @@
             </div>
           </button>
 
+          <button type="button" class="more-menu-card" id="menu-item-workshop">
+            <span class="menu-card-icon">🎅</span>
+            <div class="menu-card-text">
+              <strong>Santa Workshop (Parent Setup)</strong>
+              <span>Design tasks, goals &amp; clues for your secret child</span>
+            </div>
+          </button>
+
+          <button type="button" class="more-menu-card" id="menu-item-mydesk">
+            <span class="menu-card-icon">⭐</span>
+            <div class="menu-card-text">
+              <strong>My Workspace Desk</strong>
+              <span>Walk directly to your personalized desk &amp; prop</span>
+            </div>
+          </button>
+        </div>
+
+        <div class="more-menu-section-title">🕹️ BREAK-ROOM &amp; ATMOSPHERE</div>
+        <div class="more-menu-grid">
+          <button type="button" class="more-menu-card highlight-arcade" id="menu-item-arcade">
+            <span class="menu-card-icon">🕹️</span>
+            <div class="menu-card-text">
+              <strong>Retro Arcade Lounge</strong>
+              <span>Walk into 3D Arcade Room &amp; play Racers &amp; Bikes</span>
+            </div>
+            <span class="menu-pill-badge arcade-badge">Games</span>
+          </button>
+
           <button type="button" class="more-menu-card" id="menu-item-avatar">
             <span class="menu-card-icon">👤</span>
             <div class="menu-card-text">
               <strong>Avatar Studio</strong>
-              <span>Personalize your 3D outfit, colors &amp; Santa hat</span>
+              <span>Personalize your 3D outfit, hairstyle &amp; colors</span>
+            </div>
+          </button>
+
+          <button type="button" class="more-menu-card" id="menu-item-party">
+            <span class="menu-card-icon">🎉</span>
+            <div class="menu-card-text">
+              <strong>Holiday Party Mode</strong>
+              <span>Toggle celebration lights, music &amp; 3D confetti</span>
+            </div>
+          </button>
+
+          <button type="button" class="more-menu-card" id="menu-item-time">
+            <span class="menu-card-icon">🌙</span>
+            <div class="menu-card-text">
+              <strong>Day / Night Lighting</strong>
+              <span>Toggle cozy evening lighting or bright daylight</span>
             </div>
           </button>
 
@@ -361,15 +394,15 @@
             <span class="menu-card-icon">📜</span>
             <div class="menu-card-text">
               <strong>Rules &amp; Spirit</strong>
-              <span>Budget guidelines, anonymity &amp; event schedule</span>
+              <span>₹500 gift budget, anonymity &amp; holiday etiquette</span>
             </div>
           </button>
 
           <button type="button" class="more-menu-card" id="menu-item-help">
             <span class="menu-card-icon">🎮</span>
             <div class="menu-card-text">
-              <strong>How to Play</strong>
-              <span>Movement controls, keyboard shortcuts &amp; tips</span>
+              <strong>How to Play &amp; Move</strong>
+              <span>Movement controls, shortcuts &amp; camera navigation</span>
             </div>
           </button>
         </div>
@@ -828,21 +861,21 @@
     </div>
   </dialog>
 
-  <!-- Break-Room Arcade Cabinet Modal -->
+  <!-- Dedicated Retro Arcade Room Gaming Modal -->
   <dialog id="arcade-modal" class="office-dialog-modal arcade-dialog">
     <div class="arcade-container">
       <div class="arcade-header">
         <div class="arcade-title-wrap">
           <span class="arcade-icon">🕹️</span>
           <div>
-            <h3>Office Break-Room Arcade</h3>
-            <p class="arcade-subtitle">Play games, beat the goals, and unlock Secret Santa clues!</p>
+            <h3>Retro Arcade Lounge</h3>
+            <p class="arcade-subtitle">Free-play arcade &amp; racing simulators with real-time lap recording!</p>
           </div>
         </div>
         <button type="button" class="arcade-close-btn" id="arcade-close-btn" aria-label="Close Arcade">✕</button>
       </div>
 
-      <!-- Game Selector Tabs (Racing Championships) -->
+      <!-- Game Selector Tabs -->
       <div class="arcade-tabs">
         <button type="button" class="arcade-tab-btn active" data-game="voxel-racers">
           <span>🏎️</span> Voxel Racers
@@ -852,31 +885,34 @@
         </button>
       </div>
 
-      <!-- Active Goal & Clue Unlocking Banner with Challenge Tracker -->
-      <div class="arcade-goal-banner" id="arcade-goal-banner">
-        <div class="goal-info">
-          <span class="goal-badge">🎯 SANTA'S GOAL</span>
-          <span class="goal-desc" id="arcade-goal-desc">Finish 1 lap on Dust Track to unlock Clue #1!</span>
+      <!-- Telemetry & Live Office Recording Bar -->
+      <div class="arcade-telemetry-bar">
+        <div class="telemetry-pill">
+          <span class="telemetry-dot"></span>
+          <span class="telemetry-text">Arcade Rig Connected</span>
         </div>
-        <div class="arcade-goal-actions">
-          <button type="button" class="btn btn-secondary btn-sm" id="arcade-timer-btn" title="Track your race duration">
-            ⏱️ <span id="arcade-timer-display">Start Timer</span>
-          </button>
-          <button type="button" class="btn btn-primary btn-claim-clue" id="arcade-claim-clue-btn">
-            🏆 Claim Clue!
-          </button>
+        <div class="telemetry-stat">
+          <span class="stat-label">Telemetry:</span>
+          <span class="stat-value" id="arcade-last-stat">Ready for green flag! Drive laps or finish race</span>
         </div>
+        <div class="telemetry-badge">⚡ Auto-Verified</div>
       </div>
 
       <!-- Game Screen Viewport -->
       <div class="arcade-screen-viewport">
-        <!-- Iframe for external games -->
-        <iframe id="arcade-iframe" class="arcade-iframe" src="https://achallakiran.github.io/voxel-racers/" allow="autoplay; fullscreen" loading="lazy"></iframe>
+        <iframe id="arcade-iframe" class="arcade-iframe" src="./games/voxel-racers/index.html" allow="autoplay; fullscreen" loading="lazy"></iframe>
       </div>
 
       <div class="arcade-footer">
-        <a id="arcade-fullscreen-link" href="https://achallakiran.github.io/voxel-racers/" target="_blank" rel="noopener" class="btn btn-secondary btn-sm">⛶ Open Fullscreen in New Tab</a>
-        <button type="button" class="btn btn-secondary btn-sm" id="arcade-reload-btn">↻ Restart Game</button>
+        <div class="arcade-footer-hints">
+          <span>⌨️ Steer: <strong>W A S D / Arrows</strong></span>
+          <span>⚡ Boost: <strong>Shift</strong></span>
+          <span>🛑 Brake: <strong>Space</strong></span>
+        </div>
+        <div class="arcade-footer-buttons">
+          <a id="arcade-fullscreen-link" href="./games/voxel-racers/index.html" target="_blank" rel="noopener" class="btn btn-secondary btn-sm">⛶ Fullscreen</a>
+          <button type="button" class="btn btn-secondary btn-sm" id="arcade-reload-btn">↻ Restart</button>
+        </div>
       </div>
     </div>
   </dialog>
@@ -968,9 +1004,13 @@
         <span class="quest-icon">🧭</span>
         <div>
           <h3 id="quest-modal-title">Secret Santa Mystery Quest</h3>
-          <p class="quest-subtitle">Complete break-room tasks to unlock clues. Solve them to find your Secret Santa!</p>
+          <p class="quest-subtitle">Play games in the Arcade Room to automatically achieve goals and reveal Santa clues!</p>
         </div>
         <button type="button" class="quest-close-btn" id="quest-close-btn" aria-label="Close Notebook">✕</button>
+      </div>
+      <div class="quest-auto-banner">
+        <span>⚡</span>
+        <span><strong>Automatic Verification Active:</strong> Race metrics are tracked in real-time. Whenever you complete a lap or track in the Retro Arcade, your clue unlocks instantly!</span>
       </div>
 
       <div class="quest-tasks-list" id="quest-tasks-list">

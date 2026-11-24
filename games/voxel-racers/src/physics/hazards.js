@@ -1,0 +1,153 @@
+// Timed stage hazards. Everything is a pure function of the stage clock `terrain.time`, so physics, AI, the renderer
+// and the tests all agree. Hazard kinds:
+//   avalanche  a wall of snow sweeping across a stretch of road from one side, once per `period` seconds
+//   drifter  a floating rock that slides across the road on a fixed path (a moving solid obstacle)
+//   yak        a slow animal walking back and forth across the road (a moving solid obstacle, see tickHazards)
+//   lavaflow   a puddle of lava drifting across the road (from the right to the left, or `dir: -1` the other way): slows, shoves sideways and burns nitro
+//   drifter + oneway   a boulder that rolls across the road once per `period` from the left (the wall) to the right and drops away
+// A hazard sits on the road frame of its stage: (x,z) centre, (tx,tz) direction of travel, `len` along, `w` across.
+
+export const AVALANCHE_PUSH = 40;        // sideways acceleration inside the wave
+export const AVALANCHE_SLOW = 0.55;      // top-speed squeeze inside the wave (per second factor)
+
+// phase of a periodic hazard: 0..1 through its active window, or -1 when idle. A warning (negative) leads the window.
+export function avalanchePhase(h, time) {
+  const t = ((time - h.offset) % h.period + h.period) % h.period;
+  if (t < h.warn) return -1 - (1 - t / h.warn) * 0;       // warning window (flags flap, snow shakes); not yet moving
+  const k = (t - h.warn) / h.dur;
+  return k <= 1 ? k : -1;
+}
+export const avalancheWarning = (h, time) => {
+  const t = ((time - h.offset) % h.period + h.period) % h.period;
+  return t >= h.period - h.warnLead || t < h.warn;
+};
+
+// how much of its reach the wave has covered at phase k (0..1): it rushes in, holds, then slumps back toward its edge
+const easeIO = (t) => t * t * (3 - 2 * t);
+export function avalancheExtent(k) {
+  if (k < 0.4) return easeIO(k / 0.4);
+  if (k < 0.75) return 1;
+  return 1 - easeIO(Math.min(1, (k - 0.75) / 0.25));
+}
+// lateral extent [a,b] of the wave (+ = right of travel) at phase k. side +1: the wave comes from the right edge and
+// reaches `reach` of the way across the road (default all of it; the Himalaya waves go as far as the middle)
+export function avalancheBand(h, k) {
+  const half = h.w / 2;
+  const front = half - avalancheExtent(k) * (h.reach ?? 1) * h.w;
+  return h.side > 0 ? [front, half] : [-half, -front];
+}
+
+export function inRect(h, x, z) {
+  const dx = x - h.x; const dz = z - h.z;
+  const along = dx * h.tx + dz * h.tz;
+  const lat = dx * h.tz - dz * h.tx;
+  return { along, lat, inside: Math.abs(along) <= h.len / 2 && Math.abs(lat) <= h.w / 2 };
+}
+
+export const GEYSER_LAUNCH = 15;
+export const LAVA_PUSH = 16;            // sideways shove (to the left) inside a lava puddle
+export const LAVA_DRAG = 2.6;            // how hard the puddle slows you (per second)
+export const LAVA_BURN = 0.55;           // nitro burned per second inside it
+
+// lava puddle: it starts at the right edge (the mountain side), grows, drifts left across the road and shrinks away, then repeats.
+// frac 0..1 through the trip; u -1 (right edge) .. +1 (left edge); size 0..1 (grows and shrinks at the ends)
+export function lavaflowState(h, time) {
+  const frac = (((time / h.period) + h.phase) % 1 + 1) % 1;
+  const dir = h.dir === -1 ? -1 : 1;           // dir -1: the puddle comes from the LEFT (the wall side) and drifts right
+  return { frac, dir, u: dir * (-1 + 2 * frac), size: Math.min(1, frac * 7, (1 - frac) * 7) };
+}
+export const STALACTITE_FALL = 0.9;       // seconds the rock takes to fall (its shadow grows over this time)
+const cyc = (h, time) => ((time - h.offset) % h.period + h.period) % h.period;
+
+// geyser: erupts for `dur` seconds after `warn` seconds of bubbling; launches anything above it
+export function geyserState(h, time) {
+  const t = cyc(h, time);
+  if (t < h.warn) return { state: 'warn', k: t / h.warn };
+  if (t < h.warn + h.dur) return { state: 'erupt', k: (t - h.warn) / h.dur };
+  return { state: 'idle', k: 0 };
+}
+// stalactite: shadow grows for the last STALACTITE_FALL seconds before `warn`, then it crashes down at t = warn
+export function stalactiteState(h, time) {
+  const t = cyc(h, time);
+  if (t >= h.warn - STALACTITE_FALL && t < h.warn) return { state: 'falling', k: (t - (h.warn - STALACTITE_FALL)) / STALACTITE_FALL };
+  if (t >= h.warn && t < h.warn + 0.12) return { state: 'impact', k: 0 };
+  if (t >= h.warn + 0.12 && t < h.warn + 2.5) return { state: 'rubble', k: 0 };
+  return { state: 'idle', k: 0 };
+}
+
+export function hazardEffects(v, terrain, dt, events) {
+  const time = terrain.time || 0;
+  if (v.hazCool > 0) v.hazCool -= dt;
+  for (const h of terrain.hazards) {
+    if (h.kind === 'geyser') {
+      if (geyserState(h, time).state !== 'erupt') continue;
+      if (Math.hypot(v.x - h.x, v.z - h.z) > h.r || v.y > (h.y0 || 0) + 8) continue;
+      v.vy = Math.max(v.vy, GEYSER_LAUNCH); v.grounded = false;
+      if (!(v.hazCool > 0)) { v.hazCool = 1; events.push({ type: 'geyser', hazard: h }); }
+      continue;
+    }
+    if (h.kind === 'stalactite') {
+      if (stalactiteState(h, time).state !== 'impact' || v.y > (h.y0 || 0) + 3) continue;
+      if (Math.hypot(v.x - h.x, v.z - h.z) > h.r || v.hazCool > 0) continue;
+      v.vx *= 0.3; v.vz *= 0.3; v.hazCool = 1; events.push({ type: 'stalactite', hazard: h });
+      continue;
+    }
+    if (h.kind === 'lavaflow') {
+      const st = lavaflowState(h, time);
+      const px = h.cx + h.tz * h.range * st.u; const pz = h.cz - h.tx * h.range * st.u;
+      const rr = h.r * st.size + 0.8;
+      if (st.size < 0.2 || Math.hypot(v.x - px, v.z - pz) > rr || v.y > (h.y0 || 0) + 2.2) continue;
+      const sq = Math.exp(-LAVA_DRAG * dt);
+      v.vx = v.vx * sq + h.tz * LAVA_PUSH * st.dir * dt; v.vz = v.vz * sq - h.tx * LAVA_PUSH * st.dir * dt;
+      if (v.nitro > 0) v.nitro = Math.max(0, v.nitro - LAVA_BURN * dt);
+      if (!(v.hazCool > 0)) { v.hazCool = 0.8; events.push({ type: 'lava', hazard: h }); }
+      continue;
+    }
+    if (h.kind !== 'avalanche') continue;
+    const k = avalanchePhase(h, time);
+    if (k < 0) continue;
+    const r = inRect(h, v.x, v.z);
+    if (!r.inside) continue;
+    const [a, b] = avalancheBand(h, k);
+    if (r.lat < a - 0.5 || r.lat > b + 0.5) continue;
+    const dir = -h.side;                            // swept toward the far side
+    v.vx += h.tz * dir * AVALANCHE_PUSH * dt; v.vz += -h.tx * dir * AVALANCHE_PUSH * dt;
+    const sq = Math.exp(-(1 - AVALANCHE_SLOW) * 2.2 * dt);
+    v.vx *= sq; v.vz *= sq;
+    if (!v.inAvalanche) { v.inAvalanche = true; events.push({ type: 'avalanche', hazard: h }); }
+    v.avalancheT = 0.2;
+  }
+  if (v.avalancheT > 0) { v.avalancheT -= dt; if (v.avalancheT <= 0) v.inAvalanche = false; }
+}
+
+// move the moving obstacles (yaks) and advance the stage clock; call once per frame beside tickPickups
+export function tickHazards(terrain, dt) {
+  if (!terrain.hazards) return;
+  terrain.time = (terrain.time || 0) + dt;
+  for (const h of terrain.hazards) {
+    if (h.kind === 'drifter') {
+      // a floating rock sliding across the road on a fixed sine path; its solid body is an obstacle that moves with it
+      let u = Math.sin((terrain.time / h.period) * Math.PI * 2 + h.phase);
+      let live = true;
+      if (h.oneway) {
+        // a boulder rolling down off the wall: one trip across per period (left edge -> right edge), then it is gone until the next
+        const frac = (((terrain.time / h.period) + h.phase) % 1 + 1) % 1;
+        u = 1 - 2 * Math.min(1, frac / 0.8); live = frac <= 0.8;
+      }
+      h.x = h.cx + h.tz * h.range * u; h.z = h.cz - h.tx * h.range * u;
+      if (!live) { h.x = h.cx + 1e4; h.z = h.cz + 1e4; }
+      h.live = live;
+      h.u = u; if (live) h.y0 = terrain.heightAt ? terrain.heightAt(h.x, h.z) : (h.y0 || 0);
+      if (!h.obstacle || h.obstacle.owner !== terrain) {
+        h.obstacle = { type: 'drifter', owner: terrain, x: h.x, z: h.z, r: h.r, h: h.top, y0: h.y0 };
+        terrain.obstacles.push(h.obstacle);
+      } else { h.obstacle.x = h.x; h.obstacle.z = h.z; h.obstacle.y0 = h.y0; }
+      continue;
+    }
+    if (h.kind !== 'yak') continue;
+    const u = Math.sin((terrain.time / h.period) * Math.PI * 2 + h.phase);     // -1..1 across the road
+    h.x = h.cx + h.tz * h.range * u; h.z = h.cz - h.tx * h.range * u;
+    h.face = Math.cos((terrain.time / h.period) * Math.PI * 2 + h.phase) >= 0 ? 1 : -1;
+    if (h.obstacle) { h.obstacle.x = h.x; h.obstacle.z = h.z; }
+  }
+}

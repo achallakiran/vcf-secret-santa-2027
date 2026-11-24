@@ -1057,12 +1057,16 @@ export function mountOffice(host,profile,notice=()=>{}){
       return;
     }
 
-    // Break-Room Arcade Console hits
-    const arcadePos=new THREE.Vector3(-6.35,1.0,office.partyStart+2.55);
-    if(ray.ray.distanceToPoint(arcadePos)<1.55){
+    // Retro Arcade Room & Console hits
+    const arcX=office.arcadeStation?.x??1.20;
+    const arcZ=office.arcadeStation?.z??(office.partyStart+11.55);
+    const arcAppX=office.arcadeStation?.approachX??1.20;
+    const arcAppZ=office.arcadeStation?.approachZ??(office.partyStart+9.55);
+    const arcadePos=new THREE.Vector3(arcX,1.0,arcZ);
+    if(ray.ray.distanceToPoint(arcadePos)<3.2){
       if(hero?.seated) standUp(false);
-      moveTo(-5.25,office.partyStart+2.55);
-      notice("🕹️ Walking to the Break-Room Arcade Console!");
+      moveTo(arcAppX,arcAppZ);
+      notice("🕹️ Walking into the Retro Arcade Room!");
       setTimeout(()=>{
         if(!hero)return;
         hero.play("cheer",clock.elapsedTime);
@@ -1558,8 +1562,10 @@ export function mountOffice(host,profile,notice=()=>{}){
     updateAvatarPhoto,
     goToArcade(){
       if(hero?.seated) standUp(false);
-      moveTo(-5.25,office.partyStart+2.55);
-      notice("🕹️ Approaching Break-Room Arcade Console!");
+      const arcAppX=office.arcadeStation?.approachX??1.20;
+      const arcAppZ=office.arcadeStation?.approachZ??(office.partyStart+9.55);
+      moveTo(arcAppX,arcAppZ);
+      notice("🕹️ Entering the Retro Arcade Room!");
       setTimeout(()=>{
         if(!hero)return;
         hero.play("cheer",clock.elapsedTime);

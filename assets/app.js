@@ -1210,8 +1210,8 @@ function setupChildQuestAndArcade(){
         id:"voxel-racers",
         title:"Voxel Monster Racers",
         icon:"🏎️",
-        gameUrl:"https://achallakiran.github.io/voxel-racers/",
-        goal:"Finish 1 lap on Dust Track or score over 500 points!",
+        gameUrl:"./games/voxel-racers/index.html",
+        goal:"Complete 1 full lap or finish the monster race!",
         clue:"Your Secret Santa sits on the bright window side of the office!",
         completed:false
       },
@@ -1219,8 +1219,8 @@ function setupChildQuestAndArcade(){
         id:"voxel-bike",
         title:"Voxel Bikes Redline",
         icon:"🏍️",
-        gameUrl:"https://achallakiran.github.io/voxel-bike/",
-        goal:"Complete the Redline race course without crashing!",
+        gameUrl:"./games/voxel-bike/index.html",
+        goal:"Complete the Redline motocross race course to the finish line!",
         clue:"Your Secret Santa always carries a blue water bottle and loves dark chocolate!",
         completed:false
       }
@@ -1259,8 +1259,11 @@ function setupChildQuestAndArcade(){
 
   function updateUI(){
     const completedCount=quest.tasks.filter(t=>t.completed).length;
-    const badge=$("hud-quest-badge");
-    if(badge)badge.textContent=`${completedCount}/${quest.tasks.length}`;
+    const hudBadge=$("hud-quest-badge");
+    if(hudBadge)hudBadge.textContent=`${completedCount}/${quest.tasks.length}`;
+
+    const menuBadge=$("menu-quest-badge");
+    if(menuBadge)menuBadge.textContent=`${completedCount}/${quest.tasks.length} Done`;
 
     const list=$("quest-tasks-list");
     if(list){
@@ -1274,7 +1277,7 @@ function setupChildQuestAndArcade(){
             <div>
               <p class="task-title">Task ${index+1}: ${t.icon} ${t.title}</p>
               <p class="task-goal-text" style="font-size:11px;color:#a0aec0;margin:2px 0 0;">🎯 ${t.goal}</p>
-              ${t.completed?`<p class="task-clue-reveal">💡 Clue #${index+1}: "${t.clue}"</p>`:`<p style="font-size:11px;color:#cbd5cb;margin:2px 0 0;font-style:italic;">Play in Break-Room Arcade to unlock clue</p>`}
+              ${t.completed?`<p class="task-clue-reveal" style="font-size:12px;color:#68d391;font-weight:600;margin:3px 0 0;">💡 Clue #${index+1}: "${t.clue}"</p>`:`<p style="font-size:11px;color:#e2e8f0;margin:2px 0 0;font-style:italic;">⚡ Verified automatically in Arcade Lounge</p>`}
             </div>
           </div>
           <button type="button" class="btn btn-secondary btn-sm" data-play-game="${t.id}">
@@ -1305,7 +1308,7 @@ function setupChildQuestAndArcade(){
         finaleStatus.textContent=`✨ All ${quest.tasks.length} Clues Unlocked! The Christmas Tree is glowing in celebration!`;
         goTreeBtn.disabled=false;
       }else{
-        finaleStatus.textContent=`🔒 ${completedCount} of ${quest.tasks.length} clues unlocked. Beat the tasks to unlock all clues!`;
+        finaleStatus.textContent=`🔒 ${completedCount} of ${quest.tasks.length} clues unlocked. Beat the tasks in the Arcade to unlock clues!`;
         goTreeBtn.disabled=true;
       }
     }
@@ -1314,72 +1317,24 @@ function setupChildQuestAndArcade(){
   const arcadeModal=$("arcade-modal");
   const arcadeIframe=$("arcade-iframe");
   const arcadeFullscreen=$("arcade-fullscreen-link");
-  const arcadeGoalDesc=$("arcade-goal-desc");
-  const arcadeClaimBtn=$("arcade-claim-clue-btn");
-  const arcadeTimerBtn=$("arcade-timer-btn");
-  const arcadeTimerDisplay=$("arcade-timer-display");
-
-  let arcadeTimerInterval=null;
-  let arcadeTimerSeconds=0;
-
-  function resetArcadeTimer(){
-    if(arcadeTimerInterval){
-      clearInterval(arcadeTimerInterval);
-      arcadeTimerInterval=null;
-    }
-    arcadeTimerSeconds=0;
-    if(arcadeTimerDisplay)arcadeTimerDisplay.textContent="Start Timer";
-  }
-
-  arcadeTimerBtn?.addEventListener("click",()=>{
-    if(arcadeTimerInterval){
-      // Stop timer
-      clearInterval(arcadeTimerInterval);
-      arcadeTimerInterval=null;
-      if(arcadeTimerDisplay){
-        const m=String(Math.floor(arcadeTimerSeconds/60)).padStart(2,"0");
-        const s=String(arcadeTimerSeconds%60).padStart(2,"0");
-        arcadeTimerDisplay.textContent=`Stopped (${m}:${s}) ↻`;
-      }
-    }else{
-      // Start timer
-      arcadeTimerSeconds=0;
-      arcadeTimerInterval=setInterval(()=>{
-        arcadeTimerSeconds++;
-        const m=String(Math.floor(arcadeTimerSeconds/60)).padStart(2,"0");
-        const s=String(arcadeTimerSeconds%60).padStart(2,"0");
-        if(arcadeTimerDisplay)arcadeTimerDisplay.textContent=`${m}:${s} (Stop)`;
-      },1000);
-    }
-  });
+  const arcadeStatEl=$("arcade-last-stat");
 
   function openArcade(gameId="voxel-racers"){
     quest.activeGame=gameId;
-    resetArcadeTimer();
     document.querySelectorAll(".arcade-tab-btn").forEach(btn=>{
       btn.classList.toggle("active",btn.getAttribute("data-game")===gameId);
     });
 
-    const activeTask=quest.tasks.find(t=>t.id===gameId)||quest.tasks[0];
-    if(arcadeGoalDesc){
-      arcadeGoalDesc.textContent=`${activeTask.goal} (Unlocks Clue for: "${activeTask.title}")`;
-    }
-    if(arcadeClaimBtn){
-      arcadeClaimBtn.textContent=activeTask.completed?"✨ Clue Already Claimed!":"🏆 Claim Clue!";
-      arcadeClaimBtn.style.opacity=activeTask.completed?"0.6":"1";
-    }
-
-    if(arcadeFullscreen)arcadeFullscreen.style.display="inline-flex";
     const url=gameId==="voxel-bike"
-      ?"https://achallakiran.github.io/voxel-bike/"
-      :"https://achallakiran.github.io/voxel-racers/";
-    if(arcadeIframe&&arcadeIframe.src!==url){
+      ?"./games/voxel-bike/index.html"
+      :"./games/voxel-racers/index.html";
+    if(arcadeIframe&&!arcadeIframe.src.endsWith(url.replace("./",""))){
       arcadeIframe.src=url;
     }
     if(arcadeFullscreen)arcadeFullscreen.href=url;
 
-    if(typeof arcadeModal.showModal==="function")arcadeModal.showModal();
-    else arcadeModal.classList.remove("hidden");
+    if(typeof arcadeModal?.showModal==="function")arcadeModal.showModal();
+    else arcadeModal?.classList.remove("hidden");
   }
 
   document.querySelectorAll(".arcade-tab-btn").forEach(tab=>{
@@ -1390,43 +1345,75 @@ function setupChildQuestAndArcade(){
   });
 
   $("arcade-close-btn")?.addEventListener("click",()=>{
-    resetArcadeTimer();
     arcadeModal.close();
   });
   $("arcade-reload-btn")?.addEventListener("click",()=>{
-    resetArcadeTimer();
     if(arcadeIframe&&!arcadeIframe.classList.contains("hidden")){
       const src=arcadeIframe.src;
       arcadeIframe.src=src;
     }
   });
 
-  arcadeClaimBtn?.addEventListener("click",()=>{
-    const activeTask=quest.tasks.find(t=>t.id===quest.activeGame);
-    if(!activeTask)return;
-    if(activeTask.completed){
-      if(typeof officeToast==="function"){
-        officeToast(`ℹ️ Clue already unlocked: "${activeTask.clue}"`);
-      }else{
-        toast(`ℹ️ Clue already unlocked: "${activeTask.clue}"`);
+  function handleGameTelemetry(data){
+    if(!data)return;
+    const statEl=$("arcade-last-stat");
+    if(data.type==="VOXEL_RACE_LAP"||data.type==="VOXEL_RACE_COMPLETED"){
+      const lapTime=data.lapTime?Number(data.lapTime).toFixed(2)+"s":"";
+      const bestLap=data.bestLap?Number(data.bestLap).toFixed(2)+"s":"";
+      if(statEl){
+        statEl.textContent=data.type==="VOXEL_RACE_COMPLETED"
+          ?`🏁 Race Completed! Best Lap: ${bestLap || lapTime}`
+          :`⚡ Lap ${data.lapNumber || 1} Finished! Time: ${lapTime}`;
       }
-      return;
+      const racerTask=quest.tasks.find(t=>t.id==="voxel-racers");
+      if(racerTask&&!racerTask.completed){
+        racerTask.completed=true;
+        saveQuest();
+        playFestiveChime("unlock");
+        officeRuntime?.triggerCelebration?.();
+        const msg=`🎉 MONSTER RACERS GOAL ACHIEVED!
+💡 Clue Unlocked: "${racerTask.clue}"`;
+        if(typeof officeToast==="function")officeToast(msg);
+        else toast(msg);
+      }
+    }else if(data.type==="VOXEL_BIKE_COMPLETED"){
+      if(statEl){
+        statEl.textContent=`🏍️ Moto Race Finished! Time: ${data.resultTime || "Completed"}`;
+      }
+      const bikeTask=quest.tasks.find(t=>t.id==="voxel-bike");
+      if(bikeTask&&!bikeTask.completed){
+        bikeTask.completed=true;
+        saveQuest();
+        playFestiveChime("unlock");
+        officeRuntime?.triggerCelebration?.();
+        const msg=`🎉 VOXEL BIKE GOAL ACHIEVED!
+💡 Clue Unlocked: "${bikeTask.clue}"`;
+        if(typeof officeToast==="function")officeToast(msg);
+        else toast(msg);
+      }
     }
+  }
 
-    const confirmed=confirm(`🏁 Secret Santa Challenge Verification:\n\nDid you achieve Santa's goal?\n"${activeTask.goal}"\n\nClick OK to verify and unlock your clue!`);
-    if(!confirmed)return;
-
-    activeTask.completed=true;
-    saveQuest();
-    playFestiveChime("unlock");
-    officeRuntime?.triggerCelebration?.();
-    if(typeof officeToast==="function"){
-      officeToast(`🎉 GOAL ACHIEVED! Clue Unlocked: "${activeTask.clue}"`);
-    }else{
-      toast(`🎉 GOAL ACHIEVED! Clue Unlocked: "${activeTask.clue}"`);
+  // Same-origin postMessage listener
+  window.addEventListener("message",e=>{
+    if(e.data&&(e.data.type==="VOXEL_RACE_LAP"||e.data.type==="VOXEL_RACE_COMPLETED"||e.data.type==="VOXEL_BIKE_COMPLETED")){
+      handleGameTelemetry(e.data);
     }
-    arcadeClaimBtn.textContent="✨ Clue Claimed! (Check Quest Log)";
-    arcadeClaimBtn.style.opacity="0.6";
+  });
+
+  // Cross-storage listener fallback
+  window.addEventListener("storage",e=>{
+    if(e.key==="vcf_last_race_result"&&e.newValue){
+      try{
+        const val=JSON.parse(e.newValue);
+        handleGameTelemetry(Object.assign({type:"VOXEL_RACE_COMPLETED"},val));
+      }catch(_e){}
+    }else if(e.key==="vcf_last_bike_result"&&e.newValue){
+      try{
+        const val=JSON.parse(e.newValue);
+        handleGameTelemetry(Object.assign({type:"VOXEL_BIKE_COMPLETED"},val));
+      }catch(_e){}
+    }
   });
 
   const workshopModal=$("parent-workshop-modal");
@@ -1440,8 +1427,8 @@ function setupChildQuestAndArcade(){
     $("workshop-gift-location").value=quest.giftReveal?.hidingLocation||"";
     $("workshop-gift-message").value=quest.giftReveal?.message||"";
 
-    if(typeof workshopModal.showModal==="function")workshopModal.showModal();
-    else workshopModal.classList.remove("hidden");
+    if(typeof workshopModal?.showModal==="function")workshopModal.showModal();
+    else workshopModal?.classList.remove("hidden");
   }
 
   function readWorkshopForm(){
@@ -1492,7 +1479,7 @@ function setupChildQuestAndArcade(){
       cluesBox.innerHTML="";
       const unlocked=quest.tasks.filter(t=>t.completed);
       if(unlocked.length===0){
-        cluesBox.innerHTML=`<p style="font-size:12px;color:#a0aec0;margin:0;">No clues unlocked yet! Visit the Break-Room Arcade to unlock your first clue.</p>`;
+        cluesBox.innerHTML=`<p style="font-size:12px;color:#a0aec0;margin:0;">No clues unlocked yet! Visit the Retro Arcade Room to unlock your first clue.</p>`;
       }else{
         unlocked.forEach((t,i)=>{
           const pill=document.createElement("div");
@@ -1507,8 +1494,8 @@ function setupChildQuestAndArcade(){
     $("tree-guess-view")?.classList.remove("hidden");
     $("tree-reveal-view")?.classList.add("hidden");
 
-    if(typeof treeModal.showModal==="function")treeModal.showModal();
-    else treeModal.classList.remove("hidden");
+    if(typeof treeModal?.showModal==="function")treeModal.showModal();
+    else treeModal?.classList.remove("hidden");
   }
 
   $("tree-guess-close-btn")?.addEventListener("click",()=>treeModal.close());
@@ -1561,7 +1548,6 @@ function setupChildQuestAndArcade(){
 
   $("hud-btn-quest")?.addEventListener("click",openQuestModal);
   $("nav-btn-quest")?.addEventListener("click",openQuestModal);
-
   $("quest-close-btn")?.addEventListener("click",()=>$("child-quest-modal")?.close());
 
   $("quest-go-tree-btn")?.addEventListener("click",()=>{
@@ -1579,21 +1565,18 @@ function setupChildQuestAndArcade(){
   $("hud-btn-workshop")?.addEventListener("click",openWorkshop);
   $("nav-btn-workshop")?.addEventListener("click",openWorkshop);
 
-  // Bottom Navigation "More / Menu" Drawer
-  $("nav-btn-more")?.addEventListener("click",()=>{
+  // Top Bar "☰ Menu" & Options Dialog
+  $("player-pause")?.addEventListener("click",()=>{
+    christmasMusic.unlock();
     const moreDlg=$("more-menu-dialog");
     if(typeof moreDlg?.showModal==="function")moreDlg.showModal();
     else moreDlg?.classList.remove("hidden");
   });
   $("more-menu-close-btn")?.addEventListener("click",()=>$("more-menu-dialog")?.close());
 
-  $("menu-item-party")?.addEventListener("click",()=>{
+  $("menu-item-quest")?.addEventListener("click",()=>{
     $("more-menu-dialog")?.close();
-    officeRuntime?.toggleParty?.();
-  });
-  $("menu-item-time")?.addEventListener("click",()=>{
-    $("more-menu-dialog")?.close();
-    officeRuntime?.cycleTimeTheme?.();
+    openQuestModal();
   });
   $("menu-item-santahub")?.addEventListener("click",()=>{
     $("more-menu-dialog")?.close();
@@ -1603,6 +1586,18 @@ function setupChildQuestAndArcade(){
     officeRuntime?.setPaused(true);
     showPlayerTab("personal");
   });
+  $("menu-item-workshop")?.addEventListener("click",()=>{
+    $("more-menu-dialog")?.close();
+    openWorkshop();
+  });
+  $("menu-item-mydesk")?.addEventListener("click",()=>{
+    $("more-menu-dialog")?.close();
+    officeRuntime?.goToDesk?.();
+  });
+  $("menu-item-arcade")?.addEventListener("click",()=>{
+    $("more-menu-dialog")?.close();
+    officeRuntime?.goToArcade?.();
+  });
   $("menu-item-avatar")?.addEventListener("click",()=>{
     $("more-menu-dialog")?.close();
     const menu=$("player-menu");
@@ -1610,6 +1605,14 @@ function setupChildQuestAndArcade(){
     $("notebook-scroll").scrollTop=0;
     officeRuntime?.setPaused(true);
     showPlayerTab("character");
+  });
+  $("menu-item-party")?.addEventListener("click",()=>{
+    $("more-menu-dialog")?.close();
+    officeRuntime?.toggleParty?.();
+  });
+  $("menu-item-time")?.addEventListener("click",()=>{
+    $("more-menu-dialog")?.close();
+    officeRuntime?.cycleTimeTheme?.();
   });
   $("menu-item-rules")?.addEventListener("click",()=>{
     $("more-menu-dialog")?.close();
@@ -2041,12 +2044,9 @@ $("assign-btn").addEventListener("click",run(async()=>{
 }));
 $("player-pause")?.addEventListener("click",()=>{
   christmasMusic.unlock();
-  const menu=$("player-menu");
-  if(!menu.classList.contains("hidden")){closePlayerMenu();return;}
-  menu.classList.remove("hidden");
-  $("notebook-scroll").scrollTop=0;
-  officeRuntime?.setPaused(true);
-  showPlayerTab("character");
+  const moreDlg=$("more-menu-dialog");
+  if(typeof moreDlg?.showModal==="function")moreDlg.showModal();
+  else moreDlg?.classList.remove("hidden");
 });
 $("hud-btn-santa")?.addEventListener("click",()=>{
   christmasMusic.unlock();
@@ -2166,6 +2166,130 @@ $("save-message").addEventListener("click",run(async()=>{
   await api("save_message",{message:$("santa-message").value});
   toast("Private message saved for the ceremony.");
 }));
+
+// Horizontally Expandable / Collapsible Emotes Action Dock
+const actionDock=$("office-action-dock");
+const actionToggleBtn=$("action-toggle-btn");
+const actionCollapseBtn=$("action-collapse-btn");
+
+function toggleActionDock(expand){
+  if(!actionDock)return;
+  const isCurrentlyCollapsed=actionDock.classList.contains("collapsed");
+  const shouldExpand=expand!==undefined?expand:isCurrentlyCollapsed;
+  if(shouldExpand){
+    actionDock.classList.remove("collapsed");
+    actionDock.classList.add("expanded");
+    actionToggleBtn?.setAttribute("aria-expanded","true");
+  }else{
+    actionDock.classList.remove("expanded");
+    actionDock.classList.add("collapsed");
+    actionToggleBtn?.setAttribute("aria-expanded","false");
+  }
+}
+
+actionToggleBtn?.addEventListener("click",()=>{
+  christmasMusic.unlock();
+  toggleActionDock();
+});
+
+actionCollapseBtn?.addEventListener("click",(e)=>{
+  e.stopPropagation();
+  toggleActionDock(false);
+});
+
+// Demo / Guest Mode for Instant Play without invitation code
+function loadDemoPlayer(){
+  const demoPlayer={
+    me:{
+      id:"demo-guest",
+      display_name:"Holiday Explorer",
+      avatar:{
+        gender:"neutral",
+        outfit:"sweater-reindeer",
+        bottom:"pants-dark",
+        hairstyle:"curly",
+        skin:"warm",
+        hair:"dark-brown",
+        height:1.0,
+        build:1.0,
+        footwear:"boots",
+        bottomColor:"#2b2d42",
+        shoeColor:"#1a1a1a",
+        facialHair:"none",
+        glassesStyle:"none",
+        glassesColor:"#d90429",
+        bindiStyle:"none",
+        bindiColor:"#d90429"
+      },
+      wishlist:[
+        {id:"w1",text:"Cozy Christmas fleece or knit sweater ❄️"},
+        {id:"w2",text:"Artisan hot cocoa blend & ceramic mug ☕"},
+        {id:"w3",text:"Mechanical keyboard desk pad & novelty keycap ⌨️"}
+      ]
+    },
+    event:{
+      id:"demo-holiday-event",
+      title:"🎄 VCF Holiday Celebration Office",
+      budget:500
+    },
+    myChild:{
+      id:"colleague-sneha",
+      name:"Sneha Rao",
+      wishlist:[
+        {id:"sw1",text:"Sci-Fi paperback novel or bookstore gift card 📚"},
+        {id:"sw2",text:"Dark roasted gourmet coffee beans ☕"}
+      ]
+    },
+    colleagues:[
+      {id:"c1",name:"Arjun Sharma",desk_index:0,prop:"plant",avatar:{outfit:"sweater-snowflake",hairstyle:"short",skin:"medium"}},
+      {id:"c2",name:"Sneha Rao",desk_index:2,prop:"coffee",avatar:{outfit:"sweater-reindeer",hairstyle:"ponytail",skin:"fair"}},
+      {id:"c3",name:"Karthik Verma",desk_index:4,prop:"robot",avatar:{outfit:"suit-classic",hairstyle:"wavy",skin:"olive"}},
+      {id:"c4",name:"Ananya Iyer",desk_index:7,prop:"lamp",avatar:{outfit:"cozy-scarf",hairstyle:"curly",skin:"warm"}}
+    ],
+    receivedTasks:[
+      {
+        id:"task-demo-1",
+        title:"Office Warm-Up",
+        date:new Date().toISOString().slice(0,10),
+        status:"pending",
+        details:"Visit the Retro Arcade Room and set a high score in Monster Racers!"
+      }
+    ],
+    today:new Date().toISOString().slice(0,10),
+    mystery:{
+      hints:[
+        "Your Secret Santa loves retro gaming and hot chocolate!",
+        "Your Secret Santa sits on the bright window side of the office!"
+      ]
+    }
+  };
+
+  player=demoPlayer;
+  $("welcome").classList.add("hidden");
+  $("admin").classList.add("hidden");
+  $("player").classList.remove("hidden");
+  document.body.classList.add("office-playing");
+  christmasMusic.enter();
+  void enterOffice(player);
+
+  $("player-greeting").textContent="✦ "+player.me.display_name;
+  $("player-event-title").textContent=player.event.title;
+  if($("hud-event-name"))$("hud-event-name").textContent=player.event.title;
+  $("personal-name").textContent=player.me.display_name;
+  $("personal-budget").textContent="Suggested gift budget: ₹"+player.event.budget.toLocaleString("en-IN");
+  
+  if(typeof officeToast==="function"){
+    officeToast("✨ Welcome, Holiday Explorer! Walk around the 3D office or press ☰ Menu.");
+  }else{
+    toast("✨ Welcome, Holiday Explorer! Walk around the 3D office or press ☰ Menu.");
+  }
+}
+
+$("demo-entry-btn")?.addEventListener("click",()=>{
+  christmasMusic.unlock();
+  loadDemoPlayer();
+});
+
 async function init(){
   snowfall();
   $("admin").classList.toggle("hidden",!ADMIN);
