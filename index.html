@@ -28,7 +28,7 @@
           </button>
         </div>
         <div class="welcome-organizer-row">
-          <a href="?admin=1" class="welcome-admin-link">⚙️ Event Organizer Console (?admin=1)</a>
+          <a href="?admin=1" class="welcome-admin-link">🚀 Organize Secret Santa for Your Team (?admin=1)</a>
         </div>
       </form>
     </section>
@@ -92,17 +92,74 @@
             </div>
           </div><span id="workspace-state" class="chip"></span>
         </div>
+        <!-- Team Share & Effortless Onboarding Hub -->
+        <div class="team-share-hub" id="team-share-hub">
+          <div class="team-share-header">
+            <div class="team-share-title">
+              <span class="share-icon">📢</span>
+              <div>
+                <strong>Shareable Team Hub</strong>
+                <p class="muted small">Share this link in Slack, Teams or WhatsApp so teammates can join and explore</p>
+              </div>
+            </div>
+            <div class="team-share-actions">
+              <button type="button" class="btn btn-secondary btn-sm" id="btn-copy-team-announcement">
+                📋 Copy Slack / WhatsApp Announcement
+              </button>
+              <button type="button" class="btn btn-secondary btn-sm" id="btn-toggle-bulk-add">
+                ⚡ Bulk Add Teammates
+              </button>
+              <button type="button" class="btn btn-secondary btn-sm" id="btn-copy-all-direct-links">
+                🔗 Copy All 1-Click Login Links
+              </button>
+            </div>
+          </div>
+          <div class="team-share-url-bar">
+            <input type="text" id="team-share-url-input" class="team-share-url-input" readonly />
+            <button type="button" class="btn btn-primary btn-sm" id="btn-copy-team-url">Copy Link</button>
+          </div>
+
+          <!-- Quick Bulk Add Teammates Drawer -->
+          <div id="bulk-add-drawer" class="bulk-add-drawer hidden">
+            <p class="small muted"><strong>⚡ Bulk Add Teammates:</strong> Paste employee names below (one per line, e.g. copied from Slack or Excel). The system will register each teammate and generate their private login code automatically!</p>
+            <textarea id="bulk-add-names" class="bulk-add-textarea" rows="4" placeholder="Arjun Sharma&#10;Sneha Rao&#10;Karthik Verma&#10;Ananya Iyer"></textarea>
+            <div class="bulk-add-btn-row">
+              <button type="button" id="btn-submit-bulk-add" class="btn btn-primary btn-sm">＋ Register All Teammates</button>
+              <button type="button" id="btn-cancel-bulk-add" class="btn btn-secondary btn-sm">Cancel</button>
+              <span id="bulk-add-status" class="bulk-add-status small muted"></span>
+            </div>
+          </div>
+        </div>
+
         <div class="metrics santa-metrics">
           <div><strong id="people-count">0</strong><span>Participants</span></div>
           <div><strong id="assignment-count">0</strong><span>Assigned Santas</span></div>
           <div><strong id="pending-count">0</strong><span>Awaiting assignment</span></div>
         </div>
+
         <form id="participant-form" class="form-row roster-add-form">
           <label class="grow">Employee name<input id="participant-name" placeholder="Name" maxlength="160" required/></label>
           <label>Desk (optional)<input id="participant-desk" placeholder="D-01" maxlength="30"/></label>
           <button class="primary" type="submit" aria-label="Add participant">＋ Add</button>
         </form>
-        <div class="table-wrap"><table><thead><tr><th>Employee</th><th>Desk</th><th>Code</th><th>WhatsApp</th><th>Manage</th></tr></thead><tbody id="participant-rows"></tbody></table></div>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Employee</th>
+                <th>Desk</th>
+                <th>1-Click Link</th>
+                <th>Code</th>
+                <th>Wishlist</th>
+                <th>WhatsApp</th>
+                <th>Manage</th>
+              </tr>
+            </thead>
+            <tbody id="participant-rows"></tbody>
+          </table>
+        </div>
+
         <div class="assignment-box">
           <div>
             <h3>🎁 Secret Santa allocation</h3>
@@ -112,7 +169,43 @@
           </div>
           <button class="primary" id="assign-btn" type="button">🎁 Assign Secret Santas</button>
         </div>
-        <details id="assignment-details" class="hidden"><summary>Organizer-only pairings</summary><div id="pair-list"></div></details>
+
+        <!-- Blind / Zero-Leak Privacy Sealing Card (Replaces exposed Santa->Child pair list) -->
+        <div id="blind-secrecy-card" class="blind-secrecy-card">
+          <div class="blind-card-header">
+            <div class="blind-card-badge">🔒 ZERO-LEAK PRIVACY GUARANTEE</div>
+            <span class="blind-status-pill" id="blind-loop-status">Waiting for Draw</span>
+          </div>
+          <div class="blind-card-body">
+            <h4>Cryptographically Sealed Secret Santa Loop</h4>
+            <p class="blind-desc">
+              All Santa–Child pairs are 100% sealed and private. The organizer console strictly hides who buys gifts for whom so organizers can participate without spoiling their Christmas mystery! Each person will discover their assigned child inside their private 3D office notebook.
+            </p>
+            <div class="blind-metrics-grid">
+              <div class="blind-metric-card">
+                <span class="metric-icon">🎁</span>
+                <div>
+                  <strong id="blind-pairs-count">0</strong>
+                  <span>Pairs Sealed</span>
+                </div>
+              </div>
+              <div class="blind-metric-card">
+                <span class="metric-icon">📝</span>
+                <div>
+                  <strong id="blind-wishlist-count">0 / 0</strong>
+                  <span>Wishlists Ready</span>
+                </div>
+              </div>
+              <div class="blind-metric-card">
+                <span class="metric-icon">🕹️</span>
+                <div>
+                  <strong id="blind-arcade-count">0 / 0</strong>
+                  <span>Arcade Quests Done</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
         <div class="admin-event-tools">
           <section class="admin-tool-card stage-tool-card">
             <p class="eyebrow">THE GRAND FINALE</p>

@@ -203,8 +203,10 @@ function eventUrl(){return location.origin+location.pathname+"?event="+encodeURI
 function shareText(p){
   const code=codes.get(p.id);
   if(!code)throw Error("Generate a new code before sharing.");
-  return "🎄 VCF Secret Santa 🎁\n\nYou've been invited to our Christmas office mystery!\n\n🎮 "+eventUrl()+"\n🔐 Your private code: "+code+
-    "\n\nKeep your code private. Share warm wishes and make your Secret Child feel special! 🎅";
+  const directLink=eventUrl()+"&code="+encodeURIComponent(code);
+  return "🎄 VCF Secret Santa 🎁\n\nYou've been invited to our Christmas office mystery!\n\n🎮 1-Click Join Link:\n"+directLink+
+    "\n\n🔐 Your private code: "+code+
+    "\n\n(Clicking the link logs you in automatically!) Share warm wishes and make your Secret Child feel special! 🎅";
 }
 
 // Recipient numbers exist only in this dialog; never in event/participant data.
@@ -346,6 +348,8 @@ async function openEvent(e){
   }
   $("workspace-title").textContent=event.title;
   $("workspace-slug").textContent=eventUrl();
+  const shareUrlInput=$("team-share-url-input");
+  if(shareUrlInput)shareUrlInput.value=eventUrl();
   const open=["draft","active"].includes(event.status);
   const pending=pendingPeople();
   $("workspace-state").textContent=!open?"CLOSED":assignments.length?"DRAWN · OPEN":"OPEN";
@@ -375,8 +379,8 @@ async function openEvent(e){
 function renderPeople(){
   const tbody=$("participant-rows");tbody.replaceChildren();
   if(!participants.length){
-    const tr=node("tr"),td=node("td","muted","Add a participant above.");
-    td.colSpan=5;tbody.append(tr);tr.append(td);return;
+    const tr=node("tr"),td=node("td","muted","Add a participant above or use Bulk Add Teammates.");
+    td.colSpan=7;tbody.append(tr);tr.append(td);return;
   }
   for(const p of participants){
     const tr=node("tr","participant-entry");
@@ -392,19 +396,43 @@ function renderPeople(){
     else if(pendingPeople().some(q=>q.id===p.id))
       name.append(node("small","participant-awaiting","Awaiting Santa draw"));
     tr.append(name);
+
     const desk=node("td","participant-desk-cell",p.desk_key||"—");
     desk.dataset.label="Desk";tr.append(desk);
+
     const code=codes.get(p.id);
+    const directLink=eventUrl()+(code?"&code="+encodeURIComponent(code):"");
+
+    const directCell=node("td","participant-direct-cell");
+    directCell.dataset.label="1-Click Link";
+    const copyDirectBtn=button("🔗 Copy",async()=>{
+      const ok=await copyTextWithFallback(directLink);
+      if(ok)toast(`📋 1-Click link copied for ${p.display_name}!`);
+    },"small-outline roster-icon-button");
+    copyDirectBtn.title=`Copy 1-Click login link for ${p.display_name}`;
+    copyDirectBtn.disabled=!code;
+    directCell.append(copyDirectBtn);
+    tr.append(directCell);
+
     const codeCell=node("td","participant-code-cell");codeCell.dataset.label="Code";
     if(code)codeCell.append(node("code","organizer-code",code));
     else codeCell.append(node("small","code-not-recoverable","Reissue to view"));
     tr.append(codeCell);
-    const inviteCell=node("td","participant-invite-cell");inviteCell.dataset.label="Share";
+
+    const wishlistCell=node("td","participant-wishlist-cell");
+    wishlistCell.dataset.label="Wishlist";
+    const hasWishlist=Boolean(p.wishlist&&p.wishlist.length>0);
+    const wishBadge=node("span",hasWishlist?"wishlist-badge ready":"wishlist-badge pending",hasWishlist?`🎁 Ready (${p.wishlist.length})`:"⏳ Pending");
+    wishlistCell.append(wishBadge);
+    tr.append(wishlistCell);
+
+    const inviteCell=node("td","participant-invite-cell");inviteCell.dataset.label="WhatsApp";
     const wa=button("◉ WhatsApp",()=>openWhatsAppInvite(p),"small-outline roster-whatsapp");
     wa.title="Enter a phone number and share the invitation for "+p.display_name;
     wa.setAttribute("aria-label",wa.title);
     wa.disabled=!code;
     inviteCell.append(wa);tr.append(inviteCell);
+
     const control=node("td","participant-manage-cell");control.dataset.label="Actions";
     const edit=button("✎",()=>{void openAdminCharacterEditor(p);},"small-outline roster-icon-button");
     edit.title="Edit "+p.display_name+" and style character";
@@ -433,14 +461,37 @@ function renderPeople(){
     tbody.append(tr);
   }
 }
+
+// 100% Blind / Zero-Leak Privacy Mode: NEVER expose who is paired with whom!
 function renderPairs(){
-  const list=$("pair-list");list.replaceChildren();
-  $("assignment-details").classList.toggle("hidden",!assignments.length);
-  assignments.forEach(a=>list.append(node("div","",namesById(a.santa_id)+" → "+namesById(a.child_id))));
+  const activeCount=participants.filter(p=>p.is_active).length;
+  const pairsCount=$("blind-pairs-count");
+  if(pairsCount)pairsCount.textContent=String(assignments.length);
+
+  const loopStatus=$("blind-loop-status");
+  if(loopStatus){
+    if(assignments.length>0&&assignments.length>=activeCount&&activeCount>=2){
+      loopStatus.textContent="100% Sealed & Private 🔒";
+      loopStatus.className="blind-status-pill status-sealed";
+    }else if(assignments.length>0){
+      loopStatus.textContent="Partially Sealed 🔒";
+      loopStatus.className="blind-status-pill status-partial";
+    }else{
+      loopStatus.textContent="Waiting for Draw ⏳";
+      loopStatus.className="blind-status-pill status-pending";
+    }
+  }
+
+  const wishlistsReady=participants.filter(p=>p.is_active&&p.wishlist&&p.wishlist.length>0).length;
+  const wishCountEl=$("blind-wishlist-count");
+  if(wishCountEl)wishCountEl.textContent=`${wishlistsReady} / ${activeCount}`;
+
+  const arcadeEl=$("blind-arcade-count");
+  if(arcadeEl)arcadeEl.textContent=`${assignments.length} Active`;
+
   $("reassign-all-btn").disabled=!["draft","active"].includes(event?.status)||!assignments.length;
   $("ceremony-launch").disabled=!participants.some(p=>p.is_active);
 }
-
 function ceremonyLine(id,content,emptyText){
   const parent=$(id);parent.replaceChildren();
   if(!content.length){
@@ -504,6 +555,8 @@ async function showCeremonyMember(index){
 }
 async function startCeremony(){
   if(!event)return;
+  const proceed=confirm("⚠️ Live Party Stage Show Warning:\n\nThe Christmas Stage Show is designed for your live team party on a projector or screen. It will bring colleagues to the spotlight and reveal who their Secret Santa is.\n\nOnly launch this when you are presenting live to the whole team!\n\nOpen Stage Show now?");
+  if(!proceed)return;
   const response=await api("ceremony_roster",{event_id:event.id});
   ceremonyPeople=response.people||[];
   if(!ceremonyPeople.length)throw Error("Add at least one participant before opening the stage.");
@@ -2290,8 +2343,98 @@ $("demo-entry-btn")?.addEventListener("click",()=>{
   loadDemoPlayer();
 });
 
+
+// Team Invitation & Share Hub Event Listeners
+$("btn-copy-team-url")?.addEventListener("click",async()=>{
+  const url=eventUrl();
+  const ok=await copyTextWithFallback(url);
+  if(ok)toast("📋 Team event link copied to clipboard!");
+});
+
+$("btn-copy-team-announcement")?.addEventListener("click",async()=>{
+  const url=eventUrl();
+  const title=event?.title||"Secret Santa";
+  const announcement=`🎄 *${title} · Team Secret Santa 2027* 🎅\n\nHey Team! Our 3D Christmas office space is officially open!\n\n✨ Explore our virtual office in 3D\n🕹️ Race in the Retro Arcade Lounge\n📝 Fill out your ₹${event?.budget||500} gift wishlist\n\n👉 Join our Team Space here (1-Click):\n${url}\n\nSee you in the holiday break-room! 🎁`;
+  const ok=await copyTextWithFallback(announcement);
+  if(ok)toast("📢 Team Announcement copied! Ready to paste into Slack or WhatsApp.");
+});
+
+$("btn-toggle-bulk-add")?.addEventListener("click",()=>{
+  const drawer=$("bulk-add-drawer");
+  drawer?.classList.toggle("hidden");
+  if(!drawer?.classList.contains("hidden")){
+    $("bulk-add-names")?.focus();
+  }
+});
+
+$("btn-cancel-bulk-add")?.addEventListener("click",()=>{
+  $("bulk-add-drawer")?.classList.add("hidden");
+  if($("bulk-add-names"))$("bulk-add-names").value="";
+  if($("bulk-add-status"))$("bulk-add-status").textContent="";
+});
+
+$("btn-submit-bulk-add")?.addEventListener("click",run(async()=>{
+  if(!event)return;
+  const raw=$("bulk-add-names")?.value||"";
+  const names=raw.split(/[\n,]/).map(s=>s.trim()).filter(Boolean);
+  if(!names.length){
+    toast("Please enter at least one employee name.",true);
+    return;
+  }
+  const statusEl=$("bulk-add-status");
+  let added=0;
+  for(let i=0;i<names.length;i++){
+    const name=names[i];
+    if(statusEl)statusEl.textContent=`Adding ${i+1} of ${names.length}: ${name}…`;
+    try{
+      await api("add_participant",{
+        event_id:event.id,
+        display_name:name,
+        desk_key:""
+      });
+      added++;
+    }catch(e){
+      console.warn("Bulk add error for",name,e);
+    }
+  }
+  $("bulk-add-drawer")?.classList.add("hidden");
+  if($("bulk-add-names"))$("bulk-add-names").value="";
+  if(statusEl)statusEl.textContent="";
+  await openEvent(event);
+  toast(`🎉 Successfully registered ${added} teammates!`);
+}));
+
+$("btn-copy-all-direct-links")?.addEventListener("click",async()=>{
+  if(!event||!participants.length){
+    toast("No participants registered yet.",true);
+    return;
+  }
+  const base=eventUrl();
+  const lines=participants
+    .filter(p=>p.is_active)
+    .map(p=>{
+      const c=codes.get(p.id);
+      return `• ${p.display_name}: ${base}${c?"&code="+c:""}`;
+    });
+  const text=`🎄 *${event.title} · Teammate Direct Login Links* 🎁\n\n`+lines.join("\n");
+  const ok=await copyTextWithFallback(text);
+  if(ok)toast("📋 All 1-click participant links copied to clipboard!");
+});
+
 async function init(){
   snowfall();
+  // 1-Click Direct Link Auto-Login (?event=slug&code=1234)
+  const directCode=PARAMS.get("code");
+  if(EVENT_SLUG&&directCode&&/^[0-9]{4}$/.test(directCode)){
+    const codeInput=$("entry-code");
+    if(codeInput){
+      codeInput.value=directCode;
+      setTimeout(()=>{
+        $("entry-form")?.dispatchEvent(new Event("submit",{cancelable:true}));
+      },250);
+    }
+  }
+
   $("admin").classList.toggle("hidden",!ADMIN);
   $("welcome").classList.toggle("hidden",ADMIN);
   // Keep the participant landing page focused on the invitation code.

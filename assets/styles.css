@@ -4877,3 +4877,211 @@ body.office-playing #player-menu textarea{
   transform:scale(1.04);
   box-shadow:0 4px 12px rgba(8,145,178,0.35);
 }
+
+/* ==========================================================================
+   Zero-Leak Blind Secrecy & Multi-Team Share Hub Styles
+   ========================================================================== */
+
+.team-share-hub {
+  background: linear-gradient(135deg, rgba(17, 24, 39, 0.85), rgba(30, 41, 59, 0.75));
+  border: 1px solid rgba(79, 209, 197, 0.35);
+  border-radius: 12px;
+  padding: 16px 20px;
+  margin: 16px 0;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+}
+
+.team-share-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.team-share-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.team-share-title .share-icon {
+  font-size: 24px;
+}
+
+.team-share-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.team-share-url-bar {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+  align-items: center;
+}
+
+.team-share-url-input {
+  flex: 1;
+  background: rgba(0, 0, 0, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #4fd1c5;
+  font-family: monospace;
+  font-size: 13px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  outline: none;
+}
+
+.bulk-add-drawer {
+  margin-top: 14px;
+  padding: 14px;
+  background: rgba(15, 23, 42, 0.95);
+  border: 1px dashed rgba(246, 173, 85, 0.45);
+  border-radius: 8px;
+}
+
+.bulk-add-textarea {
+  width: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #f7fafc;
+  padding: 10px;
+  border-radius: 6px;
+  font-family: monospace;
+  font-size: 13px;
+  line-height: 1.5;
+  resize: vertical;
+  margin-top: 8px;
+  box-sizing: border-box;
+}
+
+.bulk-add-btn-row {
+  display: flex;
+  gap: 10px;
+  margin-top: 10px;
+  align-items: center;
+}
+
+.blind-secrecy-card {
+  margin: 20px 0;
+  padding: 20px;
+  background: linear-gradient(135deg, rgba(20, 36, 30, 0.85), rgba(15, 23, 42, 0.95));
+  border: 1px solid rgba(72, 187, 120, 0.4);
+  border-radius: 14px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+}
+
+.blind-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.blind-card-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(72, 187, 120, 0.18);
+  border: 1px solid rgba(72, 187, 120, 0.5);
+  color: #68d391;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 20px;
+  letter-spacing: 0.5px;
+}
+
+.blind-status-pill {
+  font-size: 12px;
+  font-weight: 600;
+  padding: 4px 12px;
+  border-radius: 12px;
+}
+
+.blind-status-pill.status-sealed {
+  background: rgba(72, 187, 120, 0.25);
+  color: #48bb78;
+  border: 1px solid rgba(72, 187, 120, 0.5);
+}
+
+.blind-status-pill.status-partial {
+  background: rgba(236, 201, 75, 0.25);
+  color: #ecc94b;
+  border: 1px solid rgba(236, 201, 75, 0.5);
+}
+
+.blind-status-pill.status-pending {
+  background: rgba(160, 174, 192, 0.2);
+  color: #cbd5e0;
+  border: 1px solid rgba(160, 174, 192, 0.4);
+}
+
+.blind-desc {
+  color: #a0aec0;
+  font-size: 13px;
+  line-height: 1.5;
+  margin: 6px 0 16px;
+}
+
+.blind-metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+}
+
+.blind-metric-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+}
+
+.blind-metric-card .metric-icon {
+  font-size: 22px;
+}
+
+.blind-metric-card strong {
+  font-size: 16px;
+  color: #f7fafc;
+  display: block;
+}
+
+.blind-metric-card span {
+  font-size: 11px;
+  color: #a0aec0;
+}
+
+.wishlist-badge {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 12px;
+  white-space: nowrap;
+}
+
+.wishlist-badge.ready {
+  background: rgba(72, 187, 120, 0.2);
+  color: #68d391;
+  border: 1px solid rgba(72, 187, 120, 0.4);
+}
+
+.wishlist-badge.pending {
+  background: rgba(160, 174, 192, 0.15);
+  color: #a0aec0;
+  border: 1px solid rgba(160, 174, 192, 0.3);
+}
+
+.participant-direct-cell button {
+  font-size: 11px;
+  padding: 3px 8px;
+  white-space: nowrap;
+}
