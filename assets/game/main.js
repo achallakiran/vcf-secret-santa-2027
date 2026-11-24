@@ -1415,30 +1415,44 @@ export function mountOffice(host,profile,notice=()=>{}){
               const subtitle=document.getElementById("desk-card-subtitle");
               const actionBtn=document.getElementById("desk-card-action");
 
+              const photoEl=document.getElementById("desk-card-photo");
+
               if(closestDesk.isMe){
                 deskCard.classList.add("desk-card-me");
+                const storedPhoto=localStorage.getItem("vcf_ss_avatar_photo");
+                if(photoEl){
+                  if(storedPhoto){
+                    photoEl.src=storedPhoto;
+                    photoEl.classList.remove("hidden");
+                  }else{
+                    photoEl.classList.add("hidden");
+                  }
+                }
                 if(badge)badge.textContent="⭐ YOUR DESK";
                 if(icon)icon.textContent=closestDesk.clueMeta.icon;
                 if(title)title.textContent=closestDesk.ownerName+"'s Workspace";
                 if(subtitle)subtitle.textContent=`${closestDesk.code} · Clue Prop: ${closestDesk.clueMeta.icon} ${closestDesk.clueMeta.title}`;
                 const custBtn=document.getElementById("desk-card-customize");
                 if(custBtn)custBtn.classList.remove("hidden");
-              }else if(closestDesk.ownerName){
-                deskCard.classList.remove("desk-card-me");
-                if(badge)badge.textContent="💼 COLLEAGUE DESK";
-                if(icon)icon.textContent=closestDesk.clueMeta.icon;
-                if(title)title.textContent=closestDesk.ownerName+"'s Desk";
-                if(subtitle)subtitle.textContent=`${closestDesk.code} · Clue Prop: ${closestDesk.clueMeta.icon} ${closestDesk.clueMeta.title}`;
-                const custBtn=document.getElementById("desk-card-customize");
-                if(custBtn)custBtn.classList.add("hidden");
               }else{
-                deskCard.classList.remove("desk-card-me");
-                if(badge)badge.textContent="🪑 OPEN DESK";
-                if(icon)icon.textContent="🪑";
-                if(title)title.textContent=closestDesk.code+" · Open Desk";
-                if(subtitle)subtitle.textContent="Unassigned Hot Desk";
-                const custBtn=document.getElementById("desk-card-customize");
-                if(custBtn)custBtn.classList.add("hidden");
+                if(photoEl)photoEl.classList.add("hidden");
+                if(closestDesk.ownerName){
+                  deskCard.classList.remove("desk-card-me");
+                  if(badge)badge.textContent="💼 COLLEAGUE DESK";
+                  if(icon)icon.textContent=closestDesk.clueMeta.icon;
+                  if(title)title.textContent=closestDesk.ownerName+"'s Desk";
+                  if(subtitle)subtitle.textContent=`${closestDesk.code} · Clue Prop: ${closestDesk.clueMeta.icon} ${closestDesk.clueMeta.title}`;
+                  const custBtn=document.getElementById("desk-card-customize");
+                  if(custBtn)custBtn.classList.add("hidden");
+                }else{
+                  deskCard.classList.remove("desk-card-me");
+                  if(badge)badge.textContent="🪑 OPEN DESK";
+                  if(icon)icon.textContent="🪑";
+                  if(title)title.textContent=closestDesk.code+" · Open Desk";
+                  if(subtitle)subtitle.textContent="Unassigned Hot Desk";
+                  const custBtn=document.getElementById("desk-card-customize");
+                  if(custBtn)custBtn.classList.add("hidden");
+                }
               }
 
               if(actionBtn){

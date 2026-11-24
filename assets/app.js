@@ -1043,13 +1043,30 @@ function applyMatchedPhoto(img,rawDataUrl){
   const current=readAvatarEditor();
   if($("avatar-facePhoto"))$("avatar-facePhoto").value=faceDataUrl;
 
-  setAvatarEditor({
+  const updateSettings={
     ...current,
     facePhoto:faceDataUrl,
     skin:result?result.skin:current.skin,
-    glassesStyle:(result?.glasses&&current.glassesStyle==="none")?result.glassesStyle:current.glassesStyle,
-    glasses:Boolean(result?.glasses||current.glasses)
-  });
+    hair:result?result.hair:current.hair
+  };
+
+  // Sync beard / stubble from photo if detected
+  if(result?.facialHair&&result.facialHair!=="none"){
+    updateSettings.facialHair=result.facialHair;
+  }
+
+  // Sync glasses from photo if detected
+  if(result?.glasses){
+    updateSettings.glasses=true;
+    updateSettings.glassesStyle=result.glassesStyle||"rectangle";
+  }
+
+  // Sync clothing color if detected
+  if(result?.color!==undefined&&result.color>=0){
+    updateSettings.color=result.color;
+  }
+
+  setAvatarEditor(updateSettings);
   previewAvatarNow();
 
   try{localStorage.setItem("vcf_ss_avatar_photo",faceDataUrl);}catch{}
@@ -1058,12 +1075,18 @@ function applyMatchedPhoto(img,rawDataUrl){
   if(chipsBox){
     chipsBox.innerHTML="";
     const chips=[
-      {label:"👤 Face Photo Applied to 3D Avatar",color:"#ecc888"},
-      {label:`Skin: ${SKIN_NAMES[result?.skin??current.skin]||"Tone"}`,color:hexToCss(result?.skinHex??SKIN_COLORS[current.skin]??0xdec1a2)},
-      {label:`Gender: ${current.gender==="female"?"Female (Preserved)":"Male (Preserved)"}`},
-      {label:`Outfit: ${current.outfit} (Preserved)`}
+      {label:"📷 Desk Photo Badge Active",color:"#ecc888"},
+      {label:`Skin: ${SKIN_NAMES[updateSettings.skin]||"Tone"}`,color:hexToCss(result?.skinHex??SKIN_COLORS[updateSettings.skin]??0xdec1a2)},
+      {label:`Hair: ${HAIR_NAMES[updateSettings.hair]||"Tone"}`,color:hexToCss(result?.hairHex??HAIR_COLORS[updateSettings.hair]??0x1f1a17)}
     ];
-    if(result?.glasses)chips.push({label:"👓 Spectacles"});
+    if(updateSettings.facialHair!=="none"){
+      chips.push({label:`🧔 ${result?.facialHairLabel||updateSettings.facialHair}`});
+    }
+    if(updateSettings.glasses){
+      chips.push({label:"👓 Spectacles"});
+    }
+    chips.push({label:`Gender: ${current.gender==="female"?"Female (Preserved)":"Male (Preserved)"}`});
+    chips.push({label:`Outfit: ${current.outfit} (Preserved)`});
 
     for(const chip of chips){
       const el=document.createElement("span");
@@ -1081,9 +1104,9 @@ function applyMatchedPhoto(img,rawDataUrl){
     }
   }
 
-  if(summaryEl)summaryEl.textContent="✨ Face photo mapped onto 3D avatar head! Your chosen gender and outfit are kept.";
-  if(typeof officeToast==="function")officeToast("✨ Face photo mapped to 3D avatar!");
-  else toast("✨ Face photo mapped to 3D avatar!");
+  if(summaryEl)summaryEl.textContent="✨ Automatically tuned your 3D voxel avatar (skin, hair, beard & glasses)! Real photo displayed on your Desk Nameplate.";
+  if(typeof officeToast==="function")officeToast("✨ Voxel avatar & desk photo badge updated!");
+  else toast("✨ Voxel avatar & desk photo badge updated!");
 }
 
 function setupPhotoAvatarMatcher(){
@@ -1101,7 +1124,7 @@ function setupPhotoAvatarMatcher(){
     if(existingPhoto&&thumb&&previewBox){
       thumb.src=existingPhoto;
       previewBox.classList.remove("hidden");
-      if(summaryEl)summaryEl.textContent="✨ Face photo active on 3D avatar. Click ✕ to revert to voxel face.";
+      if(summaryEl)summaryEl.textContent="✨ Photo badge active on your desk nameplate. Features synced to your 3D avatar.";
     }
   }catch{}
 
