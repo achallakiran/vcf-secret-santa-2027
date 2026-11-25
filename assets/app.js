@@ -716,7 +716,7 @@ async function enterOffice(info){
   }
   $("office-loading").classList.remove("hidden");
   officeLoading=(async()=>{
-    const module=await import("./game/main.js?v=arcade-overhaul-v5");
+    const module=await import("./game/main.js?v=arcade-frontview-v6");
     officeRuntime=module.mountOffice($("office-canvas"),info,officeToast);
     officeRuntime.setCamera("wide");
     officeKey=identity;
