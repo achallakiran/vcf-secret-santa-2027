@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <title>Chimney Gift Drop · Holiday Arcade</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
+    body, html {
+      width: 100%; height: 100%; overflow: hidden;
+      background: radial-gradient(circle at 50% 30%, #0d1b2a, #050811);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      color: #fff;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+    }
+    #game-container {
+      position: relative;
+      width: 100%;
+      max-width: 540px;
+      height: 100%;
+      max-height: 720px;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.8), inset 0 0 0 2px #2d4a3e;
+      border-radius: 14px;
+      overflow: hidden;
+      background: #09131a;
+    }
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 16px;
+      background: rgba(13, 27, 42, 0.9);
+      border-bottom: 2px solid #234d3b;
+      font-size: 13px;
+      font-weight: 700;
+      z-index: 10;
+    }
+    .hud-pill {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(0, 0, 0, 0.4);
+      padding: 4px 10px;
+      border-radius: 20px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    .score-val { color: #ffd166; font-size: 16px; font-weight: 800; font-family: monospace; }
+    .goal-val { color: #06d6a0; font-weight: 800; }
+    .lives-val { color: #ef476f; font-size: 16px; letter-spacing: 2px; }
+    canvas {
+      flex: 1;
+      width: 100%;
+      height: 100%;
+      display: block;
+      cursor: crosshair;
+      touch-action: none;
+    }
+    /* Touch controls on mobile */
+    .touch-controls {
+      display: none;
+      position: absolute;
+      bottom: 12px;
+      left: 0; right: 0;
+      padding: 0 20px;
+      justify-content: space-between;
+      pointer-events: none;
+      z-index: 10;
+    }
+    .touch-btn {
+      pointer-events: auto;
+      width: 68px;
+      height: 56px;
+      background: rgba(16, 185, 129, 0.3);
+      border: 2px solid rgba(52, 211, 153, 0.6);
+      border-radius: 12px;
+      color: #fff;
+      font-size: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      backdrop-filter: blur(4px);
+    }
+    .touch-btn:active { background: rgba(16, 185, 129, 0.6); transform: scale(0.95); }
+    @media (pointer: coarse) {
+      .touch-controls { display: flex; }
+    }
+    /* Overlay screens (Start / GameOver / Victory) */
+    .overlay {
+      position: absolute;
+      inset: 0;
+      background: rgba(5, 12, 18, 0.88);
+      backdrop-filter: blur(8px);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      text-align: center;
+      z-index: 20;
+    }
+    .overlay.hidden { display: none; }
+    .overlay h2 { font-size: 26px; color: #ffd166; margin-bottom: 8px; text-shadow: 0 0 12px rgba(255,209,102,0.4); }
+    .overlay p { font-size: 13px; color: #cbd5e1; margin-bottom: 18px; line-height: 1.5; max-width: 320px; }
+    .btn-start {
+      background: linear-gradient(135deg, #10b981, #059669);
+      border: 1px solid #34d399;
+      color: #fff;
+      font-size: 15px;
+      font-weight: 800;
+      padding: 12px 28px;
+      border-radius: 25px;
+      cursor: pointer;
+      box-shadow: 0 4px 15px rgba(16, 185, 129, 0.4);
+      transition: transform 0.15s, box-shadow 0.15s;
+    }
+    .btn-start:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(16, 185, 129, 0.6); }
+    .badge-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(255, 209, 102, 0.15);
+      border: 1px solid rgba(255, 209, 102, 0.4);
+      color: #ffd166;
+      padding: 5px 12px;
+      border-radius: 14px;
+      font-size: 12px;
+      margin-bottom: 16px;
+    }
+  </style>
+</head>
+<body>
+  <div id="game-container">
+    <header>
+      <div class="hud-pill">
+        <span>⭐</span>
+        <span class="score-val" id="score">0</span>
+      </div>
+      <div class="hud-pill">
+        <span>🎁 Goal:</span>
+        <span class="goal-val" id="goal-count">0/20</span>
+      </div>
+      <div class="hud-pill">
+        <span class="lives-val" id="lives">❤️❤️❤️</span>
+      </div>
+    </header>
+
+    <canvas id="canvas"></canvas>
+
+    <!-- Mobile Touch Controls -->
+    <div class="touch-controls">
+      <button class="touch-btn" id="btn-left">◀</button>
+      <button class="touch-btn" id="btn-right">▶</button>
+    </div>
+
+    <!-- Start Overlay -->
+    <div class="overlay" id="start-overlay">
+      <h2>🎁 Chimney Gift Drop</h2>
+      <div class="badge-chip">⚡ Auto-Verified Secret Santa Challenge</div>
+      <p>Santa's sleigh is soaring overhead! Steer your festive chimney to catch <strong>20 falling gifts</strong>. Avoid icy snowballs and lumps of coal!</p>
+      <button class="btn-start" id="btn-play">▶ Start Arcade Drop</button>
+    </div>
+
+    <!-- Victory Overlay -->
+    <div class="overlay hidden" id="victory-overlay">
+      <h2>🎉 CHALLENGE COMPLETED!</h2>
+      <div class="badge-chip" style="background:rgba(16,185,129,0.2);border-color:#34d399;color:#a7f3d0;">
+        ✓ Secret Santa Task Verified!
+      </div>
+      <p id="victory-msg">You caught 20 holiday gifts! Your progress has been automatically synced to the office server.</p>
+      <button class="btn-start" id="btn-replay-vic">Play Again ↻</button>
+    </div>
+
+    <!-- Game Over Overlay -->
+    <div class="overlay hidden" id="gameover-overlay">
+      <h2 style="color:#ef476f;">❄️ Out of Lives!</h2>
+      <p id="gameover-msg">You caught 0 gifts. Dust off the snow and try again!</p>
+      <button class="btn-start" id="btn-retry">Try Again ↻</button>
+    </div>
+  </div>
+
+  <script>
+    // Web Audio Sound Synthesizer (Zero external dependencies)
+    let audioCtx = null;
+    function initAudio() {
+      if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      }
+      if (audioCtx.state === "suspended") audioCtx.resume();
+    }
+    function playChime(freq = 587.33, duration = 0.15, type = "triangle") {
+      if (!audioCtx) return;
+      try {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+        gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + duration);
+      } catch(e){}
+    }
+    function playCatchSound() {
+      playChime(659.25, 0.12, "sine");
+      setTimeout(() => playChime(880.00, 0.18, "sine"), 60);
+    }
+    function playHazardSound() {
+      playChime(196.00, 0.25, "sawtooth");
+    }
+    function playVictorySound() {
+      const notes = [523.25, 659.25, 783.99, 1046.50];
+      notes.forEach((f, i) => setTimeout(() => playChime(f, 0.3, "triangle"), i * 120));
+    }
+
+    // Canvas Setup
+    const canvas = document.getElementById("canvas");
+    const ctx = canvas.getContext("2d");
+    const scoreEl = document.getElementById("score");
+    const goalEl = document.getElementById("goal-count");
+    const livesEl = document.getElementById("lives");
+
+    let width = 0, height = 0;
+    function resize() {
+      width = canvas.parentElement.clientWidth;
+      height = canvas.parentElement.clientHeight - 50;
+      canvas.width = width * window.devicePixelRatio;
+      canvas.height = height * window.devicePixelRatio;
+      ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+    }
+    window.addEventListener("resize", resize);
+
+    // Game State
+    let running = false;
+    let score = 0;
+    let giftsCaught = 0;
+    const TARGET_GIFTS = 20;
+    let lives = 3;
+    let hasSentTelemetry = false;
+
+    // Player Chimney Basket
+    const basket = {
+      x: 180,
+      y: 0,
+      width: 76,
+      height: 48,
+      speed: 8,
+      targetX: 180
+    };
+
+    // Falling Objects
+    const ITEMS = [
+      { type: "gift_red", emoji: "🎁", points: 50, isGift: true, speed: 2.2 },
+      { type: "gift_gold", emoji: "📦", points: 60, isGift: true, speed: 2.5 },
+      { type: "candy", emoji: "🍬", points: 30, isGift: true, speed: 2.8 },
+      { type: "cookie", emoji: "🍪", points: 40, isGift: true, speed: 2.4 },
+      { type: "star", emoji: "⭐", points: 100, isGift: true, speed: 3.2 },
+      { type: "coal", emoji: "🪨", points: -30, isGift: false, speed: 2.6 },
+      { type: "snowball", emoji: "❄️", points: -20, isGift: false, speed: 3.0 }
+    ];
+
+    let falling = [];
+    let particles = [];
+    let spawnTimer = 0;
+    let snowflakes = [];
+
+    // Background Snowflakes
+    for (let i = 0; i < 40; i++) {
+      snowflakes.push({
+        x: Math.random() * 500,
+        y: Math.random() * 700,
+        r: Math.random() * 2 + 1,
+        speed: Math.random() * 1.2 + 0.6
+      });
+    }
+
+    // Input Handling
+    const keys = {};
+    window.addEventListener("keydown", e => {
+      keys[e.key] = true;
+      if (["ArrowLeft", "ArrowRight", "a", "d", " "].includes(e.key)) e.preventDefault();
+    });
+    window.addEventListener("keyup", e => { keys[e.key] = false; });
+
+    // Touch & Mouse Dragging
+    function handlePointer(clientX) {
+      const rect = canvas.getBoundingClientRect();
+      const posX = clientX - rect.left;
+      basket.targetX = Math.max(basket.width / 2, Math.min(width - basket.width / 2, posX));
+    }
+    canvas.addEventListener("pointerdown", e => { handlePointer(e.clientX); });
+    canvas.addEventListener("pointermove", e => { if (e.buttons > 0) handlePointer(e.clientX); });
+    canvas.addEventListener("touchmove", e => {
+      if (e.touches.length > 0) handlePointer(e.touches[0].clientX);
+    }, { passive: true });
+
+    // Mobile Onscreen Buttons
+    let leftHolding = false, rightHolding = false;
+    const btnLeft = document.getElementById("btn-left");
+    const btnRight = document.getElementById("btn-right");
+    btnLeft.addEventListener("pointerdown", () => { leftHolding = true; });
+    btnLeft.addEventListener("pointerup", () => { leftHolding = false; });
+    btnLeft.addEventListener("pointercancel", () => { leftHolding = false; });
+    btnRight.addEventListener("pointerdown", () => { rightHolding = true; });
+    btnRight.addEventListener("pointerup", () => { rightHolding = false; });
+    btnRight.addEventListener("pointercancel", () => { rightHolding = false; });
+
+    function spawnItem() {
+      const rand = Math.random();
+      // 78% gifts, 22% hazards
+      const pool = rand > 0.22 
+        ? ITEMS.filter(i => i.isGift)
+        : ITEMS.filter(i => !i.isGift);
+      const chosen = pool[Math.floor(Math.random() * pool.length)];
+
+      falling.push({
+        ...chosen,
+        x: Math.random() * (width - 60) + 30,
+        y: -30,
+        size: 32,
+        rot: 0,
+        rotSpeed: (Math.random() - 0.5) * 0.05
+      });
+    }
+
+    function addParticles(x, y, color = "#ffd166", count = 10) {
+      for (let i = 0; i < count; i++) {
+        particles.push({
+          x, y,
+          vx: (Math.random() - 0.5) * 5,
+          vy: (Math.random() - 0.5) * 5 - 2,
+          color,
+          alpha: 1,
+          size: Math.random() * 4 + 2
+        });
+      }
+    }
+
+    function emitTelemetryVictory() {
+      if (hasSentTelemetry) return;
+      hasSentTelemetry = true;
+      try {
+        const payload = {
+          type: "ARCADE_TASK_EVENT",
+          gameId: "chimney-drop",
+          gameTitle: "Chimney Gift Drop",
+          metric: "score",
+          value: score,
+          giftsCaught: giftsCaught,
+          targetReached: true,
+          completed: true,
+          summary: `Caught ${giftsCaught} gifts with a score of ${score} pts!`
+        };
+        window.parent.postMessage(payload, "*");
+        console.log("Chimney Drop Telemetry emitted:", payload);
+      } catch(e){}
+    }
+
+    function update() {
+      if (!running) return;
+
+      // Update Basket Position
+      if (keys["ArrowLeft"] || keys["a"] || leftHolding) {
+        basket.targetX -= basket.speed;
+      }
+      if (keys["ArrowRight"] || keys["d"] || rightHolding) {
+        basket.targetX += basket.speed;
+      }
+      basket.targetX = Math.max(basket.width / 2, Math.min(width - basket.width / 2, basket.targetX));
+      // Smooth lerp
+      basket.x += (basket.targetX - basket.x) * 0.35;
+      basket.y = height - basket.height - 18;
+
+      // Spawning
+      spawnTimer++;
+      if (spawnTimer > 45) {
+        spawnItem();
+        spawnTimer = 0;
+      }
+
+      // Update Falling Objects
+      for (let i = falling.length - 1; i >= 0; i--) {
+        const item = falling[i];
+        item.y += item.speed;
+        item.rot += item.rotSpeed;
+
+        // Collision with Basket
+        const inX = item.x > basket.x - basket.width / 2 - 10 && item.x < basket.x + basket.width / 2 + 10;
+        const inY = item.y > basket.y - 10 && item.y < basket.y + basket.height / 2;
+
+        if (inX && inY) {
+          if (item.isGift) {
+            score += item.points;
+            giftsCaught++;
+            playCatchSound();
+            addParticles(item.x, item.y, "#ffd166", 12);
+          } else {
+            lives--;
+            playHazardSound();
+            addParticles(item.x, item.y, "#ef476f", 14);
+            updateHUD();
+            if (lives <= 0) {
+              gameOver();
+              return;
+            }
+          }
+          falling.splice(i, 1);
+          updateHUD();
+
+          // Check Victory Condition
+          if (giftsCaught >= TARGET_GIFTS) {
+            victory();
+            return;
+          }
+          continue;
+        }
+
+        // Missed item off-screen
+        if (item.y > height + 40) {
+          falling.splice(i, 1);
+        }
+      }
+
+      // Update Particles
+      for (let i = particles.length - 1; i >= 0; i--) {
+        const p = particles[i];
+        p.x += p.vx;
+        p.y += p.vy;
+        p.alpha -= 0.03;
+        if (p.alpha <= 0) particles.splice(i, 1);
+      }
+
+      // Update Snowflakes
+      for (const s of snowflakes) {
+        s.y += s.speed;
+        if (s.y > height) s.y = -10;
+      }
+    }
+
+    function draw() {
+      ctx.clearRect(0, 0, width, height);
+
+      // Night Sky Gradient
+      const grad = ctx.createLinearGradient(0, 0, 0, height);
+      grad.addColorStop(0, "#081b29");
+      grad.addColorStop(0.7, "#0c2c3e");
+      grad.addColorStop(1, "#153d47");
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, width, height);
+
+      // Draw Snowflakes
+      ctx.fillStyle = "rgba(255, 255, 255, 0.45)";
+      for (const s of snowflakes) {
+        ctx.beginPath();
+        ctx.arc(s.x % width, s.y, s.r, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      // Draw Distant Roof Snow Line
+      ctx.fillStyle = "#1e4d58";
+      ctx.fillRect(0, height - 12, width, 12);
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, height - 14, width, 3);
+
+      // Draw Basket / Chimney
+      const bx = basket.x - basket.width / 2;
+      const by = basket.y;
+
+      // Chimney Brick Body
+      ctx.fillStyle = "#b93c3c";
+      ctx.beginPath();
+      ctx.roundRect(bx, by, basket.width, basket.height, 6);
+      ctx.fill();
+
+      // Brick pattern accents
+      ctx.strokeStyle = "#802424";
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      // Chimney Snow Trim Rim
+      ctx.fillStyle = "#f8f9fa";
+      ctx.beginPath();
+      ctx.roundRect(bx - 4, by - 6, basket.width + 8, 12, 6);
+      ctx.fill();
+
+      // Festive Holly Berries
+      ctx.font = "14px sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText("🌿🍒", basket.x, by + basket.height - 10);
+
+      // Draw Falling Items
+      for (const item of falling) {
+        ctx.save();
+        ctx.translate(item.x, item.y);
+        ctx.rotate(item.rot);
+        ctx.font = "28px sans-serif";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(item.emoji, 0, 0);
+        ctx.restore();
+      }
+
+      // Draw Particles
+      for (const p of particles) {
+        ctx.save();
+        ctx.globalAlpha = p.alpha;
+        ctx.fillStyle = p.color;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+    }
+
+    function gameLoop() {
+      update();
+      draw();
+      requestAnimationFrame(gameLoop);
+    }
+
+    function updateHUD() {
+      scoreEl.textContent = score;
+      goalEl.textContent = `${giftsCaught}/${TARGET_GIFTS}`;
+      livesEl.textContent = "❤️".repeat(Math.max(0, lives));
+    }
+
+    function startGame() {
+      initAudio();
+      resize();
+      score = 0;
+      giftsCaught = 0;
+      lives = 3;
+      falling = [];
+      particles = [];
+      hasSentTelemetry = false;
+      basket.x = width / 2;
+      basket.targetX = width / 2;
+      updateHUD();
+      running = true;
+
+      document.getElementById("start-overlay").classList.add("hidden");
+      document.getElementById("victory-overlay").classList.add("hidden");
+      document.getElementById("gameover-overlay").classList.add("hidden");
+    }
+
+    function victory() {
+      running = false;
+      playVictorySound();
+      emitTelemetryVictory();
+      const vicEl = document.getElementById("victory-overlay");
+      document.getElementById("victory-msg").textContent = 
+        `🎉 Spectacular! You caught all 20 gifts and scored ${score} pts! Your task is verified on the office scoreboard!`;
+      vicEl.classList.remove("hidden");
+    }
+
+    function gameOver() {
+      running = false;
+      const goEl = document.getElementById("gameover-overlay");
+      document.getElementById("gameover-msg").textContent = 
+        `You caught ${giftsCaught} of ${TARGET_GIFTS} gifts. Try again to complete your challenge!`;
+      goEl.classList.remove("hidden");
+    }
+
+    document.getElementById("btn-play").addEventListener("click", startGame);
+    document.getElementById("btn-retry").addEventListener("click", startGame);
+    document.getElementById("btn-replay-vic").addEventListener("click", startGame);
+
+    // Initial setup
+    resize();
+    gameLoop();
+  </script>
+</body>
+</html>
