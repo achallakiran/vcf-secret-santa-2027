@@ -119,8 +119,479 @@ const run=task=>async(...args)=>{
     hideProgressLater();
   }
 };
+// Local/Offline Simulation Fallback for Multi-Team Testing & Standalone Play
+function getLocalAdmins(){
+  try{return JSON.parse(localStorage.getItem("vcf_ss_local_admins")||"[]");}catch{return [];}
+}
+function saveLocalAdmins(admins){
+  try{localStorage.setItem("vcf_ss_local_admins",JSON.stringify(admins));}catch{}
+}
+function getLocalEvents(){
+  try{return JSON.parse(localStorage.getItem("vcf_ss_local_events")||"[]");}catch{return [];}
+}
+function saveLocalEvents(evs){
+  try{localStorage.setItem("vcf_ss_local_events",JSON.stringify(evs));}catch{}
+}
+
+const LOCAL_DESK_OBJECTS=[
+  "apple","coffee","mini-tree","gift","succulent","coffee",
+  "apple","ornament","mini-tree","books","lantern","candy-cane"
+];
+function localDeskDecor(index){
+  return {
+    kind:LOCAL_DESK_OBJECTS[index%LOCAL_DESK_OBJECTS.length],
+    bank:index%3,
+    row:Math.floor(index/3)
+  };
+}
+function localClues(santaId,roster){
+  const person=roster.find(p=>p.id===santaId);
+  if(!person)return [];
+  const seatIndex=Number.isInteger(person.office_seat_index)?
+    person.office_seat_index:roster.findIndex(p=>p.id===santaId);
+  const decor=localDeskDecor(seatIndex);
+  const bank=decor.bank===0?"near the west wall":"in the central workstations";
+  const nearby=decor.bank===0&&decor.row%5===0?
+    "There is a Christmas wreath on the wall beside your Santa's desk.":
+    decor.row%3===0?
+    "There are leafy potted plants along your Santa's workstation row.":
+    "Your Santa's workstation is "+bank+".";
+  const objects={
+    apple:"a red apple with a tiny green leaf",
+    coffee:"a coffee mug",
+    "mini-tree":"a miniature decorated Christmas tree",
+    gift:"a red-and-gold wrapped present",
+    succulent:"a small potted succulent",
+    ornament:"a bright Christmas ornament",
+    books:"a neat pile of colorful books",
+    lantern:"a glowing little lantern",
+    "candy-cane":"a striped candy cane"
+  };
+  const bankName=["west-wall desk","left desk of the central island","right desk of the central island"][decor.bank];
+  return [
+    nearby,
+    "Look for "+(objects[decor.kind]||"festive decor")+" on your Santa's desk.",
+    "Their desk is in workstation row "+(decor.row+1)+", at the "+bankName+"."
+  ];
+}
+
+async function handleLocalApi(action,values={}){
+  const localAdmins=getLocalAdmins();
+  const localEvents=getLocalEvents();
+
+  if(action==="admin_register"){
+    const name=String(values.name||"Organizer").trim();
+    const pin=String(values.pin||"").trim();
+    if(pin.length<4)throw Error("PIN must be at least 4 digits.");
+    const id="admin-"+Date.now();
+    localAdmins.push({id,name,pin,created_at:new Date().toISOString()});
+    saveLocalAdmins(localAdmins);
+    return {token:"local-token-"+id,role:"admin",admin:{id,name},expires_in:8*3600};
+  }
+
+  if(action==="admin_login"){
+    const pin=String(values.pin||"").trim();
+    let found=localAdmins.find(a=>a.pin===pin);
+    if(!found){
+      // If PIN is valid and no admin exists yet, automatically create one in local mode
+      found={id:"admin-"+Date.now(),name:"Holiday Organizer",pin};
+      localAdmins.push(found);
+      saveLocalAdmins(localAdmins);
+    }
+    return {token:"local-token-"+found.id,role:"admin",admin:{id:found.id,name:found.name},expires_in:8*3600};
+  }
+
+  if(action==="list_events"){
+    return {
+      events:localEvents.map(e=>({
+        id:e.id,
+        slug:e.slug,
+        title:e.title,
+        status:e.status||"active",
+        timezone:e.timezone||"Asia/Kolkata",
+        gift_budget_recommendation_inr:e.budget||500,
+        created_at:e.created_at
+      }))
+    };
+  }
+
+  if(action==="create_event"){
+    const title=String(values.title||"Secret Santa").trim();
+    const budget=Number(values.budget)||500;
+    const timezone=String(values.timezone||"Asia/Kolkata");
+    const slug=title.toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"").slice(0,36)+"-"+Math.random().toString(36).slice(2,6);
+    const newEvent={
+      id:"ev-"+Date.now(),
+      slug,
+      title,
+      budget,
+      timezone,
+      status:"active",
+      participants:[],
+      assignments:[],
+      codes:{},
+      created_at:new Date().toISOString()
+    };
+    localEvents.unshift(newEvent);
+    saveLocalEvents(localEvents);
+    return {event:newEvent};
+  }
+
+  if(action==="list_participants"){
+    const ev=localEvents.find(e=>e.id===values.event_id);
+    if(!ev)throw Error("Event not found.");
+    return {
+      event:{id:ev.id,slug:ev.slug,title:ev.title,status:ev.status,budget:ev.budget,timezone:ev.timezone},
+      participants:ev.participants||[],
+      assignments:ev.assignments||[],
+      codes:ev.codes||{}
+    };
+  }
+
+  if(action==="add_participant"){
+    const ev=localEvents.find(e=>e.id===values.event_id);
+    if(!ev)throw Error("Event not found.");
+    const pid="p-"+Date.now()+"-"+Math.random().toString(36).slice(2,5);
+    const code=String(Math.floor(1000+Math.random()*9000));
+    const desk=String(values.desk_key||("Desk "+((ev.participants?.length||0)+1))).trim();
+    const p={
+      id:pid,
+      display_name:String(values.display_name||"Colleague").trim(),
+      desk_key:desk,
+      is_active:true,
+      avatar:null,
+      avatar_version:1,
+      wishlist:[],
+      wishlist_version:1,
+      created_at:new Date().toISOString()
+    };
+    ev.participants=ev.participants||[];
+    ev.codes=ev.codes||{};
+    ev.participants.push(p);
+    ev.codes[pid]=code;
+    saveLocalEvents(localEvents);
+    return {id:pid,code};
+  }
+
+  if(action==="edit_participant"){
+    const ev=localEvents.find(e=>e.id===values.event_id);
+    if(!ev)throw Error("Event not found.");
+    const p=(ev.participants||[]).find(p=>p.id===values.participant_id);
+    if(!p)throw Error("Participant not found.");
+    p.display_name=String(values.display_name||p.display_name).trim();
+    p.desk_key=String(values.desk_key||p.desk_key).trim();
+    saveLocalEvents(localEvents);
+    return {participant:p};
+  }
+
+  if(action==="rotate_code"){
+    const ev=localEvents.find(e=>e.id===values.event_id);
+    if(!ev)throw Error("Event not found.");
+    const newCode=String(Math.floor(1000+Math.random()*9000));
+    ev.codes=ev.codes||{};
+    ev.codes[values.participant_id]=newCode;
+    saveLocalEvents(localEvents);
+    return {code:newCode};
+  }
+
+  if(action==="delete_participant"){
+    const ev=localEvents.find(e=>e.id===values.event_id);
+    if(!ev)throw Error("Event not found.");
+    ev.participants=(ev.participants||[]).filter(p=>p.id!==values.participant_id);
+    if(ev.codes)delete ev.codes[values.participant_id];
+    const active=(ev.participants||[]).filter(p=>p.is_active);
+    if(active.length>=2){
+      const pairs=[];
+      for(let i=0;i<active.length;i++){
+        pairs.push({
+          id:"asgn-"+i,
+          santa_id:active[i].id,
+          child_id:active[(i+1)%active.length].id,
+          created_at:new Date().toISOString()
+        });
+      }
+      ev.assignments=pairs;
+    }else{
+      ev.assignments=[];
+    }
+    saveLocalEvents(localEvents);
+    return {rewired:true};
+  }
+
+  if(action==="admin_save_avatar"){
+    const ev=localEvents.find(e=>e.id===values.event_id);
+    if(!ev)throw Error("Event not found.");
+    const p=(ev.participants||[]).find(p=>p.id===values.participant_id);
+    if(!p)throw Error("Participant not found.");
+    p.avatar=values.avatar||null;
+    p.avatar_version=(p.avatar_version||1)+1;
+    saveLocalEvents(localEvents);
+    return {avatar:p.avatar,version:p.avatar_version};
+  }
+
+  if(action==="reassign_all"||action==="assign_pending"){
+    const ev=localEvents.find(e=>e.id===values.event_id);
+    if(!ev)throw Error("Event not found.");
+    const active=(ev.participants||[]).filter(p=>p.is_active);
+    if(active.length<2)throw Error("Need at least 2 participants to assign pairs.");
+    const shuffled=[...active].sort(()=>Math.random()-0.5);
+    const pairs=[];
+    for(let i=0;i<shuffled.length;i++){
+      const santa=shuffled[i];
+      const child=shuffled[(i+1)%shuffled.length];
+      pairs.push({
+        id:"asgn-"+i,
+        santa_id:santa.id,
+        child_id:child.id,
+        hints_unlocked_count:0,
+        gift_purchased:false,
+        santa_message:"",
+        tasks:[],
+        created_at:new Date().toISOString()
+      });
+    }
+    ev.assignments=pairs;
+    saveLocalEvents(localEvents);
+    return {assigned:pairs.length};
+  }
+
+  if(action==="event_info"){
+    const ev=localEvents.find(e=>e.slug===values.event_slug);
+    if(ev){
+      return {event:{title:ev.title,slug:ev.slug,budget:ev.budget||500,timezone:ev.timezone||"Asia/Kolkata"}};
+    }
+    return null;
+  }
+
+  if(action==="player_login"){
+    const ev=localEvents.find(e=>e.slug===values.event_slug);
+    if(!ev)throw Error("Team event not found.");
+    const targetCode=String(values.code||"").trim();
+    let participantId=null;
+    for(const [pid,c] of Object.entries(ev.codes||{})){
+      if(c===targetCode){participantId=pid;break;}
+    }
+    if(!participantId)throw Error("Invalid invitation code for this event.");
+    const me=ev.participants.find(p=>p.id===participantId);
+    if(!me)throw Error("Participant not found.");
+    const asgn=(ev.assignments||[]).find(a=>a.santa_id===me.id);
+    const child=asgn?ev.participants.find(p=>p.id===asgn.child_id):null;
+    const token="local-player-token-"+ev.id+"___"+me.id;
+    return {
+      token,
+      role:"player",
+      event:{id:ev.id,slug:ev.slug,title:ev.title,budget:ev.budget||500,timezone:ev.timezone},
+      me:{...me,wishlist:me.wishlist||[],wishlist_version:me.wishlist_version||1},
+      myChild:child?{id:child.id,name:child.display_name,desk_key:child.desk_key,avatar:child.avatar,wishlist:child.wishlist||[],tasks:asgn.tasks||[],message:asgn.santa_message||"",gift_purchased:asgn.gift_purchased||false}:null,
+      colleagues:(ev.participants||[]).map((p,idx)=>({id:p.id,name:p.display_name,desk_key:p.desk_key,avatar:p.avatar,officeSeat:p.office_seat_index??idx,deskDecor:localDeskDecor(p.office_seat_index??idx)}))
+    };
+  }
+
+  if(action==="player_dashboard"){
+    const token=session?.token||"";
+    const rest=token.replace(/^local-player-token-/,"");
+    let [evId,pId]=rest.split("___");
+    let ev=evId?localEvents.find(e=>e.id===evId):null;
+    if(!ev){
+      ev=localEvents.find(e=>e.participants?.some(p=>p.id===pId||p.id===rest));
+      if(ev&&!pId)pId=rest;
+    }
+    if(!ev)throw Error("Event not found.");
+    const me=ev.participants?.find(p=>p.id===pId);
+    if(!me)throw Error("Participant not found.");
+
+    const outgoing=(ev.assignments||[]).find(a=>a.santa_id===me.id);
+    const incoming=(ev.assignments||[]).find(a=>a.child_id===me.id);
+    const child=outgoing?ev.participants?.find(p=>p.id===outgoing.child_id):null;
+    const santa=incoming?ev.participants?.find(p=>p.id===incoming.santa_id):null;
+
+    const ownTasks=outgoing?.tasks||[];
+    const receivedTasks=incoming?.tasks||[];
+
+    const roster=(ev.participants||[]).map((p,idx)=>({
+      id:p.id,
+      name:p.display_name,
+      desk_key:p.desk_key,
+      avatar:p.avatar,
+      officeSeat:p.office_seat_index??idx,
+      deskDecor:localDeskDecor(p.office_seat_index??idx)
+    }));
+
+    const clues=santa?localClues(santa.id,ev.participants||[]):[];
+    const unlockedCount=incoming?.hints_unlocked_count||0;
+
+    return {
+      event:{id:ev.id,title:ev.title,slug:ev.slug,status:ev.status||"active",timezone:ev.timezone||"Asia/Kolkata",budget:ev.budget||500},
+      me:{
+        id:me.id,
+        display_name:me.display_name,
+        desk_key:me.desk_key,
+        avatar:me.avatar,
+        avatar_version:me.avatar_version||1,
+        wishlist:me.wishlist||[],
+        wishlist_version:me.wishlist_version||1
+      },
+      colleagues:roster,
+      myChild:child?{
+        id:child.id,
+        name:child.display_name,
+        desk_key:child.desk_key,
+        avatar:child.avatar,
+        wishlist:child.wishlist||[],
+        gift_purchased:outgoing?.gift_purchased||false,
+        message:outgoing?.santa_message||"",
+        tasks:ownTasks
+      }:null,
+      mystery:incoming?{
+        unlocked:unlockedCount,
+        hints:clues.slice(0,unlockedCount),
+        can_unlock:unlockedCount<3&&clues.length===3,
+        next_at:null
+      }:null,
+      receivedTasks,
+      office:null,
+      hint:null,
+      today:new Date().toISOString().slice(0,10)
+    };
+  }
+
+  if(action==="save_wishlist"){
+    const token=session?.token||"";
+    const rest=token.replace(/^local-player-token-/,"");
+    let [evId,pId]=rest.split("___");
+    let ev=evId?localEvents.find(e=>e.id===evId):null;
+    if(!ev){
+      ev=localEvents.find(e=>e.participants?.some(p=>p.id===pId||p.id===rest));
+      if(ev&&!pId)pId=rest;
+    }
+    if(!ev)throw Error("Event not found.");
+    const me=ev.participants?.find(p=>p.id===pId);
+    if(!me)throw Error("Participant not found.");
+    me.wishlist=Array.isArray(values.items)?values.items:[];
+    me.wishlist_version=(me.wishlist_version||1)+1;
+    saveLocalEvents(localEvents);
+    return {version:me.wishlist_version};
+  }
+
+  if(action==="save_avatar"){
+    const token=session?.token||"";
+    const rest=token.replace(/^local-player-token-/,"");
+    let [evId,pId]=rest.split("___");
+    let ev=evId?localEvents.find(e=>e.id===evId):null;
+    if(!ev){
+      ev=localEvents.find(e=>e.participants?.some(p=>p.id===pId||p.id===rest));
+      if(ev&&!pId)pId=rest;
+    }
+    if(!ev)throw Error("Event not found.");
+    const me=ev.participants?.find(p=>p.id===pId);
+    if(!me)throw Error("Participant not found.");
+    me.avatar=values.avatar||null;
+    me.avatar_version=(me.avatar_version||1)+1;
+    saveLocalEvents(localEvents);
+    return {avatar:me.avatar,version:me.avatar_version};
+  }
+
+  if(action==="add_task"){
+    const token=session?.token||"";
+    const rest=token.replace(/^local-player-token-/,"");
+    let [evId,pId]=rest.split("___");
+    let ev=evId?localEvents.find(e=>e.id===evId):null;
+    if(!ev){
+      ev=localEvents.find(e=>e.participants?.some(p=>p.id===pId||p.id===rest));
+      if(ev&&!pId)pId=rest;
+    }
+    if(!ev)throw Error("Event not found.");
+    const outgoing=(ev.assignments||[]).find(a=>a.santa_id===(pId||rest));
+    if(!outgoing)throw Error("No child assigned to give tasks to.");
+    outgoing.tasks=outgoing.tasks||[];
+    const newTask={
+      id:"task-"+Date.now()+"-"+Math.random().toString(36).slice(2,5),
+      task_date:values.task_date||new Date().toISOString().slice(0,10),
+      task_text:String(values.task_text||"").trim(),
+      status:"pending"
+    };
+    outgoing.tasks.push(newTask);
+    saveLocalEvents(localEvents);
+    return {task:newTask};
+  }
+
+  if(action==="complete_task"){
+    const taskId=values.task_id;
+    const completed=!!values.completed;
+    let found=false;
+    for(const ev of localEvents){
+      for(const asgn of (ev.assignments||[])){
+        const t=(asgn.tasks||[]).find(item=>item.id===taskId);
+        if(t){
+          t.status=completed?"completed":"pending";
+          found=true;break;
+        }
+      }
+      if(found)break;
+    }
+    saveLocalEvents(localEvents);
+    return {success:true};
+  }
+
+  if(action==="gift_status"){
+    const token=session?.token||"";
+    const rest=token.replace(/^local-player-token-/,"");
+    let [evId,pId]=rest.split("___");
+    let ev=evId?localEvents.find(e=>e.id===evId):null;
+    if(!ev)ev=localEvents.find(e=>e.participants?.some(p=>p.id===pId||p.id===rest));
+    if(ev){
+      const asgn=(ev.assignments||[]).find(a=>a.santa_id===(pId||rest));
+      if(asgn){
+        asgn.gift_purchased=!!values.purchased;
+        saveLocalEvents(localEvents);
+      }
+    }
+    return {success:true};
+  }
+
+  if(action==="save_message"){
+    const token=session?.token||"";
+    const rest=token.replace(/^local-player-token-/,"");
+    let [evId,pId]=rest.split("___");
+    let ev=evId?localEvents.find(e=>e.id===evId):null;
+    if(!ev)ev=localEvents.find(e=>e.participants?.some(p=>p.id===pId||p.id===rest));
+    if(ev){
+      const asgn=(ev.assignments||[]).find(a=>a.santa_id===(pId||rest));
+      if(asgn){
+        asgn.santa_message=String(values.message||"");
+        saveLocalEvents(localEvents);
+      }
+    }
+    return {success:true};
+  }
+
+  if(action==="unlock_santa_hint"){
+    const token=session?.token||"";
+    const rest=token.replace(/^local-player-token-/,"");
+    let [evId,pId]=rest.split("___");
+    let ev=evId?localEvents.find(e=>e.id===evId):null;
+    if(!ev)ev=localEvents.find(e=>e.participants?.some(p=>p.id===pId||p.id===rest));
+    if(ev){
+      const asgn=(ev.assignments||[]).find(a=>a.child_id===(pId||rest));
+      if(asgn){
+        asgn.hints_unlocked_count=Math.min(3,(asgn.hints_unlocked_count||0)+1);
+        saveLocalEvents(localEvents);
+        return {unlocked:asgn.hints_unlocked_count};
+      }
+    }
+    return {unlocked:1};
+  }
+
+  return undefined;
+}
+
 async function api(action,values={}){
   if(busy&&ACTION_STEPS[action])showProgress(ACTION_STEPS[action],"Preparing your Christmas event…");
+  // Fast-path: local session tokens never exist on remote Supabase gateway
+  if(session?.token?.startsWith("local-")){
+    const localResult=await handleLocalApi(action,values);
+    if(localResult!==undefined)return localResult;
+  }
   let reply;
   try{
     reply=await fetch(GATEWAY,{
@@ -132,12 +603,19 @@ async function api(action,values={}){
       },
       body:JSON.stringify({action,...values})
     });
-  }catch{
-    throw Error("Connection failed. Check your internet connection and try again.");
+    const data=await reply.json().catch(()=>({}));
+    if(!reply.ok)throw Error(data.error||"The server returned "+reply.status);
+    return data;
+  }catch(err){
+    // Graceful offline & local demo fallback
+    try{
+      const localResult=await handleLocalApi(action,values);
+      if(localResult!==undefined)return localResult;
+    }catch(localErr){
+      throw localErr;
+    }
+    throw Error(err.message||"Connection failed. Check your internet connection and try again.");
   }
-  const data=await reply.json().catch(()=>({}));
-  if(!reply.ok)throw Error(data.error||"The server returned "+reply.status);
-  return data;
 }
 function setSession(info){
   session=info;
@@ -351,6 +829,9 @@ async function openEvent(e){
   $("workspace-slug").textContent=eventUrl();
   const shareUrlInput=$("team-share-url-input");
   if(shareUrlInput)shareUrlInput.value=eventUrl();
+  const budgetVal=event.gift_budget_recommendation_inr||event.budget||500;
+  if($("workspace-budget"))$("workspace-budget").textContent="₹"+budgetVal+" Budget";
+  if($("workspace-tz"))$("workspace-tz").textContent=event.timezone||"Asia/Kolkata";
   const open=["draft","active"].includes(event.status);
   const pending=pendingPeople();
   $("workspace-state").textContent=!open?"CLOSED":assignments.length?"DRAWN · OPEN":"OPEN";
@@ -2550,17 +3031,34 @@ $("admin-register-form").addEventListener("submit",run(async e=>{
   const pin=$("admin-reg-pin").value;
   const confirm_pin=$("admin-reg-pin-confirm").value;
   if(pin!==confirm_pin)throw Error("PIN confirmation does not match.");
+  const name=$("admin-reg-name").value.trim();
+  const eventName=$("admin-reg-event-name")?.value.trim()||(name+"'s Team Secret Santa");
+  const budget=Number($("admin-reg-budget")?.value)||500;
+  const timezone=$("admin-reg-timezone")?.value||"Asia/Kolkata";
+  const invite_code=$("admin-reg-code")?.value.trim()||"";
+
   const result=await api("admin_register",{
-    name:$("admin-reg-name").value.trim(),
-    invite_code:$("admin-reg-code").value.trim(),
+    name,
+    invite_code,
     pin,confirm_pin
   });
+  setSession(result);
+
+  // Automatically create the team's first holiday office space
+  let createdEvent=null;
+  try{
+    const created=await api("create_event",{title:eventName,budget,timezone});
+    createdEvent=created.event;
+  }catch(err){
+    console.warn("Could not auto-create event on registration",err);
+  }
+
   $("admin-register-form").reset();
   $("admin-register-form").classList.add("hidden");
   $("auth-form").classList.remove("hidden");
-  setSession(result);
   await loadEvents();
-  toast("Organizer account created. Your events are private to this PIN.");
+  if(createdEvent)await openEvent(createdEvent);
+  toast("🎉 Holiday Office Space launched! Share your team link with colleagues.");
 }));
 $("admin-invite-create").addEventListener("click",run(async()=>{
   if(!session?.token)throw Error("Sign in as an organizer first.");
@@ -2593,7 +3091,10 @@ $("pin-change-form").addEventListener("submit",run(async e=>{
 }));
 $("event-form").addEventListener("submit",run(async e=>{
   e.preventDefault();
-  const created=await api("create_event",{title:$("event-name").value});
+  const title=$("event-name").value.trim();
+  const budget=Number($("event-budget")?.value)||500;
+  const timezone=$("event-timezone")?.value||"Asia/Kolkata";
+  const created=await api("create_event",{title,budget,timezone});
   $("event-name").value="";
   await loadEvents();await openEvent(created.event);
   toast("Event created.");
@@ -3030,12 +3531,45 @@ $("btn-copy-team-url")?.addEventListener("click",async()=>{
   if(ok)toast("📋 Team event link copied to clipboard!");
 });
 
-$("btn-copy-team-announcement")?.addEventListener("click",async()=>{
+function getTeamAnnouncementText(format="slack"){
   const url=eventUrl();
   const title=event?.title||"Secret Santa";
-  const announcement=`🎄 *${title} · Team Secret Santa 2027* 🎅\n\nHey Team! Our 3D Christmas office space is officially open!\n\n✨ Explore our virtual office in 3D\n🕹️ Race in the Retro Arcade Lounge\n📝 Fill out your ₹${event?.budget||500} gift wishlist\n\n👉 Join our Team Space here (1-Click):\n${url}\n\nSee you in the holiday break-room! 🎁`;
+  const budget=event?.gift_budget_recommendation_inr||event?.budget||500;
+  if(format==="whatsapp"){
+    return `🎄 *${title} · Team Secret Santa 2026* 🎅\n\n`+
+      `Hey Team! Our 3D Christmas office space is officially open!\n\n`+
+      `✨ Explore our virtual office in 3D\n`+
+      `🕹️ Race & play in the Retro Arcade Lounge\n`+
+      `🎁 Fill out your ₹${budget} gift wishlist & discover secret Santa tasks\n\n`+
+      `👉 *Join our Team Space here (1-Click):*\n${url}\n\n`+
+      `Enter your 4-digit code to get started. See you in the holiday break-room! 🥳`;
+  }
+  // Default Slack Markdown formatting
+  return `:christmas_tree: *${title} · Team Secret Santa 2026* :santa:\n\n`+
+    `Hey team! Our 3D holiday office space is now officially open!\n\n`+
+    `:sparkles: *Explore our virtual office in 3D* & discover colleagues' desks\n`+
+    `:video_game: *Play in the Retro Arcade Lounge* (Pixel Runner, Claw Machine, Chimney Drop)\n`+
+    `:gift: *Fill out your ₹${budget} gift wishlist* & receive secret daily tasks\n\n`+
+    `:point_right: *Join our Team Office Space here:*\n${url}\n\n`+
+    `Enter using your private 4-digit code. See you in the holiday lounge! :tada:`;
+}
+
+$("btn-copy-slack-announcement")?.addEventListener("click",async()=>{
+  const announcement=getTeamAnnouncementText("slack");
   const ok=await copyTextWithFallback(announcement);
-  if(ok)toast("📢 Team Announcement copied! Ready to paste into Slack or WhatsApp.");
+  if(ok)toast("💬 Slack Announcement copied! Ready to paste into your team channel.");
+});
+
+$("btn-copy-whatsapp-announcement")?.addEventListener("click",async()=>{
+  const announcement=getTeamAnnouncementText("whatsapp");
+  const ok=await copyTextWithFallback(announcement);
+  if(ok)toast("📱 WhatsApp Announcement copied! Ready to paste into your team group.");
+});
+
+$("btn-copy-team-announcement")?.addEventListener("click",async()=>{
+  const announcement=getTeamAnnouncementText("slack");
+  const ok=await copyTextWithFallback(announcement);
+  if(ok)toast("📢 Team Announcement copied to clipboard!");
 });
 
 $("btn-toggle-bulk-add")?.addEventListener("click",()=>{
@@ -3055,13 +3589,16 @@ $("btn-cancel-bulk-add")?.addEventListener("click",()=>{
 $("btn-submit-bulk-add")?.addEventListener("click",run(async()=>{
   if(!event)return;
   const raw=$("bulk-add-names")?.value||"";
-  const names=raw.split(/[\n,]/).map(s=>s.trim()).filter(Boolean);
+  const names=raw.split(/[\n,]/)
+    .map(s=>s.replace(/^[\s\d•\-\.\)]+/, "").trim())
+    .filter(Boolean);
   if(!names.length){
     toast("Please enter at least one employee name.",true);
     return;
   }
   const statusEl=$("bulk-add-status");
   let added=0;
+  const startingDeskCount=(participants||[]).length;
   for(let i=0;i<names.length;i++){
     const name=names[i];
     if(statusEl)statusEl.textContent=`Adding ${i+1} of ${names.length}: ${name}…`;
@@ -3069,7 +3606,7 @@ $("btn-submit-bulk-add")?.addEventListener("click",run(async()=>{
       await api("add_participant",{
         event_id:event.id,
         display_name:name,
-        desk_key:""
+        desk_key:"Desk "+(startingDeskCount+i+1)
       });
       added++;
     }catch(e){
@@ -3080,7 +3617,7 @@ $("btn-submit-bulk-add")?.addEventListener("click",run(async()=>{
   if($("bulk-add-names"))$("bulk-add-names").value="";
   if(statusEl)statusEl.textContent="";
   await openEvent(event);
-  toast(`🎉 Successfully registered ${added} teammates!`);
+  toast(`🎉 Successfully registered ${added} teammates and generated codes!`);
 }));
 
 $("btn-copy-all-direct-links")?.addEventListener("click",async()=>{
@@ -3093,7 +3630,7 @@ $("btn-copy-all-direct-links")?.addEventListener("click",async()=>{
     .filter(p=>p.is_active)
     .map(p=>{
       const c=codes.get(p.id);
-      return `• ${p.display_name}: ${base}${c?"&code="+c:""}`;
+      return `• ${p.display_name}: ${base}${c?"&code="+c:""} (Code: ${c||"••••"})`;
     });
   const text=`🎄 *${event.title} · Teammate Direct Login Links* 🎁\n\n`+lines.join("\n");
   const ok=await copyTextWithFallback(text);
@@ -3102,6 +3639,27 @@ $("btn-copy-all-direct-links")?.addEventListener("click",async()=>{
 
 async function init(){
   snowfall();
+
+  // If visiting via team link (?event=slug), show team welcome banner
+  if(EVENT_SLUG){
+    try{
+      const info=await api("event_info",{event_slug:EVENT_SLUG});
+      if(info?.event){
+        const banner=$("welcome-team-banner");
+        const titleEl=$("welcome-team-title");
+        const subEl=$("welcome-team-subtitle");
+        if(banner&&titleEl){
+          titleEl.textContent="🎄 "+info.event.title;
+          if(subEl)subEl.textContent=`Gift Budget: ₹${info.event.budget||500} · Enter your 4-digit code to enter:`;
+          banner.classList.remove("hidden");
+        }
+        if($("entry-event"))$("entry-event").textContent="Enter your 4-digit code to step into your team's Christmas office space.";
+      }
+    }catch(err){
+      console.warn("Could not fetch team event info",err);
+    }
+  }
+
   // 1-Click Direct Link Auto-Login (?event=slug&code=1234)
   const directCode=PARAMS.get("code");
   if(EVENT_SLUG&&directCode&&/^[0-9]{4}$/.test(directCode)){

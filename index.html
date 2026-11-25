@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#080d16"/>
   <meta name="description" content="Voxel Secret Santa — a thoughtful Christmas office mystery."/>
   <title>Voxel Secret Santa</title>
-  <link rel="stylesheet" href="./assets/styles.css?v=arcade-grand-v14"/>
+  <link rel="stylesheet" href="./assets/styles.css?v=multi-team-v1"/>
 </head>
 <body>
   <div class="snow" id="snow" aria-hidden="true"></div>
@@ -16,6 +16,13 @@
       <div class="hat" aria-hidden="true"><i></i></div>
       <div class="title-wrap"><h1 class="voxel-title"><span class="red">SECRET</span><span class="green">SANTA</span></h1><div class="year" id="hero-year">2026</div></div>
       <form id="entry-form" class="entry-form">
+        <div id="welcome-team-banner" class="welcome-team-banner hidden">
+          <span class="team-banner-icon">🎄</span>
+          <div class="team-banner-content">
+            <h3 id="welcome-team-title">Team Christmas Office</h3>
+            <p id="welcome-team-subtitle" class="muted small">Enter your 4-digit code to join your team space.</p>
+          </div>
+        </div>
         <p id="entry-event" class="field-note">Enter your 4-digit code if invited to an event, or explore instantly below.</p>
         <div class="entry-row">
           <input id="entry-code" type="text" maxlength="4" inputmode="numeric" autocomplete="one-time-code" placeholder="••••" pattern="[0-9]{4}" aria-label="Four-digit invitation code"/>
@@ -44,15 +51,57 @@
         <button type="submit" class="primary" id="login-btn">Unlock organizer console →</button>
       </form>
       <p class="muted">Enter your PIN to manage your Christmas events.</p>
-      <button type="button" id="admin-register-toggle" class="small-outline">New organizer? Create account</button>
+      <button type="button" id="admin-register-toggle" class="small-outline">✨ New Team Organizer? Create Team Space</button>
       <form id="admin-register-form" class="stack hidden" autocomplete="off" aria-label="Register new organizer">
-        <p class="muted">Use the one-time registration code shared by an organizer.</p>
-        <label>Your name<input id="admin-reg-name" maxlength="120" autocomplete="name" required placeholder="Organizer name"/></label>
-        <label>Registration code<input id="admin-reg-code" maxlength="80" autocomplete="off" autocapitalize="off" spellcheck="false" required placeholder="Invitation code"/></label>
-        <label>Create PIN<input id="admin-reg-pin" type="password" inputmode="numeric" minlength="8" maxlength="12" pattern="[0-9]{8,12}" autocomplete="new-password" required placeholder="8–12 digits"/></label>
-        <label>Confirm PIN<input id="admin-reg-pin-confirm" type="password" inputmode="numeric" minlength="8" maxlength="12" pattern="[0-9]{8,12}" autocomplete="new-password" required placeholder="Repeat PIN"/></label>
+        <div class="reg-intro-callout">
+          <strong>🎄 Launch Your Team's Office Space</strong>
+          <p class="muted small">Set up your organizer account and create your holiday event in one easy step.</p>
+        </div>
+        <div class="form-grid-2col">
+          <label>Organizer Name
+            <input id="admin-reg-name" maxlength="120" autocomplete="name" required placeholder="e.g. Alex Morgan"/>
+          </label>
+          <label>Team / Event Name
+            <input id="admin-reg-event-name" maxlength="160" required placeholder="e.g. Mobile Dev Secret Santa 2026"/>
+          </label>
+        </div>
+        <div class="form-grid-2col">
+          <label>Create Admin PIN (4–12 digits)
+            <input id="admin-reg-pin" type="password" inputmode="numeric" minlength="4" maxlength="12" pattern="[0-9]{4,12}" autocomplete="new-password" required placeholder="••••"/>
+          </label>
+          <label>Confirm Admin PIN
+            <input id="admin-reg-pin-confirm" type="password" inputmode="numeric" minlength="4" maxlength="12" pattern="[0-9]{4,12}" autocomplete="new-password" required placeholder="••••"/>
+          </label>
+        </div>
+        <div class="form-grid-2col">
+          <label>Suggested Gift Budget
+            <div class="input-with-prefix">
+              <span class="input-prefix">₹</span>
+              <input id="admin-reg-budget" type="number" min="50" max="50000" step="50" value="500" required placeholder="500"/>
+            </div>
+          </label>
+          <label>Timezone
+            <select id="admin-reg-timezone" class="select-field">
+              <option value="Asia/Kolkata" selected>Asia/Kolkata (IST · UTC+5:30)</option>
+              <option value="America/New_York">America/New_York (EST/EDT)</option>
+              <option value="America/Chicago">America/Chicago (CST/CDT)</option>
+              <option value="America/Denver">America/Denver (MST/MDT)</option>
+              <option value="America/Los_Angeles">America/Los_Angeles (PST/PDT)</option>
+              <option value="Europe/London">Europe/London (GMT/BST)</option>
+              <option value="Europe/Berlin">Europe/Berlin (CET/CEST)</option>
+              <option value="Asia/Singapore">Asia/Singapore (SGT · UTC+8)</option>
+              <option value="Australia/Sydney">Australia/Sydney (AEST/AEDT)</option>
+            </select>
+          </label>
+        </div>
+        <details class="optional-invite-details">
+          <summary class="muted small">Have an organization invite code? (Optional)</summary>
+          <label class="mt-2">Invite Code
+            <input id="admin-reg-code" maxlength="80" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Leave empty for open self-registration"/>
+          </label>
+        </details>
         <div class="admin-register-buttons">
-          <button type="submit" class="primary">Create my organizer account</button>
+          <button type="submit" class="primary" id="btn-create-team-space">🚀 Launch Team Office Space →</button>
           <button type="button" id="admin-register-cancel" class="small-outline">Cancel</button>
         </div>
       </form>
@@ -73,13 +122,27 @@
       <details class="panel pin-settings"><summary>Change administrator PIN</summary>
         <form id="pin-change-form" class="form-row">
           <label>Current PIN<input id="current-pin" type="password" maxlength="12" inputmode="numeric" autocomplete="off" required/></label>
-          <label>New PIN<input id="new-pin" type="password" minlength="8" maxlength="12" pattern="[0-9]{8,12}" inputmode="numeric" autocomplete="off" required/></label>
+          <label>New PIN<input id="new-pin" type="password" minlength="4" maxlength="12" pattern="[0-9]{4,12}" inputmode="numeric" autocomplete="off" required/></label>
           <button class="primary" type="submit">Change PIN</button>
         </form>
-        <p class="muted">The replacement PIN takes effect immediately and invalidates older administrator sessions. New PINs must have 8–12 digits. Existing PINs remain valid until changed.</p>
+        <p class="muted">The replacement PIN takes effect immediately and invalidates older administrator sessions. New PINs must have 4–12 digits. Existing PINs remain valid until changed.</p>
       </details>
       <section class="panel"><div class="section-head"><h3>Christmas events</h3><span class="chip">MULTI-EVENT</span></div>
-        <form id="event-form" class="form-row"><label class="grow">Event name<input id="event-name" maxlength="160" required placeholder="VCF Secret Santa 2026"/></label><button class="primary" type="submit">+ Create event</button></form>
+        <form id="event-form" class="form-row event-creation-form">
+          <label class="grow">Event / Team name<input id="event-name" maxlength="160" required placeholder="Design Studio Secret Santa 2026"/></label>
+          <label class="budget-field">Budget (₹)<input id="event-budget" type="number" min="50" max="50000" step="50" value="500" required/></label>
+          <label class="tz-field">Timezone
+            <select id="event-timezone" class="select-field">
+              <option value="Asia/Kolkata" selected>Asia/Kolkata (IST)</option>
+              <option value="America/New_York">America/New_York (EST)</option>
+              <option value="America/Los_Angeles">America/Los_Angeles (PST)</option>
+              <option value="Europe/London">Europe/London (GMT)</option>
+              <option value="Europe/Berlin">Europe/Berlin (CET)</option>
+              <option value="Asia/Singapore">Asia/Singapore (SGT)</option>
+            </select>
+          </label>
+          <button class="primary" type="submit">+ Create event</button>
+        </form>
         <div id="event-list" class="event-list"></div>
       </section>
       <section id="event-workspace" class="panel hidden">
@@ -90,7 +153,12 @@
               <p id="workspace-slug" class="muted" aria-label="Event invitation URL"></p>
               <button id="workspace-copy-link" type="button" class="small-outline" title="Copy event invitation URL" aria-label="Copy event URL">⧉ <span>Copy URL</span></button>
             </div>
-          </div><span id="workspace-state" class="chip"></span>
+          </div>
+          <div class="workspace-badges">
+            <span id="workspace-budget" class="chip">₹500 Budget</span>
+            <span id="workspace-tz" class="chip">Asia/Kolkata</span>
+            <span id="workspace-state" class="chip"></span>
+          </div>
         </div>
         <!-- Team Share & Effortless Onboarding Hub -->
         <div class="team-share-hub" id="team-share-hub">
@@ -103,8 +171,11 @@
               </div>
             </div>
             <div class="team-share-actions">
-              <button type="button" class="btn btn-secondary btn-sm" id="btn-copy-team-announcement">
-                📋 Copy Slack / WhatsApp Announcement
+              <button type="button" class="btn btn-secondary btn-sm" id="btn-copy-slack-announcement">
+                💬 Copy Slack Announcement
+              </button>
+              <button type="button" class="btn btn-secondary btn-sm" id="btn-copy-whatsapp-announcement">
+                📱 Copy WhatsApp Announcement
               </button>
               <button type="button" class="btn btn-secondary btn-sm" id="btn-toggle-bulk-add">
                 ⚡ Bulk Add Teammates
@@ -1382,6 +1453,6 @@
   <script type="importmap">
     {"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js"}}
   </script>
-  <script type="module" src="./assets/app.js?v=arcade-grand-v18"></script>
+  <script type="module" src="./assets/app.js?v=multi-team-v1"></script>
 </body>
 </html>
