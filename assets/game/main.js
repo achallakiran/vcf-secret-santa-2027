@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import {buildOffice,deskClueForSeat,CLUE_PROPS,decorateClueDesk} from "./office.js?v=arcade-frontview-v6";
+import {buildOffice,deskClueForSeat,CLUE_PROPS,decorateClueDesk} from "./office.js?v=arcade-large-v7";
 import {createAvatar,avatarFromPerson} from "./avatar.js?v=beard-trim-v5";
 import {createOfficeLife} from "./office-life.js?v=studio-qa-v1";
 import {playFestiveChime} from "./christmas-music.js?v=jingle-bells-v1";
@@ -545,6 +545,14 @@ export function mountOffice(host,profile,notice=()=>{}){
   function updateDeskUI(){
     const actionBtn=document.getElementById("desk-card-action");
     const deskBtn=document.getElementById("hud-btn-mydesk");
+    const mobileStandBtn=document.getElementById("mobile-stand-btn");
+    if(mobileStandBtn){
+      if(hero?.seated){
+        mobileStandBtn.classList.remove("hidden");
+      }else{
+        mobileStandBtn.classList.add("hidden");
+      }
+    }
     if(deskBtn){
       if(hero?.seated){
         deskBtn.innerHTML=`🚶 <span>Stand Up</span>`;
@@ -555,17 +563,17 @@ export function mountOffice(host,profile,notice=()=>{}){
       }
     }
     if(actionBtn&&activeDesk){
-      if(hero?.seated&&seatedDesk===activeDesk){
+      if(hero?.seated){
         actionBtn.textContent="Stand Up 🚶";
         actionBtn.classList.add("btn-seated");
       }else{
         actionBtn.classList.remove("btn-seated");
         if(activeDesk.isMe){
-          actionBtn.textContent="Sit at Desk";
+          actionBtn.textContent="Sit at Desk 🪑";
         }else if(activeDesk.ownerName){
           actionBtn.textContent="Say Hello 👋";
         }else{
-          actionBtn.textContent="Sit Here";
+          actionBtn.textContent="Visit Desk 👁️";
         }
       }
     }
@@ -577,6 +585,24 @@ export function mountOffice(host,profile,notice=()=>{}){
     if(hero.seated){
       standUp(false);
     }
+    if(!desk.isMe){
+      // Colleague or unassigned desk: navigate to visit, show card and details, but do NOT sit down
+      targetSitDesk=null;
+      const seat=desk.seat;
+      const approachX=seat.position.x+seat.chairSide*0.65;
+      const approachZ=seat.position.z;
+      moveTo(approachX,approachZ);
+      activeDesk=desk;
+      const deskCard=document.getElementById("desk-card");
+      if(deskCard)deskCard.classList.remove("hidden");
+      updateDeskUI();
+      if(desk.ownerName){
+        notice(`Visiting ${desk.ownerName}'s desk (${desk.code}) · Clue: ${desk.clueMeta.icon} ${desk.clueMeta.title}`);
+      }else{
+        notice(`Visiting desk ${desk.code}. You can only sit at your assigned desk! ⭐`);
+      }
+      return;
+    }
     const seat=desk.seat;
     const curDist=Math.hypot(hero.group.position.x-seat.position.x,hero.group.position.z-seat.position.z);
     if(curDist<=2.4){
@@ -587,11 +613,15 @@ export function mountOffice(host,profile,notice=()=>{}){
     const approachX=seat.position.x+seat.chairSide*0.55;
     const approachZ=seat.position.z;
     moveTo(approachX,approachZ,true);
-    notice(`Walking to ${desk.isMe?"your desk":desk.code}... ⭐`);
+    notice(`Walking to your desk (${desk.code})... ⭐`);
   }
 
   function performSit(desk){
     if(!desk||!hero)return;
+    if(!desk.isMe){
+      notice("You can only sit at your own dedicated desk! ⭐ Click 'My Desk' to go there.");
+      return;
+    }
     targetSitDesk=null;
     path=[];
     clickMarker.group.visible=false;
@@ -608,13 +638,7 @@ export function mountOffice(host,profile,notice=()=>{}){
       deskCard.classList.remove("hidden");
     }
     playFestiveChime("sit");
-    if(desk.isMe){
-      notice(`⭐ Seated at your desk (${desk.code})! Working & typing... 💻`);
-    }else if(desk.ownerName){
-      notice(`🪑 Visiting ${desk.ownerName}'s desk (${desk.code}) · Clue: ${desk.clueMeta.icon} ${desk.clueMeta.title}`);
-    }else{
-      notice(`🪑 Seated at desk ${desk.code}`);
-    }
+    notice(`⭐ Seated at your desk (${desk.code})! Working & typing... 💻`);
   }
 
   function standUp(notify=true){
@@ -634,7 +658,7 @@ export function mountOffice(host,profile,notice=()=>{}){
   }
 
   function goToDesk(){
-    if(hero?.seated&&seatedDesk?.isMe){
+    if(hero?.seated){
       standUp(true);
       return;
     }
@@ -651,6 +675,7 @@ export function mountOffice(host,profile,notice=()=>{}){
   const partyBtn=document.getElementById("hud-btn-party");
   const deskCardActionBtn=document.getElementById("desk-card-action");
   const deskCardCustomizeBtn=document.getElementById("desk-card-customize");
+  const mobileStandBtn=document.getElementById("mobile-stand-btn");
 
   function onMyDeskClick(){goToDesk();}
   function onTimeClick(){cycleTimeTheme();}
@@ -663,17 +688,27 @@ export function mountOffice(host,profile,notice=()=>{}){
     }
   }
   function onDeskCardActionClick(){
-    if(!activeDesk)return;
-    if(hero?.seated&&seatedDesk===activeDesk){
+    if(hero?.seated){
       standUp(true);
       return;
     }
-    if(activeDesk.ownerName&&!activeDesk.isMe){
+    if(!activeDesk)return;
+    if(activeDesk.isMe){
+      performSit(activeDesk);
+      return;
+    }
+    if(activeDesk.ownerName){
       hero.play("hi",clock.elapsedTime);
       notice(`👋 Saying hi at ${activeDesk.ownerName}'s desk!`);
       return;
     }
-    performSit(activeDesk);
+    notice("You can only sit at your own dedicated desk! ⭐");
+  }
+
+  function onMobileStandClick(e){
+    e?.preventDefault?.();
+    e?.stopPropagation?.();
+    standUp(true);
   }
 
   myDeskBtn?.addEventListener("click",onMyDeskClick);
@@ -681,6 +716,8 @@ export function mountOffice(host,profile,notice=()=>{}){
   partyBtn?.addEventListener("click",onPartyClick);
   deskCardActionBtn?.addEventListener("click",onDeskCardActionClick);
   deskCardCustomizeBtn?.addEventListener("click",onDeskCardCustomizeClick);
+  mobileStandBtn?.addEventListener("click",onMobileStandClick);
+  mobileStandBtn?.addEventListener("pointerdown",onMobileStandClick);
   sun.castShadow=true;
   sun.shadow.mapSize.set(window.innerWidth<760?1024:2048,window.innerWidth<760?1024:2048);
   sun.shadow.camera.left=-18;sun.shadow.camera.right=18;sun.shadow.camera.top=28;sun.shadow.camera.bottom=-28;
@@ -1138,7 +1175,24 @@ export function mountOffice(host,profile,notice=()=>{}){
       }
     }
     if(clickedDesk){
-      sitAtDesk(clickedDesk);
+      if(clickedDesk.isMe){
+        sitAtDesk(clickedDesk);
+      }else{
+        if(hero?.seated) standUp(false);
+        const seat=clickedDesk.seat;
+        const approachX=seat.position.x+seat.chairSide*0.65;
+        const approachZ=seat.position.z;
+        moveTo(approachX,approachZ);
+        activeDesk=clickedDesk;
+        const deskCard=document.getElementById("desk-card");
+        if(deskCard)deskCard.classList.remove("hidden");
+        updateDeskUI();
+        if(clickedDesk.ownerName){
+          notice(`Visiting ${clickedDesk.ownerName}'s desk (${clickedDesk.code}) · Clue: ${clickedDesk.clueMeta.icon} ${clickedDesk.clueMeta.title}`);
+        }else{
+          notice(`Desk ${clickedDesk.code} · Your dedicated seat is marked with ⭐`);
+        }
+      }
       return;
     }
     const point=new THREE.Vector3();
@@ -1150,7 +1204,7 @@ export function mountOffice(host,profile,notice=()=>{}){
     }
   }
   // One finger/mouse drag rotates camera, vertical drag tilts it.
-  // A short undragged tap walks. Two fingers pinch to zoom. No joystick/HUD.
+  // A short undragged tap walks. Two fingers pinch to zoom.
   const canvas=renderer.domElement;
   function down(evt){
     if(paused||evt.button!==undefined&&evt.button!==0)return;
@@ -1178,8 +1232,10 @@ export function mountOffice(host,profile,notice=()=>{}){
       pinchDistance=nextDistance;
       pointerHadMultiTouch=true;pointerDragged=true;return;
     }
+    const isTouch=evt.pointerType==="touch";
+    const dragThreshold=isTouch?18:7;
     if(pointerDownPoint&&
-       Math.hypot(evt.clientX-pointerDownPoint.x,evt.clientY-pointerDownPoint.y)>7){
+       Math.hypot(evt.clientX-pointerDownPoint.x,evt.clientY-pointerDownPoint.y)>dragThreshold){
       pointerDragged=true;
     }
     if(!pointerDragged)return;
@@ -1191,9 +1247,11 @@ export function mountOffice(host,profile,notice=()=>{}){
     const tracked=touchPointers.has(evt.pointerId);
     touchPointers.delete(evt.pointerId);
     if(!tracked)return;
+    const isTouch=evt.pointerType==="touch";
+    const tapThreshold=isTouch?22:9;
     const qualifies=pointerDownPoint?.id===evt.pointerId&&
       !pointerDragged&&!pointerHadMultiTouch&&
-      Math.hypot(evt.clientX-pointerDownPoint.x,evt.clientY-pointerDownPoint.y)<9;
+      Math.hypot(evt.clientX-pointerDownPoint.x,evt.clientY-pointerDownPoint.y)<tapThreshold;
     if(touchPointers.size===0){
       if(qualifies)handleTap(evt);
       pointerDownPoint=null;pinchDistance=0;
@@ -1283,6 +1341,7 @@ export function mountOffice(host,profile,notice=()=>{}){
   function onJoyDown(e){
     if(paused)return;
     e.stopPropagation();
+    if(hero?.seated) standUp(false);
     joystickPointerId=e.pointerId;
     joystickBase?.classList.add("active");
     try{joystickBase?.setPointerCapture(e.pointerId);}catch{}
@@ -1495,11 +1554,11 @@ export function mountOffice(host,profile,notice=()=>{}){
                 }else{
                   actionBtn.classList.remove("btn-seated");
                   if(closestDesk.isMe){
-                    actionBtn.textContent="Sit at Desk";
+                    actionBtn.textContent="Sit at Desk 🪑";
                   }else if(closestDesk.ownerName){
                     actionBtn.textContent="Say Hello 👋";
                   }else{
-                    actionBtn.textContent="Sit Here";
+                    actionBtn.textContent="Visit Desk 👁️";
                   }
                 }
               }
