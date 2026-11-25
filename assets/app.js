@@ -969,9 +969,11 @@ function analyzePhotoForAvatar(img){
     hairLum=0.299*avgR+0.587*avgG+0.114*avgB;
     hairRgb=[avgR,avgG,avgB];
     let matchedIdx=closestColorIndex(hairRgb,HAIR_COLORS);
-    // Disallow pure white (index 5) from background wall bleed; only pick white if intentionally gray/white
-    if(matchedIdx===5 && hairLum<210){
-      matchedIdx=0; // Jet Black default
+    // Disallow pure white (index 5) or silver-gray (index 7) from background wall bleed; default to Jet Black (0)
+    if(matchedIdx===5 || matchedIdx===7){
+      if(chinDiff > 6 || moustDiff > 6 || hairLum < 235){
+        matchedIdx=0; // Jet Black default
+      }
     }
     if(hairLum<70 && matchedIdx!==0 && matchedIdx!==6){
       matchedIdx=0;
