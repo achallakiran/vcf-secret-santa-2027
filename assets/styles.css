@@ -5679,6 +5679,14 @@ body.office-playing #player-menu textarea{
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
+.arcade-card-media.chimney-bg {
+  background: linear-gradient(135deg, #9b2226, #5c0f17);
+}
+
+.arcade-card-media.memory-bg {
+  background: linear-gradient(135deg, #1b4332, #081c15);
+}
+
 .arcade-card-media.racer-bg {
   background: linear-gradient(135deg, #1c4b75, #0d2842);
 }
@@ -6061,4 +6069,779 @@ body.office-playing #player-menu textarea{
   flex-wrap: wrap;
   align-items: center;
 }
+
+/* --- Task Preset Selector --- */
+.task-preset-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 8px;
+}
+.task-preset-select {
+  background: #0f2c1f;
+  color: #ffd166;
+  border: 1px solid rgba(255, 209, 102, 0.4);
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 13px;
+  font-weight: 600;
+  outline: none;
+  cursor: pointer;
+}
+.task-preset-select:focus {
+  border-color: #06d6a0;
+  box-shadow: 0 0 0 2px rgba(6, 214, 160, 0.2);
+}
+
+/* --- Break Room Section & Team Lounge / Santa Whispers --- */
+.breakroom-section {
+  color: #fff;
+  padding: 4px 2px 20px;
+}
+.breakroom-channel-toggle {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+.breakroom-channel-btn {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #d8f3dc;
+  border-radius: 20px;
+  padding: 6px 14px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.breakroom-channel-btn:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+.breakroom-channel-btn.active {
+  background: linear-gradient(135deg, #1b4332, #2d6a4f);
+  border-color: #74c69d;
+  color: #ffd166;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+}
+
+.chat-instructions-banner {
+  background: rgba(27, 67, 50, 0.5);
+  border: 1px solid rgba(116, 198, 157, 0.3);
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 12px;
+  color: #b7e4c7;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.whisper-banner {
+  background: rgba(74, 14, 22, 0.5);
+  border-color: rgba(239, 71, 111, 0.4);
+  color: #fce8bd;
+}
+
+.chat-messages-container {
+  min-height: 220px;
+  max-height: 340px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 10px;
+  background: rgba(5, 19, 10, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  margin-bottom: 12px;
+}
+
+.chat-msg-row {
+  display: flex;
+  flex-direction: column;
+  max-width: 82%;
+  padding: 8px 12px;
+  border-radius: 12px;
+  font-size: 13px;
+  line-height: 1.4;
+  word-break: break-word;
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+.chat-msg-row.own-msg {
+  align-self: flex-end;
+  background: linear-gradient(135deg, rgba(45, 106, 79, 0.8), rgba(27, 67, 50, 0.8));
+  border-color: rgba(116, 198, 157, 0.4);
+}
+.chat-msg-row.whisper-santa-msg {
+  background: linear-gradient(135deg, rgba(139, 30, 42, 0.8), rgba(74, 14, 22, 0.8));
+  border-color: rgba(255, 209, 102, 0.5);
+  box-shadow: 0 2px 10px rgba(255, 209, 102, 0.1);
+}
+
+.chat-msg-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  margin-bottom: 3px;
+  opacity: 0.85;
+}
+.chat-msg-author {
+  font-weight: 800;
+  color: #ffd166;
+}
+.chat-msg-time {
+  font-size: 10px;
+  opacity: 0.7;
+}
+
+.chat-msg-body {
+  color: #fff;
+}
+.chat-msg-photo {
+  margin-top: 6px;
+  max-width: 200px;
+  max-height: 140px;
+  border-radius: 8px;
+  border: 1px solid rgba(255,255,255,0.2);
+  object-fit: cover;
+  cursor: pointer;
+}
+
+.chat-compose-form {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.chat-compose-form input[type="text"] {
+  flex: 1;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 8px;
+  padding: 8px 12px;
+  color: #fff;
+  font-size: 13px;
+}
+.chat-file-btn {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  padding: 8px 10px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+/* --- Proof Dialog & Badges --- */
+.proof-dialog-container {
+  background: #0c1c14;
+  border: 2px solid #2d6a4f;
+  border-radius: 16px;
+  padding: 20px;
+  color: #fff;
+  max-width: 480px;
+  width: 90vw;
+  box-shadow: 0 16px 40px rgba(0,0,0,0.8);
+}
+.proof-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+  padding-bottom: 12px;
+  margin-bottom: 14px;
+}
+.proof-icon { font-size: 28px; }
+.proof-close-btn {
+  margin-left: auto;
+  background: none;
+  border: none;
+  color: #aaa;
+  font-size: 18px;
+  cursor: pointer;
+}
+.proof-task-title {
+  font-weight: 700;
+  color: #ffd166;
+  margin-bottom: 10px;
+  font-size: 14px;
+}
+.proof-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #b7e4c7;
+}
+.proof-field textarea {
+  background: rgba(0,0,0,0.4);
+  border: 1px solid rgba(255,255,255,0.2);
+  border-radius: 8px;
+  padding: 8px;
+  color: #fff;
+  font-size: 13px;
+}
+.proof-actions-row {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  margin-top: 14px;
+}
+.proof-large-image {
+  max-width: 100%;
+  max-height: 240px;
+  border-radius: 8px;
+  border: 1px solid rgba(255,255,255,0.2);
+  object-fit: contain;
+  margin-bottom: 8px;
+}
+.proof-note-text {
+  background: rgba(0,0,0,0.3);
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 13px;
+  line-height: 1.4;
+  color: #d8f3dc;
+}
+.proof-thumb-preview {
+  max-width: 120px;
+  max-height: 90px;
+  border-radius: 6px;
+  border: 1px solid rgba(255,255,255,0.2);
+  margin-top: 6px;
+}
+
+.task-proof-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  background: rgba(255, 209, 102, 0.15);
+  border: 1px solid rgba(255, 209, 102, 0.4);
+  color: #ffd166;
+  padding: 2px 8px;
+  border-radius: 10px;
+  cursor: pointer;
+  margin-left: 6px;
+}
+.task-attach-proof-btn {
+  background: rgba(116, 198, 157, 0.15);
+  border: 1px solid #74c69d;
+  color: #74c69d;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  margin-left: 6px;
+  transition: all 0.15s ease;
+}
+.task-attach-proof-btn:hover {
+  background: rgba(116, 198, 157, 0.3);
+  color: #fff;
+}
+
+/* --- Arcade Telemetry Badges & Task Hint --- */
+.telemetry-badge.verified {
+  color: #06d6a0;
+  background: rgba(6, 214, 160, 0.15);
+  border-color: rgba(6, 214, 160, 0.4);
+}
+.telemetry-badge.pending {
+  color: #ffd166;
+  background: rgba(255, 209, 102, 0.12);
+  border-color: rgba(255, 209, 102, 0.25);
+  opacity: 0.85;
+}
+
+.arcade-task-hint {
+  background: rgba(15, 44, 31, 0.85);
+  border: 1px solid rgba(116, 198, 157, 0.3);
+  padding: 7px 14px;
+  font-size: 12px;
+  color: #d8f3dc;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+.arcade-task-pill {
+  font-size: 10.5px;
+  font-weight: 800;
+  padding: 2px 7px;
+  border-radius: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+.arcade-task-pill.active {
+  background: rgba(255, 209, 102, 0.2);
+  color: #ffd166;
+  border: 1px solid rgba(255, 209, 102, 0.4);
+}
+.arcade-task-pill.done {
+  background: rgba(6, 214, 160, 0.2);
+  color: #06d6a0;
+  border: 1px solid rgba(6, 214, 160, 0.4);
+}
+.arcade-task-name {
+  font-weight: 600;
+  color: #fff;
+}
+
+.btn-demo-reset {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #b7e4c7;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.btn-demo-reset:hover {
+  background: rgba(239, 71, 111, 0.25);
+  border-color: #ef476f;
+  color: #ffd166;
+}
+
+.task-arcade-play-btn {
+  background: rgba(239, 71, 111, 0.2);
+  border: 1px solid rgba(239, 71, 111, 0.5);
+  color: #ffd166;
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  margin-left: 6px;
+  transition: all 0.15s ease;
+}
+.task-arcade-play-btn:hover {
+  background: rgba(239, 71, 111, 0.4);
+  color: #fff;
+  transform: translateY(-1px);
+}
+
+/* --- Quick Interactive Tour & Landing Welcome --- */
+.tour-btn-wrap {
+  position: relative;
+  display: inline-flex;
+  pointer-events: auto;
+}
+
+.office-tour-btn {
+  background: rgba(255, 209, 102, 0.15);
+  border: 1px solid rgba(255, 209, 102, 0.4);
+  color: #ffd166;
+  font-weight: 700;
+  font-size: 13px;
+  padding: 6px 12px;
+  border-radius: 20px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.2s ease;
+}
+.office-tour-btn:hover {
+  background: rgba(255, 209, 102, 0.3);
+  transform: translateY(-1px);
+  color: #fff;
+}
+
+@keyframes tourBtnSpotlight {
+  0% {
+    box-shadow: 0 0 0 0 rgba(255, 209, 102, 0.8), 0 0 15px rgba(255, 209, 102, 0.5);
+    transform: scale(1);
+  }
+  50% {
+    box-shadow: 0 0 0 8px rgba(255, 209, 102, 0.4), 0 0 25px rgba(255, 209, 102, 0.8);
+    transform: scale(1.08);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(255, 209, 102, 0.8), 0 0 15px rgba(255, 209, 102, 0.5);
+    transform: scale(1);
+  }
+}
+
+.office-tour-btn.tour-btn-spotlight-pulse {
+  animation: tourBtnSpotlight 1.3s ease-in-out infinite;
+  background: rgba(255, 209, 102, 0.35) !important;
+  border-color: #ffd166 !important;
+  color: #fff !important;
+}
+
+/* Tour Top Floating Coachmark Tooltip */
+.tour-top-tooltip {
+  position: absolute;
+  top: calc(100% + 12px);
+  right: 0;
+  background: linear-gradient(145deg, #0f3822, #072013);
+  border: 1.5px solid #ffd166;
+  color: #fff;
+  padding: 8px 14px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.65), 0 0 18px rgba(255, 209, 102, 0.45);
+  z-index: 100050;
+  pointer-events: auto;
+  animation: tooltipFloat 2s ease-in-out infinite alternate;
+}
+.tour-top-tooltip.hidden {
+  display: none !important;
+}
+.tour-top-tooltip .tour-tooltip-arrow {
+  position: absolute;
+  top: -6px;
+  right: 22px;
+  width: 10px;
+  height: 10px;
+  background: #0f3822;
+  border-left: 1.5px solid #ffd166;
+  border-top: 1.5px solid #ffd166;
+  transform: rotate(45deg);
+}
+.tour-tooltip-content {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.tour-tooltip-icon {
+  font-size: 16px;
+}
+@keyframes tooltipFloat {
+  0% { transform: translateY(0); }
+  100% { transform: translateY(4px); }
+}
+
+/* --- Tour Landing Welcome Modal --- */
+.tour-welcome-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 99999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+.tour-welcome-overlay.hidden {
+  display: none !important;
+}
+.tour-welcome-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(4, 18, 11, 0.78);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+.tour-welcome-card {
+  position: relative;
+  z-index: 100000;
+  width: 520px;
+  max-width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  background: linear-gradient(155deg, #0e301f 0%, #06190e 100%);
+  border: 2px solid #52b788;
+  border-radius: 20px;
+  padding: 28px 24px 22px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8), 0 0 30px rgba(82, 183, 136, 0.25);
+  color: #fff;
+  text-align: center;
+  animation: welcomePop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+@keyframes welcomePop {
+  from { transform: scale(0.9) translateY(20px); opacity: 0; }
+  to { transform: scale(1) translateY(0); opacity: 1; }
+}
+.tour-welcome-close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.08);
+  color: #ccc;
+  font-size: 16px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+.tour-welcome-close:hover {
+  background: #ef476f;
+  border-color: #ef476f;
+  color: #fff;
+}
+.tour-welcome-badge {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: #ffd166;
+  background: rgba(255, 209, 102, 0.15);
+  border: 1px solid rgba(255, 209, 102, 0.4);
+  padding: 4px 12px;
+  border-radius: 20px;
+  margin-bottom: 12px;
+}
+.tour-welcome-icon {
+  font-size: 42px;
+  margin-bottom: 8px;
+  line-height: 1;
+}
+.tour-welcome-title {
+  font-size: 24px;
+  font-weight: 800;
+  color: #fff;
+  margin-bottom: 8px;
+}
+.tour-welcome-desc {
+  font-size: 14px;
+  color: #c9e4d4;
+  line-height: 1.5;
+  margin-bottom: 18px;
+  max-width: 440px;
+  margin-left: auto;
+  margin-right: auto;
+}
+.tour-welcome-highlights {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  text-align: left;
+  margin-bottom: 18px;
+}
+@media (max-width: 480px) {
+  .tour-welcome-highlights {
+    grid-template-columns: 1fr;
+  }
+}
+.welcome-hl-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 10px 12px;
+}
+.welcome-hl-icon {
+  font-size: 20px;
+  line-height: 1;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+.welcome-hl-text strong {
+  display: block;
+  font-size: 13px;
+  color: #ffd166;
+  margin-bottom: 2px;
+}
+.welcome-hl-text span {
+  display: block;
+  font-size: 11px;
+  color: #a8d5b8;
+  line-height: 1.35;
+}
+.tour-welcome-tip {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(255, 209, 102, 0.12);
+  border: 1px solid rgba(255, 209, 102, 0.35);
+  border-radius: 12px;
+  padding: 10px 14px;
+  font-size: 12px;
+  color: #ffe6a7;
+  text-align: left;
+  margin-bottom: 20px;
+  line-height: 1.45;
+}
+.tour-welcome-tip .tip-star {
+  font-size: 20px;
+  flex-shrink: 0;
+}
+.tour-welcome-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+}
+@media (max-width: 480px) {
+  .tour-welcome-actions {
+    flex-direction: column;
+  }
+}
+
+.tour-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100000;
+  pointer-events: none;
+}
+.tour-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.2);
+  pointer-events: auto;
+}
+.tour-card {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 100001;
+  pointer-events: auto;
+  background: linear-gradient(145deg, #0a2516, #04160a);
+  border: 2px solid #52b788;
+  border-radius: 18px;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.75), 0 0 25px rgba(82, 183, 136, 0.3);
+  color: #fff;
+  width: 420px;
+  max-width: calc(100vw - 32px);
+  padding: 20px;
+  animation: tourCardPop 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+@keyframes tourCardPop {
+  from { transform: scale(0.94) translateY(12px); opacity: 0; }
+  to { transform: scale(1) translateY(0); opacity: 1; }
+}
+.tour-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  padding-bottom: 10px;
+}
+.tour-header-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.tour-step-badge {
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  background: rgba(255, 209, 102, 0.18);
+  color: #ffd166;
+  border: 1px solid rgba(255, 209, 102, 0.4);
+  padding: 3px 9px;
+  border-radius: 12px;
+}
+.tour-target-badge {
+  font-size: 11px;
+  font-weight: 700;
+  background: rgba(82, 183, 136, 0.2);
+  color: #74c69d;
+  border: 1px solid rgba(82, 183, 136, 0.4);
+  padding: 3px 8px;
+  border-radius: 12px;
+  max-width: 200px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.tour-close-btn {
+  background: none;
+  border: none;
+  color: #aaa;
+  font-size: 18px;
+  cursor: pointer;
+  transition: color 0.15s;
+}
+.tour-close-btn:hover {
+  color: #ef476f;
+}
+.tour-body {
+  text-align: left;
+  margin-bottom: 16px;
+}
+.tour-icon-wrap {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.08);
+  border: 2px solid rgba(116, 198, 157, 0.4);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  margin-bottom: 10px;
+}
+.tour-title {
+  font-size: 16px;
+  font-weight: 800;
+  color: #ffd166;
+  margin-bottom: 6px;
+}
+.tour-description {
+  font-size: 13px;
+  line-height: 1.5;
+  color: #d8f3dc;
+  margin: 0;
+}
+.tour-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  padding-top: 12px;
+}
+.tour-dots {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+.tour-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.25);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.tour-dot.active {
+  width: 18px;
+  background: #ffd166;
+  border-radius: 4px;
+}
+
+.tour-highlight {
+  position: relative !important;
+  z-index: 100002 !important;
+  box-shadow: 0 0 0 3px #ffd166, 0 0 30px rgba(255, 209, 102, 0.9), 0 0 10px rgba(0, 0, 0, 0.8) !important;
+  outline: 2px dashed #ffd166 !important;
+  outline-offset: 3px !important;
+  border-radius: 10px;
+  animation: tourHighlightPulse 1.8s infinite alternate !important;
+  transition: box-shadow 0.3s ease;
+}
+@keyframes tourHighlightPulse {
+  0% { box-shadow: 0 0 0 3px #ffd166, 0 0 20px rgba(255, 209, 102, 0.7); }
+  100% { box-shadow: 0 0 0 5px #ffd166, 0 0 40px rgba(255, 209, 102, 1); }
+}
+
+@media (max-width: 600px) {
+  .tour-card {
+    bottom: 12px;
+    right: 12px;
+    left: 12px;
+    width: auto;
+    max-width: none;
+  }
+}
+
+
 

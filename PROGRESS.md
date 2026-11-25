@@ -67,6 +67,12 @@ The app connects to Supabase Postgres with Row-Level Security (RLS) and RPC proc
 | **Overdue Task Notifications** | ✅ Completed | Overdue banner in Santa Hub + toast notification for overdue tasks past their due date |
 | **Demo Mode Local Persistence** | ✅ Completed | Full `localStorage` persistence for tasks, wishlists, and clues without Supabase auth errors |
 | **Multi-Team Self-Registration & Onboarding** | ✅ Completed | 1-step organizer registration, team event creation with custom budget/timezone, Slack/WhatsApp announcement copy, bulk-add teammates, 1-click links |
+| **Chimney Gift Drop Game** | ✅ Completed | Built-in HTML5 Canvas arcade game with Web Audio, catching falling gifts, candy canes, multipliers, hazardous coal/snowballs |
+| **Holiday Desk Memory Match Game** | ✅ Completed | 4x4 card grid featuring 8 3D festive office props (mug, cat, tree, snowglobe, etc.), 3D flips, chimes, move counter |
+| **Arcade Telemetry & Auto-Verification** | ✅ Completed | PostMessage & cross-tab storage protocol (`ARCADE_TASK_EVENT`), high scores saved to `vcf_ss_arcade_records`, auto-completes pending matching tasks |
+| **Challenge Preset Dropdown** | ✅ Completed | 1-click presets in Santa task assignment form for Chimney Drop, Memory Match, Racers, Bikes, and Photo Proofs |
+| **Task Evidence & Proof System** | ✅ Completed | Child attaches photo snapshot or note proof to manual tasks; Santa reviews and approves to unlock mystery clues |
+| **Break Room (Team Lounge & Whispers)** | ✅ Completed | 5th menu tab with public Team Lounge wall (messages + photos) and 1-on-1 anonymous Secret Santa Whispers |
 
 ---
 
@@ -131,6 +137,50 @@ The app connects to Supabase Postgres with Row-Level Security (RLS) and RPC proc
    - Added `"✓ Mark Completed"` button on received tasks for the Child. Clicking it marks the task complete, persists to storage, triggers celebration toast (`"🎉 Task completed! Clue #X unlocked!"`), and unlocks the corresponding clue.
    - Added `checkOverdueTasks()`: checks pending tasks against today's date (`task_date < today`). If overdue, displays a high-visibility warning banner in `#received-tasks-overdue-banner` and fires a friendly reminder toast on entry.
    - Tasks display color-coded status badges: `⏰ OVERDUE`, `⏳ DUE TODAY`, `📅 UPCOMING`, `✓ COMPLETED`.
+
+### Session (November 25, 2026 - Arcade Games, Telemetry Auto-Verification, Break Room & Evidence System):
+1. **New Built-in Festive Arcade Games**:
+   - **`Chimney Gift Drop`** ([games/chimney-drop/index.html](file:///Users/pronow/Downloads/Games/SecretSanta/games/chimney-drop/index.html)): HTML5 Canvas reflex catcher game with sound synthesis, smooth drag/touch/keyboard controls, falling holiday presents, candy canes, multipliers, and coal hazards. Reaching 20 gifts dispatches an auto-verification telemetry event.
+   - **`Holiday Desk Memory Match`** ([games/memory-match/index.html](file:///Users/pronow/Downloads/Games/SecretSanta/games/memory-match/index.html)): 4x4 card grid featuring the 8 3D festive office props (Cocoa Mug, Office Cat, Voxel Tree, Snowglobe, Secret Gift, Desk Light, Tech Books, Candy Cane), 3D flip animations, move counter, and audio chimes. Matching all 8 pairs dispatches completion telemetry.
+2. **Telemetry Persistence & Task Auto-Verification**:
+   - Unified `ARCADE_TASK_EVENT` protocol via `postMessage` and cross-tab `storage` fallback.
+   - When an arcade goal is achieved:
+     - High scores and telemetry records are persisted to `vcf_ss_arcade_records` in `localStorage` so they survive future sessions.
+     - Automatically scans `player.receivedTasks` for matching arcade challenges (e.g. matching "chimney", "memory", "racers", "bike", or "arcade").
+     - Automatically marks the task completed (via `complete_task` RPC or demo storage), triggers celebration confetti, plays unlock chimes, and reveals the corresponding mystery clue!
+3. **Challenge Preset Dropdown**:
+   - Added a quick preset dropdown in Santa Hub task creation form (`#task-preset`) enabling 1-click selection of auto-verified arcade challenges, desk photo proofs, and coffee break tasks.
+4. **Task Evidence & Proof System**:
+   - Added `#task-proof-dialog` dialog.
+   - Child can attach photo screenshots or written notes (`task.proof` / `vcf_ss_task_proofs`).
+   - Santa can inspect the attached evidence with `"📷 View Proof"` and approve it with `"✓ Verify & Unlock Clue"`.
+5. **Break Room Tab (Team Lounge & Santa Whispers)**:
+   - Added a 5th menu tab: `💬 Break Room`.
+   - **Team Lounge**: Public team message wall with photo attachments and cheer reactions.
+   - **Santa Whisper**: 1-on-1 anonymous messaging between Santa and Child, ensuring Santa's identity stays completely confidential while allowing clues, banter, and hints.
+6. **Per-Game Arcade Telemetry & Guest Mode Refinements**:
+   - Fixed arcade lounge telemetry bar retaining previous game's stat across tabs; now dynamically displays per-game telemetry records or clear objective prompts (`updateArcadeTelemetryDisplay(gameId)`).
+   - Dynamic Auto-Verified badge (`⚡ Auto-Verified` when completed, `⏳ Objective Pending` when incomplete).
+   - Added direct `🎯 Active Santa Task` / `✓ Santa Task Completed` banner right inside the Retro Arcade modal.
+   - Added `🕹️ Play` quick launcher button on arcade tasks in Santa Hub.
+   - Seeded fresh demo guest tasks with Voxel Racers Grand Prix, Voxel Bikes Nitro, Chimney Drop, Memory Match, and Break Room Cocoa, and added a `🔄 Reset Demo Tasks` button.
+
+7. **Interactive Quick Tour & Landing Welcome**:
+   - **Landing Welcome Pop-up**: Welcoming `#tour-welcome-modal` greets users when they land in the office, presenting a festive quick map of features (Desk & Tasks, Retro Arcade, Break Room, Clues) with direct options: "🚀 Start Quick Tour" or "Explore on My Own".
+   - **Guidance Beacon & Floating Tooltip**: When dismissed or completed, gently pulses a golden halo around the top `🧭 Tour` button (`.tour-btn-spotlight-pulse`) and displays a floating coachmark tooltip pointing up (`#tour-top-tooltip`) so players always know where to go whenever they need information.
+   - **Non-Obscuring Docked Guide Card**: 7-step guided walkthrough docked at bottom-right with zero screen blur, golden spotlight glow on target elements, and automatic scrolling to targets.
+   - Accessible anytime via the **🧭 Tour** button in the top HUD toolbar and within the Santa Hub header.
+
+8. **Achalla Ravi's Games Telemetry & Auto-Validation**:
+   - Integrated telemetry for `games/voxel-racers/` (`VOXEL_RACE_LAP` and `VOXEL_RACE_COMPLETED`) and `games/voxel-bike/` (`VOXEL_BIKE_COMPLETED`).
+   - Completing a lap in Voxel Racers or finishing the Voxel Bikes circuit triggers instant auto-validation of the player's received Santa task.
+   - Triggers festive celebration confetti, victory chime, toast announcement, and unmasks a mystery Secret Santa clue.
+   - Supports both in-office modal iframe (`postMessage`) and fullscreen external browser tab (`localStorage` storage listener).
+
+9. **Arcade Lifecycle & Background Execution Fix**:
+   - **Iframe Teardown on Close**: Implemented `stopAndCloseArcade()` which immediately resets `arcadeIframe.src = "about:blank"` when the arcade modal is closed (via ✕, backdrop click, or Esc key). This instantly destroys the iframe's rendering context, halts requestAnimationFrame loops, cancels Web Audio engine sounds, and reduces CPU to 0.
+   - **Menu & Tab Switching Teardown**: Closing the player menu or switching away from the arcade tab automatically calls `closeArcadeModal()` to ensure games never continue running in the background.
+   - **Page Lifecycle Silence Hooks**: Added `pagehide`, `beforeunload`, and `visibilitychange` listeners inside game engines to automatically mute sounds and release audio when the tab or window is hidden or unloaded.
 
 ---
 

@@ -24,7 +24,7 @@ let session=null, busy=false, events=[],event=null,participants=[],assignments=[
 let officeRuntime=null,officeLoading=null,officeKey=null,officeNoticeTimer=null;
 let clueDismissTimer=null;
 let avatarBaseline=null,avatarPreviewTimer=null;
-let launchArcadeModal=null;
+let launchArcadeModal=null, closeArcadeModal=null;
 let avatarStudio=null,avatarStudioLoading=null,activeStudioTab="look",visualEditor=null;
 let adminEditingParticipant=null;
 let latestAdminInvitation=null;
@@ -1236,6 +1236,13 @@ async function enterOffice(info){
     setAvatarEditor(avatarBaseline);
     $("office-loading").classList.add("hidden");
     showOfficeTutorial();
+    setTimeout(()=>{
+      if(!$("player").classList.contains("hidden")){
+        if(!localStorage.getItem("vcf_ss_tour_welcomed")){
+          showTourWelcomeModal();
+        }
+      }
+    },1000);
   })();
   try{await officeLoading;}
   catch(error){
@@ -2248,27 +2255,149 @@ function setupChildQuestAndArcade(){
   const arcadeFullscreen=$("arcade-fullscreen-link");
   const arcadeStatEl=$("arcade-last-stat");
 
-  function openArcade(gameId="voxel-racers"){
+  const gameTitles={
+    "chimney-drop":"Chimney Gift Drop",
+    "memory-match":"Holiday Memory Match",
+    "voxel-racers":"Voxel Racers",
+    "voxel-bike":"Voxel Bikes"
+  };
+  const gameObjectives={
+    "chimney-drop":"Catch 20 holiday gifts in stocking sack to verify!",
+    "memory-match":"Find all 8 office desk prop pairs to verify!",
+    "voxel-racers":"Complete Lap 1 or finish the circuit to auto-verify!",
+    "voxel-bike":"Complete 1 Lap or finish the moto circuit to auto-verify!"
+  };
+
+  function updateArcadeControlsFooter(gameId){
+    const hintsEl=$("arcade-footer-hints");
+    if(!hintsEl)return;
+    if(gameId==="voxel-bike"){
+      hintsEl.innerHTML=`
+        <span>🏍️ Throttle: <strong>Z</strong></span>
+        <span>⚡ Turbo: <strong>X / Shift</strong></span>
+        <span>↕️ Lanes: <strong>↑ / ↓ or W / S</strong></span>
+        <span>↔️ Pitch: <strong>← / → or A / D</strong></span>
+        <span>🛑 Brake: <strong>Space</strong></span>
+      `;
+    }else if(gameId==="voxel-racers"){
+      hintsEl.innerHTML=`
+        <span>🏎️ Steer: <strong>W A S D / Arrows</strong></span>
+        <span>⚡ Boost: <strong>Shift / Space</strong></span>
+        <span>🛑 Brake: <strong>S / ↓</strong></span>
+      `;
+    }else if(gameId==="chimney-drop"){
+      hintsEl.innerHTML=`
+        <span>🎁 Catch Gifts: <strong>← / → or A / D or Mouse</strong></span>
+      `;
+    }else if(gameId==="memory-match"){
+      hintsEl.innerHTML=`
+        <span>🃏 Flip Cards: <strong>Click / Tap Matching Pairs</strong></span>
+      `;
+    }
+  }
+
+  function updateArcadeTelemetryDisplay(gameId){
+    const statEl=$("arcade-last-stat");
+    const badgeEl=$("arcade-auto-badge");
+    const taskHintEl=$("arcade-task-hint");
+    if(!statEl)return;
+
+    let recs={};
+    try{
+      recs=JSON.parse(localStorage.getItem("vcf_ss_arcade_records")||"{}");
+    }catch(_e){}
+
+    const rec=recs[gameId];
+    if(rec&&rec.summary){
+      statEl.textContent=`⚡ ${rec.gameTitle||gameTitles[gameId]}: ${rec.summary}`;
+      if(badgeEl){
+        badgeEl.textContent="⚡ Auto-Verified";
+        badgeEl.className="telemetry-badge verified";
+      }
+    }else{
+      statEl.textContent=`🕹️ Objective: ${gameObjectives[gameId]||"Complete the game challenge to auto-verify!"}`;
+      if(badgeEl){
+        badgeEl.textContent="⏳ Objective Pending";
+        badgeEl.className="telemetry-badge pending";
+      }
+    }
+
+    if(taskHintEl){
+      const allGameKws={
+        "chimney-drop":["chimney","gift drop","presents","drop","catch 20"],
+        "memory-match":["memory","desk props","props","pairs","match"],
+        "voxel-racers":["racer","racers","car","lap","grand prix","speed"],
+        "voxel-bike":["bike","moto","nitro","redline"]
+      };
+      const gameKws=allGameKws[gameId]||[];
+      let linkedTask=null;
+      if(player&&Array.isArray(player.receivedTasks)){
+        linkedTask=player.receivedTasks.find(t=>{
+          const txt=(t.task_text||t.text||"").toLowerCase();
+          return gameKws.some(kw=>txt.includes(kw));
+        });
+      }
+      if(linkedTask){
+        const isDone=linkedTask.status==="completed";
+        taskHintEl.innerHTML=`<span class="arcade-task-pill ${isDone?'done':'active'}">${isDone?'✓ Santa Task Completed:':'🎯 Active Santa Task:'}</span> <span class="arcade-task-name">${linkedTask.task_text||linkedTask.text}</span>`;
+        taskHintEl.classList.remove("hidden");
+      }else{
+        taskHintEl.textContent="";
+        taskHintEl.classList.add("hidden");
+      }
+    }
+  }
+
+  function openArcade(gameId="chimney-drop"){
     quest.activeGame=gameId;
     document.querySelectorAll(".arcade-tab-btn").forEach(btn=>{
       btn.classList.toggle("active",btn.getAttribute("data-game")===gameId);
     });
 
-    const url=gameId==="voxel-bike"
-      ?"./games/voxel-bike/index.html"
-      :"./games/voxel-racers/index.html";
+    let url="./games/chimney-drop/index.html";
+    if(gameId==="voxel-bike")url="./games/voxel-bike/index.html";
+    else if(gameId==="voxel-racers")url="./games/voxel-racers/index.html";
+    else if(gameId==="memory-match")url="./games/memory-match/index.html";
 
-    if(typeof arcadeModal?.showModal==="function")arcadeModal.showModal();
-    else arcadeModal?.classList.remove("hidden");
+    updateArcadeTelemetryDisplay(gameId);
+    updateArcadeControlsFooter(gameId);
+
+    if(arcadeModal){
+      arcadeModal.classList.remove("hidden");
+      if(!arcadeModal.open){
+        try{
+          if(typeof arcadeModal.showModal==="function"){
+            arcadeModal.showModal();
+          }else{
+            arcadeModal.setAttribute("open","");
+          }
+        }catch(e){
+          arcadeModal.setAttribute("open","");
+        }
+      }
+    }
 
     if(arcadeIframe){
-      if(!arcadeIframe.src || !arcadeIframe.src.endsWith(url.replace("./",""))){
-        arcadeIframe.src=url;
-      }
+      arcadeIframe.src=url;
     }
     if(arcadeFullscreen)arcadeFullscreen.href=url;
   }
   launchArcadeModal=openArcade;
+
+  function stopAndCloseArcade(){
+    if(arcadeIframe){
+      arcadeIframe.src="about:blank";
+    }
+    try{
+      if(arcadeModal?.open){
+        arcadeModal.close();
+      }else if(arcadeModal){
+        arcadeModal.removeAttribute("open");
+      }
+    }catch(_e){}
+    arcadeModal?.classList.remove("hidden");
+  }
+  closeArcadeModal=stopAndCloseArcade;
 
   document.querySelectorAll(".arcade-tab-btn").forEach(tab=>{
     tab.addEventListener("click",()=>{
@@ -2277,76 +2406,193 @@ function setupChildQuestAndArcade(){
     });
   });
 
-  $("arcade-close-btn")?.addEventListener("click",()=>{
-    arcadeModal.close();
+  $("arcade-close-btn")?.addEventListener("click",stopAndCloseArcade);
+
+  arcadeModal?.addEventListener("close",()=>{
+    if(arcadeIframe && arcadeIframe.src && !arcadeIframe.src.endsWith("about:blank")){
+      arcadeIframe.src="about:blank";
+    }
   });
+
+  arcadeModal?.addEventListener("click",(e)=>{
+    if(e.target===arcadeModal){
+      stopAndCloseArcade();
+    }
+  });
+
+  $("arcade-fullscreen-link")?.addEventListener("click",()=>{
+    setTimeout(()=>{
+      stopAndCloseArcade();
+    },150);
+  });
+
   $("arcade-reload-btn")?.addEventListener("click",()=>{
     if(arcadeIframe){
-      const src=arcadeIframe.src;
-      arcadeIframe.src="";
-      setTimeout(()=>{ arcadeIframe.src=src; },60);
+      const currentGame=quest.activeGame||"chimney-drop";
+      let url="./games/chimney-drop/index.html";
+      if(currentGame==="voxel-bike")url="./games/voxel-bike/index.html";
+      else if(currentGame==="voxel-racers")url="./games/voxel-racers/index.html";
+      else if(currentGame==="memory-match")url="./games/memory-match/index.html";
+      arcadeIframe.src="about:blank";
+      setTimeout(()=>{ arcadeIframe.src=url; },80);
     }
   });
 
   function handleGameTelemetry(data){
     if(!data)return;
     const statEl=$("arcade-last-stat");
-    if(data.type==="VOXEL_RACE_LAP"||data.type==="VOXEL_RACE_COMPLETED"){
+
+    let isCompleted=false;
+    let gameTitle="";
+    let summaryText="";
+    let gameId="";
+
+    if(data.type==="ARCADE_TASK_EVENT"){
+      isCompleted=!!data.completed;
+      gameId=data.gameId;
+      gameTitle=data.gameTitle||data.gameId;
+      summaryText=data.summary||`Goal achieved in ${gameTitle}!`;
+    }else if(data.type==="VOXEL_RACE_LAP"||data.type==="VOXEL_RACE_COMPLETED"){
+      gameId="voxel-racers";
+      gameTitle="Voxel Racers";
       const lapTime=data.lapTime?Number(data.lapTime).toFixed(2)+"s":"";
       const bestLap=data.bestLap?Number(data.bestLap).toFixed(2)+"s":"";
-      if(statEl){
-        statEl.textContent=data.type==="VOXEL_RACE_COMPLETED"
-          ?`🏁 Race Completed! Best Lap: ${bestLap || lapTime}`
-          :`⚡ Lap ${data.lapNumber || 1} Finished! Time: ${lapTime}`;
+      isCompleted=true;
+      summaryText=data.type==="VOXEL_RACE_COMPLETED"
+        ?`Race Completed! Place: ${data.place || "1st"}, Best Lap: ${bestLap || lapTime}`
+        :`Lap ${data.lapNumber || data.lap || 1} Finished: ${lapTime || bestLap || "Completed"}`;
+    }else if(data.type==="VOXEL_BIKE_COMPLETED"||data.type==="VOXEL_BIKE_LAP"){
+      gameId="voxel-bike";
+      gameTitle="Voxel Bikes";
+      isCompleted=true;
+      if(data.type==="VOXEL_BIKE_LAP"){
+        summaryText=`Lap 1 Finished: ${data.lapTimeText || "1 Lap Completed"}`;
+      }else{
+        summaryText=`Moto Race Finished: ${data.resultTime || data.finishTimeText || "Completed"}`;
       }
-      const racerTask=quest.tasks.find(t=>t.id==="voxel-racers");
-      if(racerTask&&!racerTask.completed){
-        racerTask.completed=true;
+    }
+
+    // Persist to local arcade records so achievements survive sessions
+    if(gameId&&isCompleted){
+      try{
+        const recs=JSON.parse(localStorage.getItem("vcf_ss_arcade_records")||"{}");
+        recs[gameId]={
+          gameId,
+          gameTitle,
+          summary:summaryText,
+          timestamp:Date.now()
+        };
+        localStorage.setItem("vcf_ss_arcade_records",JSON.stringify(recs));
+      }catch(_e){}
+    }
+
+    if(quest.activeGame===gameId){
+      updateArcadeTelemetryDisplay(gameId);
+    updateArcadeControlsFooter(gameId);
+    }
+
+    // Check Workshop quest tasks if any
+    if(quest&&Array.isArray(quest.tasks)){
+      const qTask=quest.tasks.find(t=>t.id===gameId);
+      if(qTask&&!qTask.completed&&isCompleted){
+        qTask.completed=true;
         saveQuest();
         playFestiveChime("unlock");
         officeRuntime?.triggerCelebration?.();
-        const msg=`🎉 MONSTER RACERS GOAL ACHIEVED!
-💡 Clue Unlocked: "${racerTask.clue}"`;
+        const msg=`🎉 ${gameTitle.toUpperCase()} GOAL ACHIEVED!\n💡 Clue Unlocked: "${qTask.clue}"`;
         if(typeof officeToast==="function")officeToast(msg);
         else toast(msg);
       }
-    }else if(data.type==="VOXEL_BIKE_COMPLETED"){
-      if(statEl){
-        statEl.textContent=`🏍️ Moto Race Finished! Time: ${data.resultTime || data.finishTimeText || "Completed"}`;
+    }
+
+    // Auto-validate matching Secret Santa received tasks
+    if(isCompleted&&player&&Array.isArray(player.receivedTasks)){
+      const kwMap={
+        "chimney-drop":["chimney","gift drop","presents","drop","catch 20"],
+        "memory-match":["memory","desk props","props","pairs","match"],
+        "voxel-racers":["racer","racers","car","lap","grand prix","speed"],
+        "voxel-bike":["bike","bikes","moto","nitro","redline","circuit"]
+      };
+      const gameKws=kwMap[gameId]||[];
+
+      let matchedTask=player.receivedTasks.find(t=>{
+        if(t.status==="completed")return false;
+        const txt=(t.task_text||t.text||"").toLowerCase();
+        return gameKws.some(kw=>txt.includes(kw));
+      });
+
+      if(!matchedTask){
+        matchedTask=player.receivedTasks.find(t=>{
+          if(t.status==="completed")return false;
+          const txt=(t.task_text||t.text||"").toLowerCase();
+          if(!txt.includes("arcade"))return false;
+          for(const [otherId,otherKws] of Object.entries(kwMap)){
+            if(otherId!==gameId&&otherKws.some(kw=>txt.includes(kw)))return false;
+          }
+          return true;
+        });
       }
-      const bikeTask=quest.tasks.find(t=>t.id==="voxel-bike");
-      if(bikeTask&&!bikeTask.completed){
-        bikeTask.completed=true;
-        saveQuest();
-        playFestiveChime("unlock");
-        officeRuntime?.triggerCelebration?.();
-        const msg=`🎉 VOXEL BIKE GOAL ACHIEVED!
-💡 Clue Unlocked: "${bikeTask.clue}"`;
-        if(typeof officeToast==="function")officeToast(msg);
-        else toast(msg);
+
+      if(matchedTask){
+        matchedTask.status="completed";
+        if(player.me?.id==="demo-guest"){
+          try{localStorage.setItem("vcf_ss_demo_received_tasks",JSON.stringify(player.receivedTasks||[]));}catch(_e){}
+          const newCount=getCompletedTasksCount();
+          playFestiveChime("unlock");
+          officeRuntime?.triggerCelebration?.();
+          const celebrateMsg=`🎉 ARCADE TASK VERIFIED!\n"${matchedTask.task_text||matchedTask.text}" completed! Mystery Clue #${Math.min(3,newCount)} unlocked! 💡`;
+          if(typeof officeToast==="function")officeToast(celebrateMsg);
+          else toast(celebrateMsg);
+          renderPersonalHub();
+          checkOverdueTasks();
+        }else{
+          api("complete_task",{task_id:matchedTask.id,completed:true}).then(async()=>{
+            await loadPlayer();
+            const newCount=getCompletedTasksCount();
+            playFestiveChime("unlock");
+            officeRuntime?.triggerCelebration?.();
+            const celebrateMsg=`🎉 ARCADE TASK VERIFIED!\n"${matchedTask.task_text||matchedTask.text}" completed! Mystery Clue #${Math.min(3,newCount)} unlocked! 💡`;
+            if(typeof officeToast==="function")officeToast(celebrateMsg);
+            else toast(celebrateMsg);
+          }).catch(err=>{
+            console.warn("Arcade task auto-complete error:",err);
+          });
+        }
       }
     }
   }
 
   // Same-origin postMessage listener
   window.addEventListener("message",e=>{
-    if(e.data&&(e.data.type==="VOXEL_RACE_LAP"||e.data.type==="VOXEL_RACE_COMPLETED"||e.data.type==="VOXEL_BIKE_COMPLETED")){
+    if(e.data&&(e.data.type==="VOXEL_RACE_LAP"||e.data.type==="VOXEL_RACE_COMPLETED"||e.data.type==="VOXEL_BIKE_COMPLETED"||e.data.type==="ARCADE_TASK_EVENT")){
       handleGameTelemetry(e.data);
     }
   });
 
   // Cross-storage listener fallback
   window.addEventListener("storage",e=>{
-    if(e.key==="vcf_last_race_result"&&e.newValue){
+    if((e.key==="vcf_secret_santa_last_race"||e.key==="vcf_last_race_result")&&e.newValue){
       try{
         const val=JSON.parse(e.newValue);
         handleGameTelemetry(Object.assign({type:"VOXEL_RACE_COMPLETED"},val));
       }catch(_e){}
-    }else if(e.key==="vcf_last_bike_result"&&e.newValue){
+    }else if(e.key==="vcf_secret_santa_last_lap"&&e.newValue){
+      try{
+        const val=JSON.parse(e.newValue);
+        handleGameTelemetry(Object.assign({type:"VOXEL_RACE_LAP"},val));
+      }catch(_e){}
+    }else if((e.key==="vcf_secret_santa_last_bike"||e.key==="vcf_last_bike_result")&&e.newValue){
       try{
         const val=JSON.parse(e.newValue);
         handleGameTelemetry(Object.assign({type:"VOXEL_BIKE_COMPLETED"},val));
       }catch(_e){}
+    }else if((e.key==="vcf_last_arcade_event"||e.key==="vcf_last_chimney_drop_result"||e.key==="vcf_last_memory_match_result")&&e.newValue){
+      try{
+        const val=JSON.parse(e.newValue);
+        handleGameTelemetry(val);
+      }catch(_e){}
+    }else if(e.key==="vcf_ss_team_messages"||e.key==="vcf_ss_whisper_messages"){
+      renderBreakRoomChat();
     }
   });
 
@@ -2715,6 +2961,7 @@ function closePlayerMenu(){
   $("player-menu").classList.add("hidden");
   officeRuntime?.setPaused(false);
   if(avatarStudio){avatarStudio.dispose();avatarStudio=null;}
+  if(typeof closeArcadeModal==="function")closeArcadeModal();
 }
 
 function openPlayerMenu(tab="personal"){
@@ -2775,8 +3022,12 @@ function renderHubClues(){
 }
 
 function showPlayerTab(name){
-  const tabs=["personal","character","arcade","rules"];
+  const tabs=["personal","character","arcade","breakroom","rules"];
   const currentTab=tabs.includes(name)?name:"personal";
+
+  if(currentTab!=="arcade" && typeof closeArcadeModal==="function"){
+    closeArcadeModal();
+  }
 
   for(const t of tabs){
     const panel=$("player-"+t);
@@ -2805,6 +3056,8 @@ function showPlayerTab(name){
   }
   if(currentTab==="personal"){
     renderPersonalHub();
+  }else if(currentTab==="breakroom"){
+    renderBreakRoomChat();
   }
 }
 function renderPersonalHub(){
@@ -2833,6 +3086,8 @@ function renderPersonalHub(){
     })));
   }
   const incoming=$("received-tasks");incoming.replaceChildren();
+  const isDemo=player?.me?.id==="demo-guest";
+  $("btn-reset-demo-tasks")?.classList.toggle("hidden",!isDemo);
   if(!player.receivedTasks.length)itemLine(incoming,"No tasks assigned yet.");
   for(const t of player.receivedTasks)renderSantaTask(incoming,t,false);
   checkOverdueTasks(false);
@@ -2889,6 +3144,121 @@ async function loadPlayer(){
   }
   renderPersonalHub();
 }
+function getTaskProof(taskId){
+  try{
+    const all=JSON.parse(localStorage.getItem("vcf_ss_task_proofs")||"{}");
+    return all[taskId]||null;
+  }catch(_e){return null;}
+}
+function setTaskProof(taskId,proofObj){
+  try{
+    const all=JSON.parse(localStorage.getItem("vcf_ss_task_proofs")||"{}");
+    all[taskId]=proofObj;
+    localStorage.setItem("vcf_ss_task_proofs",JSON.stringify(all));
+  }catch(_e){}
+}
+
+let currentProofTask=null;
+let proofPreviewBase64=null;
+
+function openProofDialog(task,proof,isSanta){
+  currentProofTask=task;
+  proofPreviewBase64=null;
+  const modal=$("task-proof-dialog");
+  if(!modal)return;
+
+  const viewMode=$("proof-view-mode");
+  const uploadForm=$("proof-upload-form");
+
+  if(proof){
+    viewMode?.classList.remove("hidden");
+    uploadForm?.classList.add("hidden");
+    if($("proof-view-task-name"))$("proof-view-task-name").textContent="Task: "+(task.task_text||task.title||"Holiday Challenge");
+    const imgEl=$("proof-view-image");
+    if(imgEl){
+      if(proof.image){
+        imgEl.src=proof.image;
+        imgEl.classList.remove("hidden");
+      }else{
+        imgEl.classList.add("hidden");
+      }
+    }
+    if($("proof-view-note"))$("proof-view-note").textContent=proof.note||"No additional text notes.";
+    
+    const approveBtn=$("proof-approve-btn");
+    if(approveBtn){
+      if(isSanta&&task.status!=="completed"){
+        approveBtn.classList.remove("hidden");
+        approveBtn.onclick=run(async()=>{
+          task.status="completed";
+          if(player?.me?.id==="demo-guest"){
+            try{localStorage.setItem("vcf_ss_demo_child_tasks",JSON.stringify(player?.myChild?.tasks||[]));}catch{}
+          }else{
+            await api("complete_task",{task_id:task.id,completed:true});
+            await loadPlayer();
+          }
+          modal.close();
+          playFestiveChime("unlock");
+          officeRuntime?.triggerCelebration?.();
+          toast("✓ Task verified & clue unlocked for your Child! 🎁");
+          renderPersonalHub();
+        });
+      }else{
+        approveBtn.classList.add("hidden");
+      }
+    }
+  }else{
+    viewMode?.classList.add("hidden");
+    uploadForm?.classList.remove("hidden");
+    if($("proof-upload-task-name"))$("proof-upload-task-name").textContent="Task: "+(task.task_text||task.title||"Holiday Challenge");
+    if($("proof-note-input"))$("proof-note-input").value="";
+    if($("proof-file-input"))$("proof-file-input").value="";
+    $("proof-file-preview-wrap")?.classList.add("hidden");
+  }
+
+  if(typeof modal.showModal==="function")modal.showModal();
+  else modal.classList.remove("hidden");
+}
+
+$("proof-close-btn")?.addEventListener("click",()=>{$("task-proof-dialog")?.close();});
+$("proof-view-close-btn")?.addEventListener("click",()=>{$("task-proof-dialog")?.close();});
+$("proof-upload-cancel-btn")?.addEventListener("click",()=>{$("task-proof-dialog")?.close();});
+
+$("proof-file-input")?.addEventListener("change",e=>{
+  const file=e.target.files?.[0];
+  if(!file)return;
+  const reader=new FileReader();
+  reader.onload=ev=>{
+    proofPreviewBase64=ev.target?.result;
+    const previewImg=$("proof-file-preview");
+    if(previewImg){
+      previewImg.src=proofPreviewBase64;
+      $("proof-file-preview-wrap")?.classList.remove("hidden");
+    }
+  };
+  reader.readAsDataURL(file);
+});
+
+$("proof-upload-form")?.addEventListener("submit",e=>{
+  e.preventDefault();
+  if(!currentProofTask)return;
+  const note=$("proof-note-input")?.value?.trim()||"";
+  const proofObj={
+    image:proofPreviewBase64||null,
+    note:note||"Evidence submitted",
+    timestamp:Date.now()
+  };
+  setTaskProof(currentProofTask.id,proofObj);
+  currentProofTask.proof=proofObj;
+
+  if(player?.me?.id==="demo-guest"){
+    try{localStorage.setItem("vcf_ss_demo_received_tasks",JSON.stringify(player.receivedTasks||[]));}catch{}
+  }
+  $("task-proof-dialog")?.close();
+  toast("📷 Proof submitted for your Secret Santa to review!");
+  renderPersonalHub();
+});
+
 // Both columns use dated task visuals; child can mark tasks as completed
 // to unlock mystery clues, and Santa can mark or verify tasks they gave.
 function renderSantaTask(parent,task,editable){
@@ -2923,6 +3293,48 @@ function renderSantaTask(parent,task,editable){
   metaCol.append(date,badge);
 
   const words=node("span","santa-task-text",task.task_text||task.title||"Task");
+  const proof=task.proof||getTaskProof(task.id);
+
+  if(proof){
+    const viewProofBtn=node("button","task-proof-badge",editable?"📷 View Proof":"📷 Proof Attached");
+    viewProofBtn.type="button";
+    viewProofBtn.title="Inspect attached evidence";
+    viewProofBtn.addEventListener("click",e=>{
+      e.stopPropagation();
+      openProofDialog(task,proof,editable);
+    });
+    words.append(viewProofBtn);
+  }else if(!editable&&!isDone){
+    const txt=(task.task_text||task.title||"").toLowerCase();
+    let arcadeGame=null;
+    if(txt.includes("chimney")||txt.includes("gift drop")) arcadeGame="chimney-drop";
+    else if(txt.includes("memory")||txt.includes("match")) arcadeGame="memory-match";
+    else if(txt.includes("racer")||txt.includes("lap")||txt.includes("car")) arcadeGame="voxel-racers";
+    else if(txt.includes("bike")||txt.includes("moto")) arcadeGame="voxel-bike";
+    else if(txt.includes("arcade")) arcadeGame="chimney-drop";
+
+    if(arcadeGame){
+      const playBtn=node("button","task-arcade-play-btn","🕹️ Play");
+      playBtn.type="button";
+      playBtn.title="Launch this game directly in Retro Arcade Lounge";
+      playBtn.addEventListener("click",e=>{
+        e.stopPropagation();
+        closePlayerMenu();
+        if(typeof launchArcadeModal==="function") launchArcadeModal(arcadeGame);
+      });
+      words.append(playBtn);
+    }
+
+    const attachBtn=node("button","task-attach-proof-btn","📎 Proof");
+    attachBtn.type="button";
+    attachBtn.title="Attach evidence or photo proof for this task";
+    attachBtn.addEventListener("click",e=>{
+      e.stopPropagation();
+      openProofDialog(task,null,false);
+    });
+    words.append(attachBtn);
+  }
+
   row.append(metaCol,words);
 
   if(editable){
@@ -3233,7 +3645,188 @@ window.addEventListener("keydown",e=>{
 $("player-tab-personal")?.addEventListener("click",()=>showPlayerTab("personal"));
 $("player-tab-character")?.addEventListener("click",()=>showPlayerTab("character"));
 $("player-tab-arcade")?.addEventListener("click",()=>showPlayerTab("arcade"));
+$("player-tab-breakroom")?.addEventListener("click",()=>showPlayerTab("breakroom"));
 $("player-tab-rules")?.addEventListener("click",()=>showPlayerTab("rules"));
+
+// Break Room Team Chat & Secret Santa Whispers
+let activeBreakRoomChannel="team";
+
+function getTeamMessages(){
+  try{
+    const msgs=JSON.parse(localStorage.getItem("vcf_ss_team_messages")||"[]");
+    if(!msgs.length){
+      return [
+        {
+          id:"seed-1",
+          authorName:"Santa's Elf",
+          desk:"North Pole",
+          text:"🎅 Welcome to the Break Room! Share holiday cheers, banter, and celebrate completed tasks!",
+          timestamp:Date.now()-3600000
+        },
+        {
+          id:"seed-2",
+          authorName:"Arjun Sharma",
+          desk:"Desk 1",
+          text:"🎉 Who has beaten my high score in Chimney Gift Drop? Loving the retro arcade!",
+          timestamp:Date.now()-1800000
+        }
+      ];
+    }
+    return msgs;
+  }catch(_e){return [];}
+}
+
+function getWhisperMessages(){
+  try{
+    const msgs=JSON.parse(localStorage.getItem("vcf_ss_whisper_messages")||"[]");
+    if(!msgs.length){
+      return [
+        {
+          id:"w-seed-1",
+          authorName:"🎅 Secret Santa",
+          text:"Ho Ho Ho! I left you 3 mystery tasks in the Santa Hub. Complete them to unlock my secret clues!",
+          isSanta:true,
+          timestamp:Date.now()-3600000
+        }
+      ];
+    }
+    return msgs;
+  }catch(_e){return [];}
+}
+
+function renderBreakRoomChat(){
+  const teamBtn=$("chat-tab-team");
+  const whisperBtn=$("chat-tab-whisper");
+  const teamChan=$("breakroom-channel-team");
+  const whisperChan=$("breakroom-channel-whisper");
+
+  teamBtn?.classList.toggle("active",activeBreakRoomChannel==="team");
+  whisperBtn?.classList.toggle("active",activeBreakRoomChannel==="whisper");
+  teamChan?.classList.toggle("hidden",activeBreakRoomChannel!=="team");
+  whisperChan?.classList.toggle("hidden",activeBreakRoomChannel!=="whisper");
+
+  if(activeBreakRoomChannel==="team"){
+    const box=$("team-chat-messages");
+    if(!box)return;
+    box.replaceChildren();
+    const msgs=getTeamMessages();
+    msgs.forEach(m=>{
+      const isOwn=player&&m.authorName===player.me?.display_name;
+      const row=node("div","chat-msg-row"+(isOwn?" own-msg":""));
+      const hdr=node("div","chat-msg-header");
+      const author=node("span","chat-msg-author",m.authorName+(m.desk?` (${m.desk})`:""));
+      const timeStr=new Date(m.timestamp||Date.now()).toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"});
+      const time=node("span","chat-msg-time",timeStr);
+      hdr.append(author,time);
+      const body=node("div","chat-msg-body",m.text);
+      row.append(hdr,body);
+      if(m.photo){
+        const img=node("img","chat-msg-photo");
+        img.src=m.photo;
+        img.alt="Attached evidence photo";
+        img.loading="lazy";
+        row.append(img);
+      }
+      box.append(row);
+    });
+    box.scrollTop=box.scrollHeight;
+  }else{
+    const box=$("whisper-chat-messages");
+    if(!box)return;
+    box.replaceChildren();
+    const msgs=getWhisperMessages();
+    msgs.forEach(m=>{
+      const isSanta=!!m.isSanta;
+      const isOwn=player&&m.authorName===player.me?.display_name;
+      const row=node("div","chat-msg-row"+(isSanta?" whisper-santa-msg":(isOwn?" own-msg":"")));
+      const hdr=node("div","chat-msg-header");
+      const author=node("span","chat-msg-author",m.authorName);
+      const timeStr=new Date(m.timestamp||Date.now()).toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"});
+      const time=node("span","chat-msg-time",timeStr);
+      hdr.append(author,time);
+      const body=node("div","chat-msg-body",m.text);
+      row.append(hdr,body);
+      box.append(row);
+    });
+    box.scrollTop=box.scrollHeight;
+  }
+}
+
+$("chat-tab-team")?.addEventListener("click",()=>{
+  activeBreakRoomChannel="team";
+  renderBreakRoomChat();
+});
+$("chat-tab-whisper")?.addEventListener("click",()=>{
+  activeBreakRoomChannel="whisper";
+  renderBreakRoomChat();
+});
+
+let teamChatPhotoBase64=null;
+$("team-chat-file")?.addEventListener("change",e=>{
+  const file=e.target.files?.[0];
+  if(!file)return;
+  const reader=new FileReader();
+  reader.onload=ev=>{
+    teamChatPhotoBase64=ev.target?.result;
+    toast("📷 Photo attached! Ready to send.");
+  };
+  reader.readAsDataURL(file);
+});
+
+$("team-chat-form")?.addEventListener("submit",e=>{
+  e.preventDefault();
+  const input=$("team-chat-input");
+  const text=input?.value?.trim();
+  if(!text)return;
+  const authorName=player?.me?.display_name||"Teammate";
+  const desk=player?.me?.desk||"";
+  const msgs=getTeamMessages();
+  msgs.push({
+    id:"msg-"+Date.now(),
+    authorName,
+    desk,
+    text,
+    photo:teamChatPhotoBase64||null,
+    timestamp:Date.now()
+  });
+  try{localStorage.setItem("vcf_ss_team_messages",JSON.stringify(msgs));}catch(_e){}
+  teamChatPhotoBase64=null;
+  if(input)input.value="";
+  renderBreakRoomChat();
+});
+
+$("whisper-chat-form")?.addEventListener("submit",e=>{
+  e.preventDefault();
+  const input=$("whisper-chat-input");
+  const text=input?.value?.trim();
+  if(!text)return;
+  const msgs=getWhisperMessages();
+  const isSantaWhisper=!player?.myChild||confirm("Send this whisper anonymously as 🎅 Secret Santa?");
+  msgs.push({
+    id:"wh-"+Date.now(),
+    authorName:isSantaWhisper?"🎅 Secret Santa":(player?.me?.display_name||"Teammate"),
+    text,
+    isSanta:isSantaWhisper,
+    timestamp:Date.now()
+  });
+  try{localStorage.setItem("vcf_ss_whisper_messages",JSON.stringify(msgs));}catch(_e){}
+  if(input)input.value="";
+  renderBreakRoomChat();
+});
+
+$("task-preset")?.addEventListener("change",e=>{
+  const val=e.target?.value;
+  if(val&&$("task-text"))$("task-text").value=val;
+});
+
+$("arcade-launch-chimney")?.addEventListener("click",()=>{
+  closePlayerMenu();
+  if(typeof launchArcadeModal==="function")launchArcadeModal("chimney-drop");
+});
+$("arcade-launch-memory")?.addEventListener("click",()=>{
+  closePlayerMenu();
+  if(typeof launchArcadeModal==="function")launchArcadeModal("memory-match");
+});
 
 $("hub-unlock-clue-btn")?.addEventListener("click",run(async()=>{
   const {available}=updateClueButton();
@@ -3288,6 +3881,244 @@ $("rules-sign-out")?.addEventListener("click",()=>{
     endSession();
   }
 });
+
+// ==========================================
+// Interactive Quick Tour Controller
+// ==========================================
+const tourSteps=[
+  {
+    icon:"🏢",
+    title:"Welcome to the 3D Christmas Office!",
+    description:"Walk around using W, A, S, D or arrow keys. Explore teammate desks, grab hot cocoa from the break room, and dance using keys 1, 2, 3, 4!",
+    targetId:null,
+    targetLabel:"3D Holiday Office",
+    prepare:()=>{
+      closePlayerMenu();
+    }
+  },
+  {
+    icon:"⏸️",
+    title:"Game Menu & Santa Hub",
+    description:"Click Menu in the top corner (or press Esc anytime) to open your private Secret Santa Hub, customize your 3D avatar, or chat with teammates.",
+    targetId:"player-pause",
+    targetLabel:"Top Menu Button",
+    prepare:()=>{
+      closePlayerMenu();
+    }
+  },
+  {
+    icon:"📜",
+    title:"Tasks From Your Secret Santa",
+    description:"Your Santa gives you mystery daily tasks! Complete them or play featured Retro Arcade challenges to auto-verify tasks and unlock mystery clues!",
+    targetId:"received-tasks",
+    targetLabel:"Received Santa Tasks",
+    prepare:()=>{
+      openPlayerMenu("personal");
+    }
+  },
+  {
+    icon:"🎁",
+    title:"My Secret Child & Challenges",
+    description:"See who you were matched with as Secret Santa! View their wishlist, and assign up to 3 festive tasks using fun arcade presets or custom ideas.",
+    targetId:"child-card",
+    targetLabel:"Secret Child & Challenges",
+    prepare:()=>{
+      openPlayerMenu("personal");
+    }
+  },
+  {
+    icon:"🕹️",
+    title:"Retro Arcade Lounge",
+    description:"Play 4 exciting holiday games: Chimney Gift Drop, Memory Match, Voxel Racers, and Voxel Bikes! Laps and high scores auto-validate tasks in real time!",
+    targetId:"player-tab-arcade",
+    targetLabel:"Retro Arcade Lounge",
+    prepare:()=>{
+      openPlayerMenu("arcade");
+    }
+  },
+  {
+    icon:"☕",
+    title:"Break Room & Anonymous Whispers",
+    description:"Hang out at the kitchen counter, share holiday banter and photos with colleagues, or send anonymous whispers to your child as Secret Santa!",
+    targetId:"player-tab-breakroom",
+    targetLabel:"Break Room Chat",
+    prepare:()=>{
+      openPlayerMenu("breakroom");
+    }
+  },
+  {
+    icon:"💡",
+    title:"Mystery Clues & Santa Reveal",
+    description:"Each completed task unlocks a new clue about your Santa (their desk prop, avatar, or hints). When ready, celebrate and reveal who your Santa was!",
+    targetId:"player-clue",
+    targetLabel:"Mystery Clues Lightbulb",
+    prepare:()=>{
+      closePlayerMenu();
+    }
+  }
+];
+
+let currentTourIndex=0;
+let activeHighlightEl=null;
+
+function clearTourHighlight(){
+  if(activeHighlightEl){
+    activeHighlightEl.classList.remove("tour-highlight");
+    activeHighlightEl=null;
+  }
+}
+
+function renderTourStep(index){
+  if(index<0)index=0;
+  if(index>=tourSteps.length){
+    endTour();
+    return;
+  }
+  currentTourIndex=index;
+  const step=tourSteps[index];
+
+  clearTourHighlight();
+
+  if(typeof step.prepare==="function"){
+    try{step.prepare();}catch(_e){}
+  }
+
+  const overlay=$("quick-tour-overlay");
+  const badgeEl=$("tour-step-badge");
+  const targetBadgeEl=$("tour-target-badge");
+  const iconEl=$("tour-icon");
+  const titleEl=$("tour-title");
+  const descEl=$("tour-description");
+  const prevBtn=$("tour-prev-btn");
+  const nextBtn=$("tour-next-btn");
+  const dotsEl=$("tour-dots");
+
+  if(!overlay)return;
+
+  if(badgeEl)badgeEl.textContent=`Step ${index+1} of ${tourSteps.length}`;
+  if(targetBadgeEl){
+    if(step.targetLabel){
+      targetBadgeEl.textContent="🎯 "+step.targetLabel;
+      targetBadgeEl.classList.remove("hidden");
+    }else{
+      targetBadgeEl.classList.add("hidden");
+    }
+  }
+  if(iconEl)iconEl.textContent=step.icon||"✨";
+  if(titleEl)titleEl.textContent=step.title||"";
+  if(descEl)descEl.textContent=step.description||"";
+
+  if(prevBtn){
+    prevBtn.disabled=index===0;
+    prevBtn.style.opacity=index===0?"0.4":"1";
+  }
+  if(nextBtn){
+    nextBtn.textContent=index===tourSteps.length-1?"Finish ✓":"Next →";
+  }
+
+  if(dotsEl){
+    dotsEl.innerHTML="";
+    tourSteps.forEach((_,i)=>{
+      const dot=document.createElement("span");
+      dot.className="tour-dot"+(i===index?" active":"");
+      dot.addEventListener("click",()=>renderTourStep(i));
+      dotsEl.appendChild(dot);
+    });
+  }
+
+  if(step.targetId){
+    setTimeout(()=>{
+      const target=document.getElementById(step.targetId);
+      if(target){
+        target.classList.add("tour-highlight");
+        activeHighlightEl=target;
+        target.scrollIntoView({behavior:"smooth",block:"center"});
+      }
+    },100);
+  }
+
+  overlay.classList.remove("hidden");
+}
+
+let tourTooltipTimer=null;
+
+function pointToTopTourButton(msg){
+  const btn=$("player-tour-btn");
+  const tip=$("tour-top-tooltip");
+  if(!btn)return;
+  btn.classList.add("tour-btn-spotlight-pulse");
+  if(tip){
+    if(msg){
+      const textEl=tip.querySelector(".tour-tooltip-content span:last-child")||tip.querySelector("span:last-child");
+      if(textEl)textEl.innerHTML=msg;
+    }
+    tip.classList.remove("hidden");
+  }
+  if(tourTooltipTimer)clearTimeout(tourTooltipTimer);
+  tourTooltipTimer=setTimeout(()=>{
+    btn.classList.remove("tour-btn-spotlight-pulse");
+    if(tip)tip.classList.add("hidden");
+  },5500);
+}
+
+function clearTourCoachmark(){
+  const btn=$("player-tour-btn");
+  const tip=$("tour-top-tooltip");
+  if(btn)btn.classList.remove("tour-btn-spotlight-pulse");
+  if(tip)tip.classList.add("hidden");
+  if(tourTooltipTimer)clearTimeout(tourTooltipTimer);
+}
+
+function showTourWelcomeModal(){
+  const modal=$("tour-welcome-modal");
+  if(!modal)return;
+  modal.classList.remove("hidden");
+}
+
+function dismissTourWelcomeModal(startInteractiveTour=false){
+  const modal=$("tour-welcome-modal");
+  if(modal)modal.classList.add("hidden");
+  try{localStorage.setItem("vcf_ss_tour_welcomed","true");}catch(_e){}
+  if(startInteractiveTour){
+    startTour(0);
+  }else{
+    pointToTopTourButton("Need help or features? Click <strong>Tour</strong> right here anytime!");
+  }
+}
+
+function startTour(stepIndex=0){
+  clearTourCoachmark();
+  renderTourStep(stepIndex);
+}
+
+function endTour(){
+  clearTourHighlight();
+  $("quick-tour-overlay")?.classList.add("hidden");
+  try{
+    localStorage.setItem("vcf_ss_tour_done","true");
+    localStorage.setItem("vcf_ss_tour_welcomed","true");
+  }catch(_e){}
+  pointToTopTourButton("You can restart the <strong>Tour</strong> anytime right here!");
+}
+
+$("player-tour-btn")?.addEventListener("click",()=>{
+  clearTourCoachmark();
+  startTour(0);
+});
+$("menu-tour-btn")?.addEventListener("click",()=>{
+  clearTourCoachmark();
+  startTour(0);
+});
+$("tour-close-btn")?.addEventListener("click",endTour);
+$("tour-backdrop")?.addEventListener("click",endTour);
+$("tour-prev-btn")?.addEventListener("click",()=>renderTourStep(currentTourIndex-1));
+$("tour-next-btn")?.addEventListener("click",()=>renderTourStep(currentTourIndex+1));
+
+$("welcome-start-tour-btn")?.addEventListener("click",()=>dismissTourWelcomeModal(true));
+$("welcome-skip-btn")?.addEventListener("click",()=>dismissTourWelcomeModal(false));
+$("tour-welcome-close")?.addEventListener("click",()=>dismissTourWelcomeModal(false));
+$("tour-welcome-backdrop")?.addEventListener("click",()=>dismissTourWelcomeModal(false));
+
 $("refresh-personal").addEventListener("click",run(async()=>{
   await loadPlayer();
   toast("Your private Santa notebook is up to date.");
@@ -3449,21 +4280,33 @@ function loadDemoPlayer(){
     ],
     receivedTasks:[
       {
-        id:"task-demo-1",
-        task_date:yesterdayStr,
-        task_text:"Visit the Retro Arcade Room and play a game of Monster Racers!",
-        status:"pending"
-      },
-      {
-        id:"task-demo-2",
+        id:"task-demo-racer",
         task_date:todayStr,
-        task_text:"Customize your office desk and snap a festive desk selfie badge!",
+        task_text:"🏎️ Race in Retro Arcade and complete a lap in Voxel Racers!",
         status:"pending"
       },
       {
-        id:"task-demo-3",
+        id:"task-demo-bike",
+        task_date:todayStr,
+        task_text:"🏍️ Ride Voxel Bikes in the Arcade and finish the speed circuit!",
+        status:"pending"
+      },
+      {
+        id:"task-demo-chimney",
+        task_date:todayStr,
+        task_text:"🎁 Play Chimney Gift Drop in the Arcade and catch 20 presents!",
+        status:"pending"
+      },
+      {
+        id:"task-demo-memory",
+        task_date:todayStr,
+        task_text:"🃏 Play Holiday Memory Match and find all 8 office prop pairs!",
+        status:"pending"
+      },
+      {
+        id:"task-demo-cocoa",
         task_date:tomorrowStr,
-        task_text:"Sip hot cocoa at the break-room kitchen counter and relax!",
+        task_text:"☕ Sip hot cocoa at the break-room kitchen counter and relax!",
         status:"pending"
       }
     ],
@@ -3485,7 +4328,27 @@ function loadDemoPlayer(){
     if(Array.isArray(savedTasks)) demoPlayer.myChild.tasks=savedTasks;
 
     const savedRecTasks=JSON.parse(localStorage.getItem("vcf_ss_demo_received_tasks")||"null");
-    if(Array.isArray(savedRecTasks)&&savedRecTasks.length) demoPlayer.receivedTasks=savedRecTasks;
+    if(Array.isArray(savedRecTasks)&&savedRecTasks.length){
+      for(const t of demoPlayer.receivedTasks){
+        const isRacer=(t.task_text||"").includes("Voxel Racers");
+        const isBike=(t.task_text||"").includes("Voxel Bikes");
+        const isChimney=(t.task_text||"").includes("Chimney");
+        const isMem=(t.task_text||"").includes("Memory");
+        if(isRacer&&!savedRecTasks.some(st=>(st.task_text||"").includes("Voxel Racers"))){
+          savedRecTasks.unshift(t);
+        }
+        if(isBike&&!savedRecTasks.some(st=>(st.task_text||"").includes("Voxel Bikes"))){
+          savedRecTasks.splice(1, 0, t);
+        }
+        if(isChimney&&!savedRecTasks.some(st=>(st.task_text||"").includes("Chimney"))){
+          savedRecTasks.splice(2, 0, t);
+        }
+        if(isMem&&!savedRecTasks.some(st=>(st.task_text||"").includes("Memory"))){
+          savedRecTasks.splice(3, 0, t);
+        }
+      }
+      demoPlayer.receivedTasks=savedRecTasks;
+    }
 
     const savedMsg=localStorage.getItem("vcf_ss_demo_message");
     if(savedMsg!==null) demoPlayer.myChild.message=savedMsg;
@@ -3521,6 +4384,17 @@ function loadDemoPlayer(){
 $("demo-entry-btn")?.addEventListener("click",()=>{
   christmasMusic.unlock();
   loadDemoPlayer();
+});
+
+$("btn-reset-demo-tasks")?.addEventListener("click",()=>{
+  try{
+    localStorage.removeItem("vcf_ss_demo_received_tasks");
+    localStorage.removeItem("vcf_ss_arcade_records");
+  }catch(_e){}
+  loadDemoPlayer();
+  const resetMsg="🔄 Demo tasks & arcade telemetry reset! Ready to test fresh.";
+  if(typeof officeToast==="function")officeToast(resetMsg);
+  else toast(resetMsg);
 });
 
 

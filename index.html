@@ -29,9 +29,9 @@
           <button type="submit" class="arrow-button" aria-label="Enter office">➜</button>
         </div>
         <div class="welcome-actions">
-          <button type="button" id="demo-entry-btn" class="demo-entry-btn" title="Explore the full 3D office, retro arcade room, and avatar studio">
-            <span class="demo-btn-icon">🎄</span>
-            <span class="demo-btn-text">Instant Play · Explore Holiday Office (Demo)</span>
+          <button type="button" id="demo-entry-btn" class="demo-entry-btn" title="Explore the full 3D office, retro arcade room, and avatar studio in Guest / Demo mode">
+            <span class="demo-btn-icon">🎮</span>
+            <span class="demo-btn-text">Play Quick Demo · Holiday Office (Guest Mode)</span>
           </button>
         </div>
         <div class="welcome-organizer-row">
@@ -308,6 +308,16 @@
           <div class="hud-badge"><span class="hud-badge-icon">🎄</span><span id="hud-event-name">Secret Santa</span></div>
         </div>
         <div class="hud-group-right">
+          <div class="tour-btn-wrap">
+            <button id="player-tour-btn" class="office-tour-btn" type="button" aria-label="Take quick interactive tour" title="Take Quick Tour">🧭 Tour</button>
+            <div id="tour-top-tooltip" class="tour-top-tooltip hidden" role="tooltip">
+              <div class="tour-tooltip-arrow"></div>
+              <div class="tour-tooltip-content">
+                <span class="tour-tooltip-icon">🧭</span>
+                <span>Need help or features? Click <strong>Tour</strong> anytime!</span>
+              </div>
+            </div>
+          </div>
           <button id="player-clue" class="office-clue" type="button" aria-label="View Secret Santa clue" title="Santa Clue">💡</button>
           <button id="player-music" class="office-music" type="button" aria-label="Mute Jingle Bells" aria-pressed="false" title="Mute Jingle Bells">🔊</button>
           <button id="player-pause" class="office-pause" type="button" aria-label="Open Game Menu" title="Game Menu (Pause)"><span class="pause-icon">⏸</span><span class="pause-label">Menu</span></button>
@@ -599,6 +609,7 @@
           <button type="button" class="tab active" id="player-tab-personal" role="tab" aria-controls="player-personal" aria-selected="true">🎁 Santa Hub</button>
           <button type="button" class="tab" id="player-tab-character" role="tab" aria-controls="player-character" aria-selected="false">👤 Character</button>
           <button type="button" class="tab" id="player-tab-arcade" role="tab" aria-controls="player-arcade" aria-selected="false">🕹️ Arcade &amp; Office</button>
+          <button type="button" class="tab" id="player-tab-breakroom" role="tab" aria-controls="player-breakroom" aria-selected="false">💬 Break Room</button>
           <button type="button" class="tab" id="player-tab-rules" role="tab" aria-controls="player-rules" aria-selected="false">📜 Guide &amp; Rules</button>
         </nav>
         <button id="player-close" class="small-outline" type="button" aria-label="Close notebook and resume game" title="Close notebook">✕</button>
@@ -750,7 +761,10 @@
             <p class="studio-eyebrow">SANTA HUB</p>
             <h3 id="personal-name"></h3>
           </div>
-          <button type="button" id="refresh-personal" class="small-outline" title="Refresh assignment and gift information">↻ Refresh</button>
+          <div style="display:flex; gap:6px; align-items:center;">
+            <button type="button" id="menu-tour-btn" class="small-outline" title="Take a quick interactive tour of the app">🧭 Tour</button>
+            <button type="button" id="refresh-personal" class="small-outline" title="Refresh assignment and gift information">↻ Refresh</button>
+          </div>
         </div>
         <p id="my-assignment-status" class="personal-assignment-status" role="status" aria-live="polite">Your Secret Santa allocation will appear here after the organizer draws it.</p>
         <div class="personal-layout personal-main-cards">
@@ -764,7 +778,7 @@
               <button class="primary" type="submit" aria-label="Add wishlist item">＋</button>
             </form>
           </section>
-          <section class="personal-card personal-child-card">
+          <section class="personal-card personal-child-card" id="child-card">
             <div class="secret-child-reveal-row">
               <span class="personal-card-kicker">02 · YOUR SECRET CHILD</span>
               <button id="child-toggle" type="button" class="small-outline" aria-label="Privately reveal or hide Secret Child">◉ Reveal</button>
@@ -787,7 +801,10 @@
           <span class="personal-card-kicker">03 · SECRET SANTA TASKS</span>
           <div class="santa-task-columns">
             <section class="santa-task-group">
-              <h4>Tasks for me from my Secret Santa</h4>
+              <div class="santa-group-header-row" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                <h4 style="margin:0;">Tasks for me from my Secret Santa</h4>
+                <button type="button" id="btn-reset-demo-tasks" class="btn-demo-reset hidden" title="Reset all demo tasks so you can test them again">🔄 Reset Demo Tasks</button>
+              </div>
               <p class="muted small" style="margin-bottom:8px;">Complete your Santa's tasks before their due date to unlock clues about who your Santa is!</p>
               <div id="received-tasks-overdue-banner" class="task-overdue-banner hidden"></div>
               <div id="received-tasks" class="personal-list santa-task-list"></div>
@@ -797,6 +814,19 @@
               <p class="muted small" style="margin-bottom:8px;">Assign up to 3 fun holiday tasks with due dates. Each task your child completes unlocks one of your clues!</p>
               <div id="assigned-tasks" class="personal-list santa-task-list"></div>
               <form id="task-form" class="task-entry-form">
+                <label class="task-field task-preset-field" for="task-preset">
+                  <span>Challenge Preset (Optional)</span>
+                  <select id="task-preset" class="task-preset-select">
+                    <option value="">-- Choose Challenge or Custom --</option>
+                    <option value="🎁 Chimney Gift Drop: Catch 20 falling gifts in the Retro Arcade!">🎮 Chimney Gift Drop (Arcade Auto-Verified)</option>
+                    <option value="🃏 Memory Match: Match all 8 holiday office props in the Arcade!">🃏 Holiday Desk Memory (Arcade Auto-Verified)</option>
+                    <option value="🏎️ Voxel Racers: Complete 1 fast lap in the Arcade Grand Prix!">🏎️ Voxel Racers Grand Prix (Arcade Auto-Verified)</option>
+                    <option value="🏍️ Voxel Bikes: Complete 1 lap on the Voxel Bike Track!">🏍️ Voxel Bikes Nitro (Arcade Auto-Verified - 1 Lap)</option>
+                    <option value="📸 Desk Photo: Share a photo of your decorated holiday workspace!">📸 Desk Photo Proof (Attach Photo Evidence)</option>
+                    <option value="☕ Holiday Beverage: Share a coffee or hot cocoa break with a teammate!">☕ Coffee Break (Attach Photo or Note)</option>
+                    <option value="🎄 Office Tree Visit: Walk to the giant Christmas tree and leave a festive note!">🎄 Visit Christmas Tree (In-game or Real)</option>
+                  </select>
+                </label>
                 <label class="task-field task-date-field" for="task-date">
                   <span>Due Date</span>
                   <input id="task-date" type="date" required/>
@@ -836,6 +866,30 @@
           </div>
 
           <div class="arcade-menu-cards-grid">
+            <div class="arcade-launch-card">
+              <div class="arcade-card-media chimney-bg">
+                <span class="arcade-card-emoji">🎁</span>
+                <span class="arcade-card-tag">Festive Reflex Catcher</span>
+              </div>
+              <div class="arcade-card-content">
+                <h4>Chimney Gift Drop</h4>
+                <p>Catch falling holiday gifts, candy canes, and stars before they hit the ground! Catch 20 gifts to satisfy Santa's quest!</p>
+                <button type="button" class="primary arcade-play-btn" id="arcade-launch-chimney">▶ Play Chimney Drop</button>
+              </div>
+            </div>
+
+            <div class="arcade-launch-card">
+              <div class="arcade-card-media memory-bg">
+                <span class="arcade-card-emoji">🃏</span>
+                <span class="arcade-card-tag">Voxel Props Match</span>
+              </div>
+              <div class="arcade-card-content">
+                <h4>Holiday Desk Memory</h4>
+                <p>Flip and match all 8 pairs of 3D Christmas office props (cat, cocoa mug, snowglobe &amp; more)! Complete the board to unlock clues!</p>
+                <button type="button" class="primary arcade-play-btn" id="arcade-launch-memory">▶ Play Memory Match</button>
+              </div>
+            </div>
+
             <div class="arcade-launch-card">
               <div class="arcade-card-media racer-bg">
                 <span class="arcade-card-emoji">🏎️</span>
@@ -897,6 +951,47 @@
               <button type="button" class="small-outline" id="arcade-toggle-party">🎉 Toggle Party Lights &amp; Confetti</button>
               <button type="button" class="small-outline" id="arcade-toggle-lighting">🌙 Day / Night Lighting</button>
             </div>
+          </div>
+        </section>
+
+        <!-- TAB 4: BREAK ROOM (TEAM CHAT & SANTA WHISPERS) -->
+        <section id="player-breakroom" class="breakroom-section hidden" role="tabpanel" aria-labelledby="player-tab-breakroom">
+          <div class="personal-heading">
+            <div>
+              <p class="studio-eyebrow">BREAK ROOM &amp; CHANNELS</p>
+              <h3>Holiday Lounge &amp; Whispers</h3>
+            </div>
+            <div class="breakroom-channel-toggle">
+              <button type="button" class="btn btn-sm breakroom-channel-btn active" id="chat-tab-team">🎄 Team Lounge</button>
+              <button type="button" class="btn btn-sm breakroom-channel-btn" id="chat-tab-whisper">🎅 Santa Whisper</button>
+            </div>
+          </div>
+
+          <!-- Channel 1: Team Lounge -->
+          <div id="breakroom-channel-team" class="breakroom-channel">
+            <div class="chat-instructions-banner">
+              <span>☕ <strong>Office Break-Room Wall:</strong> Hang out with teammates, cheer completed arcade tasks, or share holiday cheer!</span>
+            </div>
+            <div id="team-chat-messages" class="chat-messages-container"></div>
+            <form id="team-chat-form" class="chat-compose-form">
+              <input type="text" id="team-chat-input" placeholder="Say something cheerful to the team…" maxlength="300" required autocomplete="off" />
+              <label class="chat-file-btn" title="Attach picture or proof">
+                📷 <input type="file" id="team-chat-file" accept="image/*" style="display:none;" />
+              </label>
+              <button type="submit" class="primary">Send</button>
+            </form>
+          </div>
+
+          <!-- Channel 2: Anonymous Santa Whisper -->
+          <div id="breakroom-channel-whisper" class="breakroom-channel hidden">
+            <div class="chat-instructions-banner whisper-banner">
+              <span id="whisper-banner-text">🎅 <strong>Secret Santa Whisper:</strong> Exchange private messages with your Santa or Child. Santa is completely anonymous!</span>
+            </div>
+            <div id="whisper-chat-messages" class="chat-messages-container"></div>
+            <form id="whisper-chat-form" class="chat-compose-form">
+              <input type="text" id="whisper-chat-input" placeholder="Send an anonymous whisper…" maxlength="300" required autocomplete="off" />
+              <button type="submit" class="primary">Whisper</button>
+            </form>
           </div>
         </section>
 
@@ -1234,7 +1329,13 @@
 
       <!-- Game Selector Tabs -->
       <div class="arcade-tabs">
-        <button type="button" class="arcade-tab-btn active" data-game="voxel-racers">
+        <button type="button" class="arcade-tab-btn active" data-game="chimney-drop">
+          <span>🎁</span> Chimney Drop
+        </button>
+        <button type="button" class="arcade-tab-btn" data-game="memory-match">
+          <span>🃏</span> Memory Match
+        </button>
+        <button type="button" class="arcade-tab-btn" data-game="voxel-racers">
           <span>🏎️</span> Voxel Racers
         </button>
         <button type="button" class="arcade-tab-btn" data-game="voxel-bike">
@@ -1252,8 +1353,9 @@
           <span class="stat-label">Telemetry:</span>
           <span class="stat-value" id="arcade-last-stat">Ready for green flag! Drive laps or finish race</span>
         </div>
-        <div class="telemetry-badge">⚡ Auto-Verified</div>
+        <div class="telemetry-badge" id="arcade-auto-badge">⚡ Auto-Verified</div>
       </div>
+      <div class="arcade-task-hint hidden" id="arcade-task-hint"></div>
 
       <!-- Game Screen Viewport -->
       <div class="arcade-screen-viewport">
@@ -1261,7 +1363,7 @@
       </div>
 
       <div class="arcade-footer">
-        <div class="arcade-footer-hints">
+        <div class="arcade-footer-hints" id="arcade-footer-hints">
           <span>⌨️ Steer: <strong>W A S D / Arrows</strong></span>
           <span>⚡ Boost: <strong>Shift</strong></span>
           <span>🛑 Brake: <strong>Space</strong></span>
@@ -1443,6 +1545,134 @@
       </div>
     </div>
   </dialog>
+  <!-- Task Evidence / Proof Dialog -->
+  <dialog id="task-proof-dialog" class="office-dialog-modal proof-dialog">
+    <div class="proof-dialog-container">
+      <div class="proof-header">
+        <span class="proof-icon">📷</span>
+        <div>
+          <h3 id="proof-dialog-title">Task Evidence &amp; Proof</h3>
+          <p id="proof-dialog-subtitle" class="proof-subtitle">Attach a snapshot, photo, or note showing task completion!</p>
+        </div>
+        <button type="button" class="proof-close-btn" id="proof-close-btn" aria-label="Close Proof Dialog">✕</button>
+      </div>
+
+      <div class="proof-content">
+        <div id="proof-view-mode" class="proof-mode-box hidden">
+          <p class="proof-task-title" id="proof-view-task-name"></p>
+          <div class="proof-preview-wrap">
+            <img id="proof-view-image" class="proof-large-image hidden" alt="Task Proof Evidence" />
+            <p id="proof-view-note" class="proof-note-text"></p>
+          </div>
+          <div class="proof-actions-row">
+            <button type="button" id="proof-approve-btn" class="btn btn-primary hidden">✓ Verify &amp; Unlock Clue</button>
+            <button type="button" id="proof-view-close-btn" class="btn btn-secondary">Close</button>
+          </div>
+        </div>
+
+        <form id="proof-upload-form" class="proof-form">
+          <p class="proof-task-title" id="proof-upload-task-name"></p>
+          <label class="proof-field">
+            <span>Photo / Screenshot Proof (Optional)</span>
+            <input type="file" id="proof-file-input" accept="image/*" />
+          </label>
+          <div id="proof-file-preview-wrap" class="proof-preview-wrap hidden">
+            <img id="proof-file-preview" class="proof-thumb-preview" alt="Proof preview" />
+          </div>
+          <label class="proof-field">
+            <span>Notes or Message to Santa</span>
+            <textarea id="proof-note-input" rows="3" placeholder="Describe how you completed this task or paste any evidence links…"></textarea>
+          </label>
+          <div class="proof-actions-row">
+            <button type="submit" class="btn btn-primary" id="proof-submit-btn">✓ Submit Proof</button>
+            <button type="button" class="btn btn-secondary" id="proof-upload-cancel-btn">Cancel</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- First-Time Landing Welcome & Tour Prompt -->
+  <div id="tour-welcome-modal" class="tour-welcome-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="welcome-modal-title">
+    <div class="tour-welcome-backdrop" id="tour-welcome-backdrop"></div>
+    <div class="tour-welcome-card">
+      <button type="button" class="tour-welcome-close" id="tour-welcome-close" aria-label="Close welcome prompt">✕</button>
+      <div class="tour-welcome-badge">🎄 HOLIDAY OFFICE HEADQUARTERS</div>
+      <div class="tour-welcome-icon">✨</div>
+      <h2 id="welcome-modal-title" class="tour-welcome-title">Welcome to Secret Santa!</h2>
+      <p class="tour-welcome-desc">
+        Your festive 3D workspace is ready! Take a quick 60-second interactive tour to explore features, secret Santa tasks, and holiday surprises.
+      </p>
+
+      <div class="tour-welcome-highlights">
+        <div class="welcome-hl-item">
+          <span class="welcome-hl-icon">🖥️</span>
+          <div class="welcome-hl-text">
+            <strong>Your Desk &amp; Santa Tasks</strong>
+            <span>Complete secret challenges assigned by your Santa to unlock clues!</span>
+          </div>
+        </div>
+        <div class="welcome-hl-item">
+          <span class="welcome-hl-icon">🕹️</span>
+          <div class="welcome-hl-text">
+            <strong>Retro Arcade Lounge</strong>
+            <span>Play classic racers &amp; holiday mini-games with auto task verification.</span>
+          </div>
+        </div>
+        <div class="welcome-hl-item">
+          <span class="welcome-hl-icon">☕</span>
+          <div class="welcome-hl-text">
+            <strong>Break Room &amp; Whispers</strong>
+            <span>Chat with team members, share photos, or whisper as Secret Santa.</span>
+          </div>
+        </div>
+        <div class="welcome-hl-item">
+          <span class="welcome-hl-icon">💡</span>
+          <div class="welcome-hl-text">
+            <strong>Mystery Clues &amp; Reveal</strong>
+            <span>Uncover hints about who picked you and reveal them at the tree!</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="tour-welcome-tip">
+        <span class="tip-star">🧭</span>
+        <div><strong>Where to find help:</strong> You can take or revisit this guided tour at any time by clicking the <strong>🧭 Tour</strong> button in the top menu bar!</div>
+      </div>
+
+      <div class="tour-welcome-actions">
+        <button type="button" class="btn btn-primary btn-lg" id="welcome-start-tour-btn">🚀 Start Quick Tour</button>
+        <button type="button" class="btn btn-secondary btn-lg" id="welcome-skip-btn">Explore on My Own</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Interactive Quick Tour Overlay -->
+  <div id="quick-tour-overlay" class="tour-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="tour-title">
+    <div class="tour-backdrop" id="tour-backdrop"></div>
+    <div class="tour-card" id="tour-card">
+      <div class="tour-header">
+        <div class="tour-header-left">
+          <span class="tour-step-badge" id="tour-step-badge">Step 1 of 7</span>
+          <span class="tour-target-badge hidden" id="tour-target-badge">🎯 Viewing Target</span>
+        </div>
+        <button type="button" class="tour-close-btn" id="tour-close-btn" aria-label="Skip Tour">✕</button>
+      </div>
+      <div class="tour-body">
+        <div class="tour-icon-wrap">
+          <span class="tour-icon" id="tour-icon">🏢</span>
+        </div>
+        <h3 class="tour-title" id="tour-title">Welcome to the Holiday Office</h3>
+        <p class="tour-description" id="tour-description">Walk around our festive 3D workspace using W, A, S, D or arrow keys. Explore desks, grab hot cocoa, and find hidden holiday surprises!</p>
+      </div>
+      <div class="tour-footer">
+        <button type="button" class="btn btn-secondary btn-sm" id="tour-prev-btn">← Back</button>
+        <div class="tour-dots" id="tour-dots"></div>
+        <button type="button" class="btn btn-primary btn-sm" id="tour-next-btn">Next →</button>
+      </div>
+    </div>
+  </div>
+
   <div id="action-progress" class="action-progress hidden" role="status" aria-live="polite" aria-atomic="true">
     <div class="progress-card">
       <div class="progress-head"><span class="progress-spinner" aria-hidden="true"></span><div><strong id="progress-title">Working…</strong><p id="progress-detail">Saving your changes securely. Please keep this page open.</p></div></div>
