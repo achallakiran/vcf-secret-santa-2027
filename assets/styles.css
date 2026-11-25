@@ -2519,8 +2519,93 @@ body.office-playing #player-menu textarea{
 #player-menu #player-personal .santa-task-list{display:grid;gap:8px}
 #player-menu #player-personal .santa-task-entry{
   display:grid;grid-template-columns:auto minmax(0,1fr) auto;
-  gap:9px;align-items:center;
+  gap:10px;align-items:center;
   padding:10px 12px;min-width:0;
+  transition:all 0.2s ease;
+}
+#player-menu #player-personal .santa-task-entry.is-overdue{
+  border:1px solid #e06d7c !important;
+  background:linear-gradient(135deg, rgba(160,42,57,0.35) 0%, rgba(21,64,46,0.9) 100%) !important;
+}
+#player-menu #player-personal .task-meta-col{
+  display:flex;
+  flex-direction:column;
+  gap:4px;
+  align-items:flex-start;
+  min-width:68px;
+}
+#player-menu #player-personal .task-badge{
+  font-size:9.5px;
+  font-weight:800;
+  padding:2px 6px;
+  border-radius:10px;
+  text-transform:uppercase;
+  letter-spacing:0.04em;
+  display:inline-block;
+}
+#player-menu #player-personal .task-badge-overdue{
+  background:#d62828;
+  color:#fff;
+  border:1px solid #ff99a8;
+  box-shadow:0 0 6px rgba(214,40,40,0.45);
+}
+#player-menu #player-personal .task-badge-today{
+  background:#f4a261;
+  color:#15372a;
+  border:1px solid #ffe3b3;
+}
+#player-menu #player-personal .task-badge-upcoming{
+  background:#267055;
+  color:#e2ece6;
+  border:1px solid #57876a;
+}
+#player-menu #player-personal .task-badge-done{
+  background:#198754;
+  color:#fff;
+  border:1px solid #75b798;
+}
+#player-menu #player-personal .task-complete-btn{
+  background:linear-gradient(135deg, #1b6644 0%, #155136 100%);
+  color:#fff;
+  border:1px solid #98c4a1;
+  border-radius:8px;
+  padding:6px 11px;
+  font-size:11px;
+  font-weight:750;
+  cursor:pointer;
+  white-space:nowrap;
+  transition:all 0.15s ease;
+}
+#player-menu #player-personal .task-complete-btn:hover{
+  background:linear-gradient(135deg, #248157 0%, #1b6644 100%);
+  border-color:#dfc38f;
+  transform:translateY(-1px);
+}
+.task-overdue-banner{
+  background:linear-gradient(135deg, rgba(160,42,57,0.9) 0%, rgba(100,24,35,0.95) 100%);
+  border:1px solid #f28b97;
+  border-radius:10px;
+  padding:10px 12px;
+  color:#fff;
+  font-size:12px;
+  line-height:1.45;
+  margin-bottom:12px;
+  display:flex;
+  align-items:center;
+  gap:10px;
+  box-shadow:0 4px 14px rgba(160,42,57,0.3);
+}
+.santa-hub-clue-entry.clue-locked{
+  opacity:0.75;
+  border-style:dashed !important;
+}
+.clue-number-badge.locked{
+  background:#435c50 !important;
+  color:#a1b8af !important;
+}
+.clue-text.locked-text{
+  color:#a1b8af !important;
+  font-style:italic;
 }
 #player-menu #player-personal .santa-task-date{
   color:#fff;font-size:11px;font-weight:800;
@@ -3804,6 +3889,72 @@ body.office-playing #player-menu textarea{
   padding:6px 12px;
   font-size:11.5px;
 }
+.btn-outline{
+  background:transparent;
+  color:#f2ece2;
+  border:1px solid rgba(223,195,143,0.3) !important;
+}
+.btn-outline:hover{
+  background:rgba(255,255,255,0.08);
+  border-color:#dfc38f !important;
+}
+
+/* Desk Customizer Photo Badge Preview */
+.customizer-badge-preview-wrap{
+  display:flex;
+  align-items:center;
+  gap:14px;
+  background:rgba(0,0,0,0.25);
+  border:1px solid rgba(223,195,143,0.2);
+  border-radius:14px;
+  padding:10px 14px;
+  margin:10px 0 12px;
+}
+.customizer-badge-thumb-box{
+  position:relative;
+  width:52px;
+  height:52px;
+  border-radius:50%;
+  overflow:hidden;
+  border:2px solid #dfc38f;
+  background:#0d211b;
+  flex-shrink:0;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  box-shadow:0 4px 12px rgba(0,0,0,0.4);
+}
+.customizer-badge-thumb{
+  width:100%;
+  height:100%;
+  object-fit:cover;
+}
+.customizer-badge-placeholder{
+  font-size:24px;
+  color:#739688;
+}
+.customizer-badge-meta{
+  flex:1;
+  min-width:0;
+}
+.customizer-badge-status{
+  font-size:12.5px;
+  font-weight:700;
+  color:#dfc38f;
+  margin-bottom:2px;
+}
+.customizer-badge-sub{
+  font-size:11px;
+  color:#a1b8af;
+  margin:0;
+  line-height:1.35;
+}
+.customizer-badge-actions{
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+}
+
 .desk-customizer-footer{
   display:flex;
   gap:10px;
@@ -4775,37 +4926,49 @@ body.office-playing #player-menu textarea{
   text-decoration:none;
 }
 
-/* 2. Top Bar Menu Button */
+/* 2. Top Bar Menu Button (Unified Pause / Options) */
 .office-pause{
   display:inline-flex !important;
   align-items:center !important;
-  gap:6px !important;
-  padding:6px 14px !important;
-  background:rgba(18, 36, 27, 0.90) !important;
+  justify-content:center !important;
+  gap:7px !important;
+  padding:0 16px !important;
+  height:40px !important;
+  min-height:40px !important;
+  background:linear-gradient(135deg, rgba(22, 56, 40, 0.95), rgba(13, 34, 25, 0.98)) !important;
   border:1.5px solid #ecc888 !important;
-  border-radius:20px !important;
+  border-radius:22px !important;
   color:#fffaeb !important;
   font-size:13px !important;
   font-weight:700 !important;
   cursor:pointer !important;
-  box-shadow:0 4px 16px rgba(0,0,0,0.35) !important;
-  backdrop-filter:blur(8px) !important;
-  transition:all 0.18s ease !important;
+  box-shadow:0 4px 18px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.18) !important;
+  backdrop-filter:blur(10px) !important;
+  transition:all 0.18s cubic-bezier(0.16, 1, 0.3, 1) !important;
   width:auto !important;
-  height:auto !important;
+  user-select:none !important;
 }
 .office-pause:hover{
-  background:rgba(32, 62, 47, 0.96) !important;
-  border-color:#fff0ce !important;
-  transform:translateY(-1px) !important;
-  box-shadow:0 6px 18px rgba(236,200,136,0.25) !important;
+  background:linear-gradient(135deg, rgba(32, 78, 56, 0.98), rgba(18, 48, 35, 1)) !important;
+  border-color:#ffe4a0 !important;
+  transform:translateY(-1px) scale(1.02) !important;
+  box-shadow:0 6px 22px rgba(236,200,136,0.35), inset 0 1px 0 rgba(255,255,255,0.25) !important;
+}
+.office-pause:active{
+  transform:translateY(1px) scale(0.98) !important;
+  box-shadow:0 2px 10px rgba(0,0,0,0.5) !important;
 }
 .pause-icon{
-  font-size:14px;
+  font-size:12px;
+  color:#f7d28e;
+  line-height:1;
 }
 .pause-label{
   font-size:12.5px;
-  letter-spacing:0.02em;
+  font-weight:700;
+  letter-spacing:0.04em;
+  text-transform:uppercase;
+  color:#ffffff;
 }
 
 /* 3. Horizontally Expandable & Collapsible Action Emotes */
@@ -5264,4 +5427,383 @@ body.office-playing #player-menu textarea{
   font-size: 11px;
   padding: 3px 8px;
   white-space: nowrap;
+}
+
+/* ========================================================
+   UNIFIED 4-TAB PLAYER MENU & ACTIVITIES STYLING
+   ======================================================== */
+
+/* Tab bar responsive adjustments */
+#player-menu .notebook-toolbar .menu-tabs {
+  display: flex;
+  flex: 1 1 auto;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin: 0;
+}
+
+#player-menu .notebook-toolbar .menu-tabs button {
+  min-width: clamp(72px, 8vw, 125px);
+  padding: 8px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 10px;
+  transition: all 0.15s ease;
+}
+
+/* TAB 1: Santa Clues Card inside Santa Hub */
+.santa-clues-card {
+  margin-top: 16px;
+  background: linear-gradient(140deg, #1b4d37, #13382a) !important;
+  border: 1px solid #639274 !important;
+  border-radius: 15px !important;
+  padding: 16px !important;
+}
+
+.santa-clue-badge {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 10px;
+  background: rgba(236, 200, 136, 0.2);
+  color: #f7d898;
+  border: 1px solid rgba(236, 200, 136, 0.45);
+  border-radius: 12px;
+  letter-spacing: 0.03em;
+}
+
+.santa-hub-clues-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 12px 0 14px;
+}
+
+.santa-hub-clue-entry {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 10px 14px;
+  background: rgba(14, 38, 29, 0.85);
+  border: 1px solid rgba(120, 168, 138, 0.4);
+  border-radius: 10px;
+  line-height: 1.45;
+}
+
+.clue-number-badge {
+  flex-shrink: 0;
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 800;
+  padding: 2px 7px;
+  background: linear-gradient(135deg, #c03445, #882231);
+  color: #fff;
+  border-radius: 6px;
+  letter-spacing: 0.05em;
+  margin-top: 2px;
+}
+
+.clue-text {
+  font-size: 13px;
+  color: #f3f8f4;
+  word-break: break-word;
+}
+
+.santa-hub-empty-clues {
+  font-size: 12.5px;
+  color: #b8cfbe;
+  font-style: italic;
+  padding: 12px;
+  text-align: center;
+  background: rgba(16, 42, 32, 0.6);
+  border: 1px dashed rgba(100, 150, 120, 0.35);
+  border-radius: 10px;
+}
+
+.santa-clue-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+
+.santa-clue-actions button:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+/* TAB 3: Arcade Activities & Wayfinding */
+.arcade-activities-section,
+.rules-guide-section {
+  color: #fff;
+  padding: 4px 2px 20px;
+}
+
+.arcade-menu-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 16px;
+  margin-top: 14px;
+}
+
+.arcade-launch-card {
+  background: linear-gradient(145deg, rgba(23, 56, 42, 0.95), rgba(15, 38, 29, 0.98));
+  border: 1px solid rgba(238, 201, 136, 0.35);
+  border-radius: 15px;
+  overflow: hidden;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.3);
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.18s ease, border-color 0.18s ease;
+}
+
+.arcade-launch-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(238, 201, 136, 0.65);
+}
+
+.arcade-card-media {
+  padding: 22px 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.arcade-card-media.racer-bg {
+  background: linear-gradient(135deg, #1c4b75, #0d2842);
+}
+
+.arcade-card-media.bike-bg {
+  background: linear-gradient(135deg, #7c2250, #421029);
+}
+
+.arcade-card-emoji {
+  font-size: 34px;
+  filter: drop-shadow(0 4px 8px rgba(0,0,0,0.4));
+}
+
+.arcade-card-tag {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 10px;
+  background: rgba(0, 0, 0, 0.4);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.arcade-card-content {
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.arcade-card-content h4 {
+  margin: 0 0 6px;
+  font-size: 16px;
+  color: #fce8bd !important;
+}
+
+.arcade-card-content p {
+  margin: 0 0 16px;
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: #d1e2d4;
+  flex: 1;
+}
+
+.arcade-play-btn {
+  width: 100%;
+  padding: 10px 14px;
+  font-weight: 700;
+  font-size: 13px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #2b7a54, #1b5338) !important;
+  border: 1.5px solid #a8d5b8 !important;
+  color: #ffffff !important;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.3);
+  transition: all 0.15s ease;
+}
+
+.arcade-play-btn:hover {
+  background: linear-gradient(135deg, #369466, #246847) !important;
+  border-color: #d2edd9 !important;
+  transform: translateY(-1px);
+}
+
+/* Office Teleport / Wayfinding Grid */
+.office-teleport-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.teleport-btn {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  background: rgba(18, 46, 34, 0.9);
+  border: 1px solid rgba(120, 170, 140, 0.4);
+  border-radius: 11px;
+  color: #f7faf8;
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.15s ease;
+}
+
+.teleport-btn:hover {
+  background: rgba(28, 68, 50, 0.95);
+  border-color: #ecc888;
+  transform: translateY(-1px);
+}
+
+.tp-icon {
+  font-size: 24px;
+  flex-shrink: 0;
+}
+
+.tp-content strong {
+  display: block;
+  font-size: 13px;
+  color: #fff;
+}
+
+.tp-content small {
+  display: block;
+  font-size: 11px;
+  color: #c0d8c6;
+  margin-top: 2px;
+}
+
+.atmosphere-toggles-row,
+.session-actions-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 12px;
+}
+
+.atmosphere-toggles-row button,
+.session-actions-row button {
+  padding: 8px 14px;
+  font-size: 12.5px;
+  font-weight: 600;
+  border-radius: 9px;
+}
+
+/* TAB 4: Rules & Guide */
+.rules-budget-highlight {
+  background: linear-gradient(135deg, rgba(140, 38, 52, 0.85), rgba(70, 20, 30, 0.92)) !important;
+  border: 1.5px solid #f2c0b8 !important;
+  border-radius: 14px !important;
+  padding: 16px 18px !important;
+  margin-top: 12px;
+}
+
+.budget-badge-wrap {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+}
+
+.budget-icon {
+  font-size: 32px;
+  line-height: 1;
+}
+
+.budget-badge-wrap h4 {
+  margin: 0 0 4px;
+  font-size: 16px;
+  color: #fffaee !important;
+}
+
+.budget-badge-wrap p {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: #f7e6e2;
+}
+
+.clean-rules-list {
+  list-style: none;
+  padding: 0;
+  margin: 12px 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.clean-rules-list li {
+  padding: 8px 12px;
+  background: rgba(15, 38, 28, 0.8);
+  border: 1px solid rgba(110, 160, 130, 0.3);
+  border-radius: 9px;
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: #e5f0e8;
+}
+
+.clean-rules-list li strong {
+  color: #fce8bd;
+}
+
+.controls-cheat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.control-box {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 12px;
+  background: rgba(16, 40, 30, 0.85);
+  border: 1px solid rgba(110, 160, 130, 0.35);
+  border-radius: 9px;
+}
+
+.cb-key {
+  font-size: 11px;
+  font-weight: 800;
+  color: #ffeaae;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.cb-desc {
+  font-size: 12px;
+  color: #d1e2d4;
+}
+
+@media(max-width: 600px) {
+  #player-menu .notebook-toolbar .menu-tabs {
+    gap: 4px;
+  }
+  #player-menu .notebook-toolbar .menu-tabs button {
+    min-width: 60px;
+    padding: 6px 8px;
+    font-size: 10.5px;
+  }
+  .arcade-menu-cards-grid {
+    grid-template-columns: 1fr;
+  }
+  .office-teleport-grid {
+    grid-template-columns: 1fr;
+  }
+  .controls-cheat-grid {
+    grid-template-columns: 1fr 1fr;
+  }
 }

@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#080d16"/>
   <meta name="description" content="Voxel Secret Santa — a thoughtful Christmas office mystery."/>
   <title>Voxel Secret Santa</title>
-  <link rel="stylesheet" href="./assets/styles.css?v=arcade-grand-v12"/>
+  <link rel="stylesheet" href="./assets/styles.css?v=arcade-grand-v14"/>
 </head>
 <body>
   <div class="snow" id="snow" aria-hidden="true"></div>
@@ -239,7 +239,7 @@
         <div class="hud-group-right">
           <button id="player-clue" class="office-clue" type="button" aria-label="View Secret Santa clue" title="Santa Clue">💡</button>
           <button id="player-music" class="office-music" type="button" aria-label="Mute Jingle Bells" aria-pressed="false" title="Mute Jingle Bells">🔊</button>
-          <button id="player-pause" class="office-pause" type="button" aria-label="Open options menu" title="Office Menu &amp; Features"><span class="pause-icon">☰</span><span class="pause-label">Menu</span></button>
+          <button id="player-pause" class="office-pause" type="button" aria-label="Open Game Menu" title="Game Menu (Pause)"><span class="pause-icon">⏸</span><span class="pause-label">Menu</span></button>
         </div>
       </header>
 
@@ -525,13 +525,15 @@
           <p id="player-event-title" class="notebook-accessible-meta">Christmas office</p>
         </div>
         <nav class="menu-tabs" role="tablist" aria-label="Notebook sections">
-          <button type="button" class="tab active" id="player-tab-character" role="tab" aria-controls="player-character" aria-selected="true">Character</button>
-          <button type="button" class="tab" id="player-tab-personal" role="tab" aria-controls="player-personal" aria-selected="false">Santa Hub</button>
+          <button type="button" class="tab active" id="player-tab-personal" role="tab" aria-controls="player-personal" aria-selected="true">🎁 Santa Hub</button>
+          <button type="button" class="tab" id="player-tab-character" role="tab" aria-controls="player-character" aria-selected="false">👤 Character</button>
+          <button type="button" class="tab" id="player-tab-arcade" role="tab" aria-controls="player-arcade" aria-selected="false">🕹️ Arcade &amp; Office</button>
+          <button type="button" class="tab" id="player-tab-rules" role="tab" aria-controls="player-rules" aria-selected="false">📜 Guide &amp; Rules</button>
         </nav>
         <button id="player-close" class="small-outline" type="button" aria-label="Close notebook and resume game" title="Close notebook">✕</button>
       </div>
       <div id="notebook-scroll" class="notebook-body" tabindex="-1">
-        <section id="player-character" class="character-studio-section" role="tabpanel" aria-labelledby="player-tab-character">
+        <section id="player-character" class="character-studio-section hidden" role="tabpanel" aria-labelledby="player-tab-character">
         <div class="avatar-atelier">
           <nav class="atelier-categories" aria-label="Character styling categories">
             <button type="button" data-studio-tab="look" class="atelier-category active" aria-selected="true"><span class="atelier-category-icon" aria-hidden="true">☺</span><span>Face</span></button>
@@ -671,7 +673,7 @@
           </div>
         </div>
       </section>
-        <section id="player-personal" class="hidden" role="tabpanel" aria-labelledby="player-tab-personal">
+        <section id="player-personal" role="tabpanel" aria-labelledby="player-tab-personal">
         <div class="personal-heading">
           <div>
             <p class="studio-eyebrow">SANTA HUB</p>
@@ -715,25 +717,188 @@
           <div class="santa-task-columns">
             <section class="santa-task-group">
               <h4>Tasks for me from my Secret Santa</h4>
+              <p class="muted small" style="margin-bottom:8px;">Complete your Santa's tasks before their due date to unlock clues about who your Santa is!</p>
+              <div id="received-tasks-overdue-banner" class="task-overdue-banner hidden"></div>
               <div id="received-tasks" class="personal-list santa-task-list"></div>
             </section>
             <section class="santa-task-group">
-              <h4>Tasks for my Secret Child</h4>
+              <h4>Tasks for my Secret Child (3 Tasks for 3 Clues)</h4>
+              <p class="muted small" style="margin-bottom:8px;">Assign up to 3 fun holiday tasks with due dates. Each task your child completes unlocks one of your clues!</p>
               <div id="assigned-tasks" class="personal-list santa-task-list"></div>
               <form id="task-form" class="task-entry-form">
                 <label class="task-field task-date-field" for="task-date">
-                  <span>Date</span>
+                  <span>Due Date</span>
                   <input id="task-date" type="date" required/>
                 </label>
                 <label class="task-field task-description-field" for="task-text">
-                  <span>Task</span>
-                  <textarea id="task-text" rows="2" maxlength="1000" placeholder="Add a task for your Secret Child…" required></textarea>
+                  <span>Task Challenge</span>
+                  <textarea id="task-text" rows="2" maxlength="1000" placeholder="Add a holiday task for your Secret Child…" required></textarea>
                 </label>
                 <button type="submit" class="primary task-submit">✓ Save task</button>
               </form>
             </section>
           </div>
         </section>
+
+        <!-- 04: SANTA CLUES & HINTS -->
+        <section id="clues-card" class="personal-card santa-clues-card">
+          <div class="secret-child-reveal-row">
+            <span class="personal-card-kicker">04 · CLUES ABOUT YOUR SECRET SANTA</span>
+            <span id="santa-clue-badge" class="santa-clue-badge">0 / 3 Unlocked</span>
+          </div>
+          <h4>Office Mystery Hints</h4>
+          <p class="muted small" id="santa-hub-clues-explainer">Each task you complete from your Secret Santa unlocks 1 mystery clue! Complete all 3 tasks to unlock all 3 clues and reveal your Santa at the Christmas Tree!</p>
+          <div id="santa-hub-clues-list" class="personal-list santa-hub-clues-list"></div>
+          <div class="santa-clue-actions" id="santa-clue-actions-wrap">
+            <span id="hub-clue-timer-text" class="muted small">Complete your assigned tasks to reveal clues</span>
+          </div>
+        </section>
+        </section>
+
+        <!-- TAB 3: ARCADE & OFFICE -->
+        <section id="player-arcade" class="arcade-activities-section hidden" role="tabpanel" aria-labelledby="player-tab-arcade">
+          <div class="personal-heading">
+            <div>
+              <p class="studio-eyebrow">ARCADE &amp; ACTIVITIES</p>
+              <h3>Retro Lounge &amp; Wayfinding</h3>
+            </div>
+          </div>
+
+          <div class="arcade-menu-cards-grid">
+            <div class="arcade-launch-card">
+              <div class="arcade-card-media racer-bg">
+                <span class="arcade-card-emoji">🏎️</span>
+                <span class="arcade-card-tag">3D Formula Arcade</span>
+              </div>
+              <div class="arcade-card-content">
+                <h4>Voxel Racers Grand Prix</h4>
+                <p>Hop into a custom voxel racecar, drift through snowy chicanes, and compete for top lap times!</p>
+                <button type="button" class="primary arcade-play-btn" id="arcade-launch-racers">▶ Play Voxel Racers</button>
+              </div>
+            </div>
+
+            <div class="arcade-launch-card">
+              <div class="arcade-card-media bike-bg">
+                <span class="arcade-card-emoji">🏍️</span>
+                <span class="arcade-card-tag">3D Neon Motocross</span>
+              </div>
+              <div class="arcade-card-content">
+                <h4>Voxel Bikes Nitro</h4>
+                <p>Rev up neon dirt bikes, jump over holiday ramps, collect festive candy canes and boost to victory!</p>
+                <button type="button" class="primary arcade-play-btn" id="arcade-launch-bikes">▶ Play Voxel Bikes</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="personal-card office-nav-card" style="margin-top:20px;">
+            <span class="personal-card-kicker">WAYFINDING &amp; FAST-TRAVEL</span>
+            <h4>Navigate the Christmas Office</h4>
+            <p class="muted small">Tap any destination to have your avatar walk there directly across the floor!</p>
+            <div class="office-teleport-grid">
+              <button type="button" class="teleport-btn" id="arcade-nav-mydesk">
+                <span class="tp-icon">⭐</span>
+                <div class="tp-content">
+                  <strong>Walk to My Desk</strong>
+                  <small>Head to your workspace and desk prop</small>
+                </div>
+              </button>
+              <button type="button" class="teleport-btn" id="arcade-nav-tree">
+                <span class="tp-icon">🎄</span>
+                <div class="tp-content">
+                  <strong>Visit Christmas Tree</strong>
+                  <small>Gather by the tree &amp; gifts</small>
+                </div>
+              </button>
+              <button type="button" class="teleport-btn" id="arcade-nav-lounge">
+                <span class="tp-icon">🕹️</span>
+                <div class="tp-content">
+                  <strong>Visit Arcade Corner</strong>
+                  <small>Walk to retro game machines</small>
+                </div>
+              </button>
+            </div>
+          </div>
+
+          <div class="personal-card office-atmosphere-card" style="margin-top:20px;">
+            <span class="personal-card-kicker">OFFICE ATMOSPHERE</span>
+            <h4>Atmosphere Controls</h4>
+            <div class="atmosphere-toggles-row">
+              <button type="button" class="small-outline" id="arcade-toggle-party">🎉 Toggle Party Lights &amp; Confetti</button>
+              <button type="button" class="small-outline" id="arcade-toggle-lighting">🌙 Day / Night Lighting</button>
+            </div>
+          </div>
+        </section>
+
+        <!-- TAB 4: GUIDE & RULES -->
+        <section id="player-rules" class="rules-guide-section hidden" role="tabpanel" aria-labelledby="player-tab-rules">
+          <div class="personal-heading">
+            <div>
+              <p class="studio-eyebrow">GUIDE &amp; RULES</p>
+              <h3>Event Rules &amp; Controls</h3>
+            </div>
+          </div>
+
+          <div class="personal-card rules-budget-highlight">
+            <div class="budget-badge-wrap">
+              <span class="budget-icon">🎁</span>
+              <div>
+                <h4>Recommended Gift Budget: ₹500</h4>
+                <p>The spirit of Secret Santa is thoughtfulness, holiday warmth, and creative humor—not expensive purchases! Keep gifts around ₹500.</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="personal-card rules-card-content" style="margin-top:16px;">
+            <span class="personal-card-kicker">SECRECY &amp; TRADITIONS</span>
+            <h4>Core Rules of the Game</h4>
+            <ul class="clean-rules-list">
+              <li><strong>🤫 100% Anonymity:</strong> You only know who your Secret Child is. Keep your identity a mystery until the Grand Finale Stage Show!</li>
+              <li><strong>📝 Check Their Wishlist:</strong> Head to <strong>Santa Hub</strong> to read what gift ideas your Child shared.</li>
+              <li><strong>🎯 Assign Holiday Tasks:</strong> Add fun, light-hearted festive challenges (e.g., "Sing Jingle Bells at lunch", "Wear red socks tomorrow").</li>
+              <li><strong>💡 Unlock Office Hints:</strong> Daily clues unlock every 24 hours based on where your Santa sits in the office.</li>
+              <li><strong>🎭 The Grand Stage Finale:</strong> The event organizer brings everyone to the Christmas stage to reveal the Santas and exchange gifts!</li>
+            </ul>
+          </div>
+
+          <div class="personal-card controls-card-content" style="margin-top:16px;">
+            <span class="personal-card-kicker">CONTROLS &amp; SHORTCUTS</span>
+            <h4>How to Move &amp; Interact</h4>
+            <div class="controls-cheat-grid">
+              <div class="control-box">
+                <span class="cb-key">WASD / Arrows</span>
+                <span class="cb-desc">Walk around 3D office</span>
+              </div>
+              <div class="control-box">
+                <span class="cb-key">Click Floor</span>
+                <span class="cb-desc">Smart pathfinding to tap</span>
+              </div>
+              <div class="control-box">
+                <span class="cb-key">Click Colleague</span>
+                <span class="cb-desc">Walk over &amp; exchange greeting</span>
+              </div>
+              <div class="control-box">
+                <span class="cb-key">Keys 1 – 4</span>
+                <span class="cb-desc">Wave (1), Dance (2), Clap (3), Cheer (4)</span>
+              </div>
+              <div class="control-box">
+                <span class="cb-key">Mouse Drag / Swipe</span>
+                <span class="cb-desc">Orbit camera</span>
+              </div>
+              <div class="control-box">
+                <span class="cb-key">Scroll / Pinch</span>
+                <span class="cb-desc">Zoom camera in/out</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="personal-card account-card-content" style="margin-top:16px;">
+            <span class="personal-card-kicker">GAME AUDIO &amp; SESSION</span>
+            <h4>Settings &amp; Session</h4>
+            <div class="session-actions-row">
+              <button type="button" class="small-outline" id="rules-toggle-sound">🔊 Toggle Music</button>
+              <button type="button" class="small-outline admin-danger" id="rules-sign-out">🚪 Leave Office / Sign Out</button>
+            </div>
+          </div>
         </section>
       </div>
     </section>
@@ -958,8 +1123,19 @@
             <input type="checkbox" id="customizer-show-badge" checked />
             <span class="customizer-checkbox-text">Display Avatar Photo Badge on 3D Nameplate</span>
           </label>
+          <div id="customizer-badge-preview-wrap" class="customizer-badge-preview-wrap">
+            <div class="customizer-badge-thumb-box">
+              <img id="customizer-badge-thumb" class="customizer-badge-thumb hidden" alt="Badge Selfie" />
+              <div id="customizer-badge-placeholder" class="customizer-badge-placeholder">👤</div>
+            </div>
+            <div class="customizer-badge-meta">
+              <div id="customizer-badge-status" class="customizer-badge-status">No photo captured yet</div>
+              <p class="customizer-badge-sub">Snapping a selfie adds your portrait badge right above your 3D desk nameplate!</p>
+            </div>
+          </div>
           <div class="customizer-badge-actions">
-            <button type="button" id="customizer-take-selfie" class="btn btn-secondary btn-sm">📸 Live Selfie for Badge</button>
+            <button type="button" id="customizer-take-selfie" class="btn btn-secondary btn-sm">📸 Take Live Selfie</button>
+            <button type="button" id="customizer-clear-photo" class="btn btn-outline btn-sm hidden">🗑️ Remove Photo</button>
           </div>
         </div>
       </div>
@@ -1206,6 +1382,6 @@
   <script type="importmap">
     {"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js"}}
   </script>
-  <script type="module" src="./assets/app.js?v=arcade-grand-v13"></script>
+  <script type="module" src="./assets/app.js?v=arcade-grand-v18"></script>
 </body>
 </html>

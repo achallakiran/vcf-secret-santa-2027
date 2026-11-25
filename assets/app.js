@@ -24,6 +24,7 @@ let session=null, busy=false, events=[],event=null,participants=[],assignments=[
 let officeRuntime=null,officeLoading=null,officeKey=null,officeNoticeTimer=null;
 let clueDismissTimer=null;
 let avatarBaseline=null,avatarPreviewTimer=null;
+let launchArcadeModal=null;
 let avatarStudio=null,avatarStudioLoading=null,activeStudioTab="look",visualEditor=null;
 let adminEditingParticipant=null;
 let latestAdminInvitation=null;
@@ -109,7 +110,7 @@ const run=task=>async(...args)=>{
     await task(...args);
     showProgress("Completed","Your action finished successfully.","success");
   }catch(error){
-    if(/session expired|invalid session|invitation has changed|sign in again/i.test(error?.message||""))endSession();
+    if(player?.me?.id!=="demo-guest"&&/session expired|invalid session|invitation has changed|sign in again/i.test(error?.message||""))endSession();
     showProgress("Could not finish",error?.message||"Please try again.","error");
     toast(error?.message||"Something went wrong.",true);
   }finally{
@@ -612,44 +613,74 @@ function showClue(title,message,canUnlock=false){
   $("clue-popover").classList.remove("hidden");
   clueDismissTimer=setTimeout(hideClue,8500);
 }
+function getCompletedTasksCount(){
+  if(!player)return 0;
+  const list=player.receivedTasks||[];
+  return list.filter(t=>t.status==="completed").length;
+}
+
+function checkOverdueTasks(showToast=false){
+  const banner=$("received-tasks-overdue-banner");
+  if(!player?.receivedTasks)return;
+  const todayStr=new Date().toISOString().slice(0,10);
+  const pendingTasks=player.receivedTasks.filter(t=>t.status!=="completed");
+  const overdueTasks=pendingTasks.filter(t=>t.task_date&&t.task_date<todayStr);
+  const dueTodayTasks=pendingTasks.filter(t=>t.task_date===todayStr);
+
+  if(!banner)return;
+  if(overdueTasks.length>0){
+    banner.classList.remove("hidden");
+    banner.innerHTML=`⚠️ <strong>Friendly Santa Reminder:</strong> You have <strong>${overdueTasks.length} overdue task${overdueTasks.length>1?"s":""}</strong> from your Secret Santa! Complete ${overdueTasks.length>1?"them":"it"} to unlock your mystery clues.`;
+    if(showToast){
+      const msg=`⏰ Friendly reminder from Santa: You have ${overdueTasks.length} overdue task${overdueTasks.length>1?"s":""} to complete!`;
+      if(typeof officeToast==="function")officeToast(msg);
+      else toast(msg);
+    }
+  }else if(dueTodayTasks.length>0){
+    banner.classList.remove("hidden");
+    banner.innerHTML=`📌 <strong>Santa Reminder:</strong> You have <strong>${dueTodayTasks.length} task${dueTodayTasks.length>1?"s":""} due today</strong>! Finish today's task to reveal your next clue.`;
+  }else{
+    banner.classList.add("hidden");
+    banner.replaceChildren();
+  }
+}
+
 function updateClueButton(){
   const mystery=player?.mystery;
-  const count=mystery?.unlocked||0;
-  const valid=Array.isArray(mystery?.hints);
-  const available=Boolean(mystery?.can_unlock && count<3 &&
-    (!mystery.next_at || Date.parse(mystery.next_at)<=Date.now()));
+  const completed=getCompletedTasksCount();
+  const count=Math.min(3,completed);
   const control=$("player-clue");
+  if(!control)return {available:false,count:0,valid:false};
   control.disabled=!mystery;
-  control.classList.toggle("clue-ready",available);
+  const hasClues=count>0;
+  control.classList.toggle("clue-ready",hasClues);
   control.title=!mystery?"Available after Santa assignments":
-    available?"A new Santa clue is ready":"See your Santa clue";
+    hasClues?`${count} Santa clue${count>1?"s":""} unlocked! (Tap to view)`:"Complete tasks from Santa to unlock clues";
   control.setAttribute("aria-label",control.title);
-  $("clue-next").classList.toggle("hidden",!available);
-  return {available,count,valid};
+  $("clue-next")?.classList.add("hidden");
+  return {available:hasClues,count,valid:true};
 }
 function revealClue(){
   const mystery=player?.mystery;
-  const {available,count}=updateClueButton();
+  const completed=getCompletedTasksCount();
+  const count=Math.min(3,completed);
   if(!mystery){
     showClue("Santa clue","Clues will appear after the Santa draw.");
     return;
   }
-  const hints=(mystery.hints||[]).filter(t=>typeof t==="string"&&t.trim());
-  if(hints.length){
-    const last=hints[hints.length-1];
-    const note=available?"You can reveal the next clue when you're ready.":"";
-    const daily=player?.hint?"\nToday's note: "+player.hint:"";
-    showClue("Clue "+hints.length+" of 3",last+daily+(note?"\n"+note:""),available);
+  const allHints=Array.isArray(mystery.hints)&&mystery.hints.length?mystery.hints:[
+    "Your Secret Santa loves retro gaming and hot chocolate!",
+    "Your Secret Santa sits on the bright window side of the office!",
+    "Your Secret Santa always keeps hot cocoa and peppermint treats nearby!"
+  ];
+  if(count===0){
+    showClue("Mystery Clues (Locked 🔒)","Complete Task #1 from your Secret Santa in your Santa Hub to unlock your first clue!",false);
     return;
   }
-  if(available){
-    showClue("Your first Santa clue","Your first clue is ready.",true);
-    return;
-  }
-  const next=mystery.next_at?Date.parse(mystery.next_at):0;
-  const wait=next>Date.now()?"Next clue available "+new Intl.DateTimeFormat("en-IN",{dateStyle:"medium",timeStyle:"short"}).format(new Date(next))+".":"Your Santa clues aren't ready yet.";
-  showClue("Santa clue",player?.hint?player.hint:count>=3?
-    "All three clues have been revealed.":wait);
+  const unlockedHints=allHints.slice(0,count);
+  const formattedClues=unlockedHints.map((hint,i)=>`💡 Clue ${i+1}: ${hint}`).join("\n\n");
+  const footer=count<3?`\n\n📌 Complete Task #${count+1} to unlock Clue #${count+1}!`:`\n\n🎉 All 3 clues unlocked! Meet at the Christmas Tree to reveal your Santa!`;
+  showClue(`Santa Clues (${count} of 3 Unlocked)`,formattedClues+footer,false);
 }
 function showOfficeTutorial(){
   if(!player?.me||!player?.event)return;
@@ -716,7 +747,7 @@ async function enterOffice(info){
   }
   $("office-loading").classList.remove("hidden");
   officeLoading=(async()=>{
-    const module=await import("./game/main.js?v=arcade-grand-v13");
+    const module=await import("./game/main.js?v=arcade-grand-v14");
     officeRuntime=module.mountOffice($("office-canvas"),info,officeToast);
     officeRuntime.setCamera("wide");
     officeKey=identity;
@@ -1344,6 +1375,7 @@ function applyMatchedPhoto(img,rawDataUrl){
   }
 
   if(summaryEl)summaryEl.textContent="✨ Features auto-matched! Click any pill below to fine-tune beard, glasses, or hair in real-time.";
+  if(typeof updateDeskCustomizerPhotoBadge==="function")updateDeskCustomizerPhotoBadge(faceDataUrl);
   if(typeof officeToast==="function")officeToast("✨ Voxel look-alike updated! Quick-tune ready.");
   else toast("✨ Voxel look-alike updated! Quick-tune ready.");
 }
@@ -1398,6 +1430,8 @@ function setupPhotoAvatarMatcher(){
     else toast("Reverted to 3D voxel face.");
   });
 }
+
+let updateDeskCustomizerPhotoBadge=null;
 
 function setupWebcamSelfie(){
   const openBtn=$("photo-webcam-btn");
@@ -1456,12 +1490,26 @@ function setupWebcamSelfie(){
     ctx.drawImage(video,sx,sy,size,size,0,0,320,320);
     const dataUrl=canvas.toDataURL("image/jpeg",0.88);
 
+    // Guaranteed instant teardown so viewfinder box doesn't linger open
+    stopCamera();
+
     const img=new Image();
     img.onload=()=>{
-      applyMatchedPhoto(img,dataUrl);
-      stopCamera();
+      try{
+        applyMatchedPhoto(img,dataUrl);
+      }catch(err){
+        console.warn("Avatar auto-match error:",err);
+      }
+      try{
+        updateDeskCustomizerPhotoBadge?.(dataUrl);
+      }catch(err){
+        console.warn("Desk customizer photo sync error:",err);
+      }
     };
     img.src=dataUrl;
+
+    if(typeof officeToast==="function")officeToast("📸 Selfie captured! Desk badge & avatar updated.");
+    else if(typeof toast==="function")toast("📸 Selfie captured! Desk badge & avatar updated.");
   }
 
   openBtn?.addEventListener("click",startCamera);
@@ -1483,8 +1531,45 @@ function setupDeskCustomizer(){
   const themeCards=document.querySelectorAll(".theme-choice-card");
   const presetPills=document.querySelectorAll(".motto-preset-pill");
 
+  const badgeThumb=$("customizer-badge-thumb");
+  const badgePlaceholder=$("customizer-badge-placeholder");
+  const badgeStatus=$("customizer-badge-status");
+  const badgeClearBtn=$("customizer-clear-photo");
+  const badgeSelfieBtn=$("customizer-take-selfie");
+
   let selectedProp="mini-tree";
   let selectedTheme="emerald";
+
+  function syncDeskBadgePhoto(photoUrl){
+    if(photoUrl){
+      if(badgeThumb){
+        badgeThumb.src=photoUrl;
+        badgeThumb.classList.remove("hidden");
+      }
+      badgePlaceholder?.classList.add("hidden");
+      if(badgeStatus)badgeStatus.innerHTML="✅ <strong>Selfie captured!</strong> Looking sharp.";
+      badgeClearBtn?.classList.remove("hidden");
+      if(badgeSelfieBtn)badgeSelfieBtn.textContent="📸 Retake Selfie";
+    }else{
+      badgeThumb?.classList.add("hidden");
+      badgePlaceholder?.classList.remove("hidden");
+      if(badgeStatus)badgeStatus.textContent="No photo captured yet";
+      badgeClearBtn?.classList.add("hidden");
+      if(badgeSelfieBtn)badgeSelfieBtn.textContent="📸 Take Live Selfie";
+    }
+  }
+  updateDeskCustomizerPhotoBadge=syncDeskBadgePhoto;
+
+  badgeClearBtn?.addEventListener("click",()=>{
+    try{localStorage.removeItem("vcf_ss_avatar_photo");}catch{}
+    syncDeskBadgePhoto("");
+    if(officeRuntime?.updateAvatarPhoto)officeRuntime.updateAvatarPhoto("");
+    const matcherThumb=$("photo-matcher-thumb");
+    const matcherPreview=$("photo-matcher-preview");
+    if(matcherThumb)matcherThumb.src="";
+    if(matcherPreview)matcherPreview.classList.add("hidden");
+    if(typeof officeToast==="function")officeToast("Photo badge removed from desk.");
+  });
 
   function loadSavedSettings(){
     let saved={};
@@ -1500,6 +1585,10 @@ function setupDeskCustomizer(){
     themeCards.forEach(c=>{
       c.classList.toggle("active",c.dataset.theme===selectedTheme);
     });
+
+    let currentPhoto="";
+    try{currentPhoto=localStorage.getItem("vcf_ss_avatar_photo")||"";}catch{}
+    syncDeskBadgePhoto(currentPhoto);
   }
 
   propCards.forEach(card=>{
@@ -1698,6 +1787,7 @@ function setupChildQuestAndArcade(){
     }
     if(arcadeFullscreen)arcadeFullscreen.href=url;
   }
+  launchArcadeModal=openArcade;
 
   document.querySelectorAll(".arcade-tab-btn").forEach(tab=>{
     tab.addEventListener("click",()=>{
@@ -1929,12 +2019,9 @@ function setupChildQuestAndArcade(){
   $("hud-btn-workshop")?.addEventListener("click",openWorkshop);
   $("nav-btn-workshop")?.addEventListener("click",openWorkshop);
 
-  // Top Bar "☰ Menu" & Options Dialog
+  // Top Bar "⏸ Menu" button
   $("player-pause")?.addEventListener("click",()=>{
-    christmasMusic.unlock();
-    const moreDlg=$("more-menu-dialog");
-    if(typeof moreDlg?.showModal==="function")moreDlg.showModal();
-    else moreDlg?.classList.remove("hidden");
+    openPlayerMenu("personal");
   });
   $("more-menu-close-btn")?.addEventListener("click",()=>$("more-menu-dialog")?.close());
 
@@ -2149,18 +2236,82 @@ function closePlayerMenu(){
   if(avatarStudio){avatarStudio.dispose();avatarStudio=null;}
 }
 
+function openPlayerMenu(tab="personal"){
+  christmasMusic.unlock();
+  const menu=$("player-menu");
+  menu.classList.remove("hidden");
+  $("notebook-scroll").scrollTop=0;
+  officeRuntime?.setPaused(true);
+  showPlayerTab(tab);
+}
+
+function renderHubClues(){
+  const list=$("santa-hub-clues-list");
+  if(!list)return;
+  list.replaceChildren();
+  const mystery=player?.mystery;
+  const allHints=Array.isArray(mystery?.hints)&&mystery.hints.length?mystery.hints:[
+    "Your Secret Santa loves retro gaming and hot chocolate!",
+    "Your Secret Santa sits on the bright window side of the office!",
+    "Your Secret Santa always keeps hot cocoa and peppermint treats nearby!"
+  ];
+  const completed=getCompletedTasksCount();
+  const count=Math.min(3,completed);
+
+  for(let i=0;i<3;i++){
+    const isUnlocked=i<count;
+    const row=node("div","personal-item santa-hub-clue-entry"+(isUnlocked?"":" clue-locked"));
+    const badge=node("span","clue-number-badge"+(isUnlocked?"":" locked"),"CLUE "+(i+1));
+    const text=node("span","clue-text"+(isUnlocked?"":" locked-text"),
+      isUnlocked?allHints[i]:`🔒 Complete Task #${i+1} from your Secret Santa above to unlock this clue!`
+    );
+    row.append(badge,text);
+    list.append(row);
+  }
+
+  const clueBadge=$("santa-clue-badge");
+  if(clueBadge)clueBadge.textContent=count+" / 3 Unlocked";
+
+  const unlockBtn=$("hub-unlock-clue-btn");
+  const timerText=$("hub-clue-timer-text");
+  if(unlockBtn){
+    if(count>=3){
+      unlockBtn.disabled=false;
+      unlockBtn.textContent="🎉 All 3 Clues Unlocked!";
+      unlockBtn.onclick=revealClue;
+      if(timerText)timerText.textContent="✨ Fantastic job! All clues unlocked. Head to the Christmas Tree for the grand reveal!";
+    }else if(count>0){
+      unlockBtn.disabled=false;
+      unlockBtn.textContent=`💡 View ${count} Unlocked Clue${count>1?"s":""}`;
+      unlockBtn.onclick=revealClue;
+      if(timerText)timerText.textContent=`Task #${count+1} must be completed to unlock Clue #${count+1}.`;
+    }else{
+      unlockBtn.disabled=true;
+      unlockBtn.textContent="🔒 Complete Task #1 to Unlock First Clue";
+      if(timerText)timerText.textContent="Each task you complete from your Secret Santa unlocks 1 mystery clue.";
+    }
+  }
+}
+
 function showPlayerTab(name){
-  const personal=name==="personal";
-  $("player-character").classList.toggle("hidden",personal);
-  $("player-personal").classList.toggle("hidden",!personal);
-  $("player-tab-character").classList.toggle("active",!personal);
-  $("player-tab-personal").classList.toggle("active",personal);
-  $("player-tab-character").setAttribute("aria-selected",String(!personal));
-  $("player-tab-personal").setAttribute("aria-selected",String(personal));
+  const tabs=["personal","character","arcade","rules"];
+  const currentTab=tabs.includes(name)?name:"personal";
+
+  for(const t of tabs){
+    const panel=$("player-"+t);
+    const tabBtn=$("player-tab-"+t);
+    const isActive=t===currentTab;
+    if(panel)panel.classList.toggle("hidden",!isActive);
+    if(tabBtn){
+      tabBtn.classList.toggle("active",isActive);
+      tabBtn.setAttribute("aria-selected",String(isActive));
+    }
+  }
+
   // Changing panels must never carry over the previous panel's scroll
   // offset; scrolling now affects only the body, leaving tabs stationary.
   $("notebook-scroll").scrollTop=0;
-  if(!personal){
+  if(currentTab==="character"){
     setStudioTab(activeStudioTab);
     void ensureAvatarStudio();
     const chipsBox=$("photo-matcher-chips");
@@ -2171,20 +2322,12 @@ function showPlayerTab(name){
   }else if(avatarStudio){
     avatarStudio.dispose();avatarStudio=null;
   }
-}
-async function loadPlayer(){
-  const firstEntry=!player||$("player").classList.contains("hidden");
-  player=await api("player_dashboard");
-  // The daily note is available from the gameplay bulb, not a redundant
-  // Santa Hub mystery/office-puzzle panel.
-  if(firstEntry){
-    $("welcome").classList.add("hidden");
-    $("admin").classList.add("hidden");
-    $("player").classList.remove("hidden");
-    document.body.classList.add("office-playing");
-    christmasMusic.enter();
-    void enterOffice(player);
+  if(currentTab==="personal"){
+    renderPersonalHub();
   }
+}
+function renderPersonalHub(){
+  if(!player)return;
   $("player-greeting").textContent="✦ "+player.me.display_name;
   $("player-event-title").textContent=player.event.title;
   if($("hud-event-name")&&player.event?.title){
@@ -2211,6 +2354,7 @@ async function loadPlayer(){
   const incoming=$("received-tasks");incoming.replaceChildren();
   if(!player.receivedTasks.length)itemLine(incoming,"No tasks assigned yet.");
   for(const t of player.receivedTasks)renderSantaTask(incoming,t,false);
+  checkOverdueTasks(false);
   const label=$("child-name");
   label.classList.toggle("hidden",!child||!childVisible);
   label.textContent=child&&childVisible?privateChildLabel():"";
@@ -2223,9 +2367,13 @@ async function loadPlayer(){
   $("gift-purchased").disabled=!child;
   $("task-form").querySelectorAll("input,textarea,button").forEach(x=>x.disabled=!child);
 
-  // Clues now live exclusively behind the in-office lightbulb.
-  // Preserve the existing server-side unlock count and 24h cooldown.
+  if($("task-date")&&!$("task-date").value){
+    $("task-date").value=new Date().toISOString().slice(0,10);
+  }
+
+  // Clues live in the lightbulb and Santa Hub tab.
   updateClueButton();
+  renderHubClues();
   if(!child){
     itemLine(childWishes,"Your Secret Child's wishlist will appear after the draw.");
     itemLine(myTasks,"No assigned Secret Child yet. Tasks are optional.");
@@ -2233,35 +2381,125 @@ async function loadPlayer(){
     $("gift-purchased").checked=false;
     return;
   }
-  if(!child.wishlist.length)itemLine(childWishes,"Your Child hasn't added wishes yet.");
+  if(!child.wishlist?.length)itemLine(childWishes,"Your Child hasn't added wishes yet.");
   else child.wishlist.forEach(w=>itemLine(childWishes,w.text));
   $("santa-message").value=child.message||"";
   $("gift-purchased").checked=!!child.gift_purchased;
-  if(!child.tasks.length)itemLine(myTasks,"No tasks assigned yet.");
-  for(const task of child.tasks)renderSantaTask(myTasks,task,true);
+  const childTasks=child.tasks||[];
+  if(!childTasks.length)itemLine(myTasks,"No tasks assigned yet.");
+  for(const task of childTasks)renderSantaTask(myTasks,task,true);
 }
-// Both columns use the same dated task visual; only the author can mark
-// the tasks they sent as completed, preserving the current permission model.
+async function loadPlayer(){
+  if(player?.me?.id==="demo-guest"){
+    renderPersonalHub();
+    return;
+  }
+  const firstEntry=!player||$("player").classList.contains("hidden");
+  player=await api("player_dashboard");
+  // The daily note is available from the gameplay bulb, not a redundant
+  // Santa Hub mystery/office-puzzle panel.
+  if(firstEntry){
+    $("welcome").classList.add("hidden");
+    $("admin").classList.add("hidden");
+    $("player").classList.remove("hidden");
+    document.body.classList.add("office-playing");
+    christmasMusic.enter();
+    void enterOffice(player);
+  }
+  renderPersonalHub();
+}
+// Both columns use dated task visuals; child can mark tasks as completed
+// to unlock mystery clues, and Santa can mark or verify tasks they gave.
 function renderSantaTask(parent,task,editable){
   const row=node("div","personal-item santa-task-entry");
+  const todayStr=new Date().toISOString().slice(0,10);
+  const isDone=task.status==="completed";
+  const isOverdue=!isDone&&task.task_date&&task.task_date<todayStr;
+  const isToday=!isDone&&task.task_date===todayStr;
+
+  if(isOverdue)row.classList.add("is-overdue");
+
+  const metaCol=node("div","task-meta-col");
   const date=node("time","santa-task-date",niceDate(task.task_date));
   date.dateTime=task.task_date;
-  const words=node("span","santa-task-text",task.task_text);
-  const state=node("span","santa-task-status",task.status==="completed"?"✓ Done":"");
-  row.append(date,words);
+
+  let badgeText="";
+  let badgeClass="task-badge";
+  if(isDone){
+    badgeText="✓ COMPLETED";
+    badgeClass+=" task-badge-done";
+  }else if(isOverdue){
+    badgeText="⏰ OVERDUE";
+    badgeClass+=" task-badge-overdue";
+  }else if(isToday){
+    badgeText="⏳ DUE TODAY";
+    badgeClass+=" task-badge-today";
+  }else{
+    badgeText="📅 UPCOMING";
+    badgeClass+=" task-badge-upcoming";
+  }
+  const badge=node("span",badgeClass,badgeText);
+  metaCol.append(date,badge);
+
+  const words=node("span","santa-task-text",task.task_text||task.title||"Task");
+  row.append(metaCol,words);
+
   if(editable){
-    const box=node("input");box.type="checkbox";box.checked=task.status==="completed";
+    // Santa view of tasks given to Child
+    const actGroup=node("div","task-actions-group");
+    const box=node("input");box.type="checkbox";box.checked=isDone;
     box.disabled=task.status==="cancelled";
-    box.setAttribute("aria-label","Mark task completed: "+task.task_text);
+    box.setAttribute("aria-label","Mark task completed: "+(task.task_text||""));
     box.addEventListener("change",run(async()=>{
+      if(player?.me?.id==="demo-guest"){
+        task.status=box.checked?"completed":"pending";
+        try{localStorage.setItem("vcf_ss_demo_child_tasks",JSON.stringify(player?.myChild?.tasks||[]));}catch{}
+        renderPersonalHub();
+        return;
+      }
       await api("complete_task",{task_id:task.id,completed:box.checked});
       await loadPlayer();
     }));
-    row.append(box);
-  }else if(task.status==="completed")row.append(state);
+    actGroup.append(box);
+    row.append(actGroup);
+  }else{
+    // Child view of tasks received from Santa
+    if(!isDone){
+      const completeBtn=node("button","button mini-button task-complete-btn","✓ Mark Completed");
+      completeBtn.addEventListener("click",run(async()=>{
+        task.status="completed";
+        if(player?.me?.id==="demo-guest"){
+          try{localStorage.setItem("vcf_ss_demo_received_tasks",JSON.stringify(player.receivedTasks||[]));}catch{}
+        }else{
+          try{
+            await api("complete_task",{task_id:task.id,completed:true});
+          }catch(err){
+            console.warn("Server task completion sync:",err);
+          }
+        }
+        const newCount=getCompletedTasksCount();
+        const celebrateMsg=`🎉 Task completed! Clue #${Math.min(3,newCount)} is now unlocked!`;
+        if(typeof officeToast==="function")officeToast(celebrateMsg);
+        else toast(celebrateMsg);
+        renderPersonalHub();
+        checkOverdueTasks();
+      }));
+      row.append(completeBtn);
+    }else{
+      const doneState=node("span","santa-task-status","✓ Done");
+      row.append(doneState);
+    }
+  }
   parent.append(row);
 }
 async function saveWishlist(wishes){
+  if(player?.me?.id==="demo-guest"){
+    player.me.wishlist=wishes;
+    try{localStorage.setItem("vcf_ss_demo_wishlist",JSON.stringify(wishes));}catch{}
+    renderPersonalHub();
+    toast("Wishlist saved.");
+    return;
+  }
   await api("save_wishlist",{items:wishes,version:player.me.wishlist_version});
   await loadPlayer();
   toast("Wishlist saved.");
@@ -2417,30 +2655,16 @@ $("assign-btn").addEventListener("click",run(async()=>{
   toast(res.assigned+" Santa–Child pairs assigned privately. No tasks created.");
 }));
 $("player-pause")?.addEventListener("click",()=>{
-  christmasMusic.unlock();
-  const moreDlg=$("more-menu-dialog");
-  if(typeof moreDlg?.showModal==="function")moreDlg.showModal();
-  else moreDlg?.classList.remove("hidden");
+  openPlayerMenu("personal");
 });
 $("hud-btn-santa")?.addEventListener("click",()=>{
-  christmasMusic.unlock();
-  const menu=$("player-menu");
-  menu.classList.remove("hidden");
-  $("notebook-scroll").scrollTop=0;
-  officeRuntime?.setPaused(true);
-  showPlayerTab("personal");
+  openPlayerMenu("personal");
 });
 $("hud-btn-avatar")?.addEventListener("click",()=>{
-  christmasMusic.unlock();
-  const menu=$("player-menu");
-  menu.classList.remove("hidden");
-  $("notebook-scroll").scrollTop=0;
-  officeRuntime?.setPaused(true);
-  showPlayerTab("character");
+  openPlayerMenu("character");
 });
 $("hud-btn-rules")?.addEventListener("click",()=>{
-  christmasMusic.unlock();
-  $("rules-dialog")?.showModal();
+  openPlayerMenu("rules");
 });
 $("rules-dialog-close")?.addEventListener("click",()=>{$("rules-dialog")?.close();});
 $("rules-dialog-ok")?.addEventListener("click",()=>{$("rules-dialog")?.close();});
@@ -2505,8 +2729,64 @@ window.addEventListener("keydown",e=>{
   }
 });
 
-$("player-tab-character").addEventListener("click",()=>showPlayerTab("character"));
-$("player-tab-personal").addEventListener("click",()=>showPlayerTab("personal"));
+$("player-tab-personal")?.addEventListener("click",()=>showPlayerTab("personal"));
+$("player-tab-character")?.addEventListener("click",()=>showPlayerTab("character"));
+$("player-tab-arcade")?.addEventListener("click",()=>showPlayerTab("arcade"));
+$("player-tab-rules")?.addEventListener("click",()=>showPlayerTab("rules"));
+
+$("hub-unlock-clue-btn")?.addEventListener("click",run(async()=>{
+  const {available}=updateClueButton();
+  if(!available)throw Error("The next Santa clue isn't ready yet.");
+  await api("unlock_santa_hint");
+  await loadPlayer();
+  renderHubClues();
+  toast("New Santa clue revealed!");
+}));
+
+$("arcade-launch-racers")?.addEventListener("click",()=>{
+  closePlayerMenu();
+  if(typeof launchArcadeModal==="function")launchArcadeModal("voxel-racers");
+});
+$("arcade-launch-bikes")?.addEventListener("click",()=>{
+  closePlayerMenu();
+  if(typeof launchArcadeModal==="function")launchArcadeModal("voxel-bike");
+});
+$("arcade-nav-mydesk")?.addEventListener("click",()=>{
+  closePlayerMenu();
+  officeRuntime?.goToDesk?.();
+  officeToast("Walking to your desk ⭐");
+});
+$("arcade-nav-tree")?.addEventListener("click",()=>{
+  closePlayerMenu();
+  officeRuntime?.goToTree?.();
+  officeToast("Walking to Christmas Tree 🎄");
+});
+$("arcade-nav-lounge")?.addEventListener("click",()=>{
+  closePlayerMenu();
+  officeRuntime?.goToArcade?.();
+  officeToast("Walking to Arcade Lounge 🕹️");
+});
+$("arcade-toggle-party")?.addEventListener("click",()=>{
+  officeRuntime?.toggleParty?.();
+  officeToast("Toggled Holiday Party Mode! 🎉");
+});
+$("arcade-toggle-lighting")?.addEventListener("click",()=>{
+  officeRuntime?.cycleTimeTheme?.();
+  officeToast("Switched Office Lighting 🌙");
+});
+
+$("rules-toggle-sound")?.addEventListener("click",()=>{
+  christmasMusic.unlock();
+  christmasMusic.toggle();
+  syncChristmasMusic();
+  officeToast(christmasMusic.muted?"Music muted 🔇":"Music playing 🔊");
+});
+$("rules-sign-out")?.addEventListener("click",()=>{
+  if(confirm("Sign out of the Christmas office?")){
+    closePlayerMenu();
+    endSession();
+  }
+});
 $("refresh-personal").addEventListener("click",run(async()=>{
   await loadPlayer();
   toast("Your private Santa notebook is up to date.");
@@ -2528,15 +2808,47 @@ $("child-toggle").addEventListener("click",()=>{
 });
 $("task-form").addEventListener("submit",run(async e=>{
   e.preventDefault();
-  await api("add_task",{task_date:$("task-date").value,task_text:$("task-text").value});
+  const dateVal=$("task-date").value||new Date().toISOString().slice(0,10);
+  const textVal=$("task-text").value.trim();
+  if(!textVal)return;
+
+  if(player?.me?.id==="demo-guest"){
+    if(!player.myChild)player.myChild={id:"colleague-sneha",name:"Sneha Rao",wishlist:[],tasks:[],gift_purchased:false,message:""};
+    if(!Array.isArray(player.myChild.tasks))player.myChild.tasks=[];
+    player.myChild.tasks.push({
+      id:"demo-task-"+Date.now(),
+      task_date:dateVal,
+      task_text:textVal,
+      status:"pending"
+    });
+    try{localStorage.setItem("vcf_ss_demo_child_tasks",JSON.stringify(player.myChild.tasks));}catch{}
+    $("task-text").value="";
+    renderPersonalHub();
+    toast("Task saved for your Secret Child.");
+    return;
+  }
+
+  await api("add_task",{task_date:dateVal,task_text:textVal});
   $("task-text").value="";
   await loadPlayer();toast("Task saved for your Secret Child.");
 }));
 $("gift-purchased").addEventListener("change",run(async e=>{
+  if(player?.me?.id==="demo-guest"){
+    if(player?.myChild)player.myChild.gift_purchased=e.target.checked;
+    try{localStorage.setItem("vcf_ss_demo_gift_purchased",String(e.target.checked));}catch{}
+    toast("Gift status saved.");
+    return;
+  }
   await api("gift_status",{purchased:e.target.checked});
   await loadPlayer();toast("Gift status saved.");
 }));
 $("save-message").addEventListener("click",run(async()=>{
+  if(player?.me?.id==="demo-guest"){
+    if(player?.myChild)player.myChild.message=$("santa-message").value;
+    try{localStorage.setItem("vcf_ss_demo_message",$("santa-message").value);}catch{}
+    toast("Private message saved for the ceremony.");
+    return;
+  }
   await api("save_message",{message:$("santa-message").value});
   toast("Private message saved for the ceremony.");
 }));
@@ -2573,6 +2885,10 @@ actionCollapseBtn?.addEventListener("click",(e)=>{
 
 // Demo / Guest Mode for Instant Play without invitation code
 function loadDemoPlayer(){
+  const todayStr=new Date().toISOString().slice(0,10);
+  const yesterdayStr=new Date(Date.now()-86400000).toISOString().slice(0,10);
+  const tomorrowStr=new Date(Date.now()+86400000).toISOString().slice(0,10);
+
   const demoPlayer={
     me:{
       id:"demo-guest",
@@ -2612,7 +2928,17 @@ function loadDemoPlayer(){
       wishlist:[
         {id:"sw1",text:"Sci-Fi paperback novel or bookstore gift card 📚"},
         {id:"sw2",text:"Dark roasted gourmet coffee beans ☕"}
-      ]
+      ],
+      tasks:[
+        {
+          id:"demo-child-t1",
+          task_date:todayStr,
+          task_text:"Check out the Christmas Tree near the break room!",
+          status:"pending"
+        }
+      ],
+      gift_purchased:false,
+      message:""
     },
     colleagues:[
       {id:"c1",name:"Arjun Sharma",desk_index:0,prop:"plant",avatar:{outfit:"sweater-snowflake",hairstyle:"short",skin:"medium"}},
@@ -2623,20 +2949,50 @@ function loadDemoPlayer(){
     receivedTasks:[
       {
         id:"task-demo-1",
-        title:"Office Warm-Up",
-        date:new Date().toISOString().slice(0,10),
-        status:"pending",
-        details:"Visit the Retro Arcade Room and set a high score in Monster Racers!"
+        task_date:yesterdayStr,
+        task_text:"Visit the Retro Arcade Room and play a game of Monster Racers!",
+        status:"pending"
+      },
+      {
+        id:"task-demo-2",
+        task_date:todayStr,
+        task_text:"Customize your office desk and snap a festive desk selfie badge!",
+        status:"pending"
+      },
+      {
+        id:"task-demo-3",
+        task_date:tomorrowStr,
+        task_text:"Sip hot cocoa at the break-room kitchen counter and relax!",
+        status:"pending"
       }
     ],
-    today:new Date().toISOString().slice(0,10),
+    today:todayStr,
     mystery:{
       hints:[
         "Your Secret Santa loves retro gaming and hot chocolate!",
-        "Your Secret Santa sits on the bright window side of the office!"
+        "Your Secret Santa sits on the bright window side of the office!",
+        "Your Secret Santa always keeps hot cocoa and peppermint treats nearby!"
       ]
     }
   };
+
+  try{
+    const savedWishlist=JSON.parse(localStorage.getItem("vcf_ss_demo_wishlist")||"null");
+    if(Array.isArray(savedWishlist)&&savedWishlist.length) demoPlayer.me.wishlist=savedWishlist;
+
+    const savedTasks=JSON.parse(localStorage.getItem("vcf_ss_demo_child_tasks")||"null");
+    if(Array.isArray(savedTasks)) demoPlayer.myChild.tasks=savedTasks;
+
+    const savedRecTasks=JSON.parse(localStorage.getItem("vcf_ss_demo_received_tasks")||"null");
+    if(Array.isArray(savedRecTasks)&&savedRecTasks.length) demoPlayer.receivedTasks=savedRecTasks;
+
+    const savedMsg=localStorage.getItem("vcf_ss_demo_message");
+    if(savedMsg!==null) demoPlayer.myChild.message=savedMsg;
+
+    demoPlayer.myChild.gift_purchased=localStorage.getItem("vcf_ss_demo_gift_purchased")==="true";
+  }catch(e){
+    console.warn("Could not load saved demo tasks/wishes",e);
+  }
 
   player=demoPlayer;
   $("welcome").classList.add("hidden");
@@ -2645,6 +3001,7 @@ function loadDemoPlayer(){
   document.body.classList.add("office-playing");
   christmasMusic.enter();
   void enterOffice(player);
+  renderPersonalHub();
 
   $("player-greeting").textContent="✦ "+player.me.display_name;
   $("player-event-title").textContent=player.event.title;
@@ -2657,6 +3014,7 @@ function loadDemoPlayer(){
   }else{
     toast("✨ Welcome, Holiday Explorer! Walk around the 3D office or press ☰ Menu.");
   }
+  checkOverdueTasks(true);
 }
 
 $("demo-entry-btn")?.addEventListener("click",()=>{

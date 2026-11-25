@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import {buildOffice,deskClueForSeat,CLUE_PROPS,decorateClueDesk} from "./office.js?v=arcade-grand-v13";
+import {buildOffice,deskClueForSeat,CLUE_PROPS,decorateClueDesk} from "./office.js?v=arcade-grand-v14";
 import {createAvatar,avatarFromPerson} from "./avatar.js?v=beard-trim-v5";
 import {createOfficeLife} from "./office-life.js?v=studio-qa-v1";
 import {playFestiveChime} from "./christmas-music.js?v=jingle-bells-v1";
