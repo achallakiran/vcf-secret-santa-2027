@@ -1320,7 +1320,8 @@ export function buildOffice(count=12){
     cd.drawMarquee(canM.getContext("2d"),512,128);
     const texM=new THREE.CanvasTexture(canM);
     texM.colorSpace=THREE.SRGBColorSpace;
-    const meshM=new THREE.Mesh(new THREE.PlaneGeometry(.80,.26),new THREE.MeshBasicMaterial({map:texM}));
+    texM.needsUpdate=true;
+    const meshM=new THREE.Mesh(new THREE.PlaneGeometry(.80,.26),new THREE.MeshBasicMaterial({map:texM,side:THREE.DoubleSide}));
     meshM.position.set(0,1.95,.342);
     cab.add(meshM);
 
@@ -1334,7 +1335,8 @@ export function buildOffice(count=12){
     cd.drawScreen(canS.getContext("2d"),512,384);
     const texS=new THREE.CanvasTexture(canS);
     texS.colorSpace=THREE.SRGBColorSpace;
-    const meshS=new THREE.Mesh(new THREE.PlaneGeometry(.68,.48),new THREE.MeshBasicMaterial({map:texS}));
+    texS.needsUpdate=true;
+    const meshS=new THREE.Mesh(new THREE.PlaneGeometry(.68,.48),new THREE.MeshBasicMaterial({map:texS,side:THREE.DoubleSide}));
     meshS.position.set(0,1.42,.23);
     meshS.rotation.x=-.26;
     cab.add(meshS);
@@ -1445,7 +1447,8 @@ export function buildOffice(count=12){
 
     const texPB=new THREE.CanvasTexture(canPB);
     texPB.colorSpace=THREE.SRGBColorSpace;
-    const pbMesh=new THREE.Mesh(new THREE.PlaneGeometry(.66,.62),new THREE.MeshBasicMaterial({map:texPB}));
+    texPB.needsUpdate=true;
+    const pbMesh=new THREE.Mesh(new THREE.PlaneGeometry(.66,.62),new THREE.MeshBasicMaterial({map:texPB,side:THREE.DoubleSide}));
     pbMesh.position.set(0,1.48,-.485);
     pb.add(pbMesh);
 
@@ -1489,7 +1492,8 @@ export function buildOffice(count=12){
 
   const texVM=new THREE.CanvasTexture(canVM);
   texVM.colorSpace=THREE.SRGBColorSpace;
-  const meshVM=new THREE.Mesh(new THREE.PlaneGeometry(1.24,.22),new THREE.MeshBasicMaterial({map:texVM}));
+  texVM.needsUpdate=true;
+  const meshVM=new THREE.Mesh(new THREE.PlaneGeometry(1.24,.22),new THREE.MeshBasicMaterial({map:texVM,side:THREE.DoubleSide}));
   meshVM.position.set(0,2.14,.475);
   soda.add(meshVM);
 
@@ -1511,7 +1515,8 @@ export function buildOffice(count=12){
     transparent:true,
     opacity:0.22,
     roughness:0.05,
-    metalness:0.15
+    metalness:0.15,
+    depthWrite:false
   });
   const glassMesh=new THREE.Mesh(new THREE.PlaneGeometry(.78,1.54),glassMat);
   glassMesh.position.set(-.20,1.21,.475);
@@ -1704,7 +1709,8 @@ export function buildOffice(count=12){
   });
   const texBoard=new THREE.CanvasTexture(canBoard);
   texBoard.colorSpace=THREE.SRGBColorSpace;
-  const boardMesh=new THREE.Mesh(new THREE.PlaneGeometry(6.20,1.52),new THREE.MeshBasicMaterial({map:texBoard}));
+  texBoard.needsUpdate=true;
+  const boardMesh=new THREE.Mesh(new THREE.PlaneGeometry(6.20,1.52),new THREE.MeshBasicMaterial({map:texBoard,side:THREE.DoubleSide}));
   boardMesh.position.set(0.60,2.85,12.35);
   boardMesh.rotation.y=Math.PI; // Face south towards entering players
   arcadeRoom.add(boardMesh);
