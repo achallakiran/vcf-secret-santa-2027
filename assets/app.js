@@ -24,6 +24,7 @@ let session=null, busy=false, events=[],event=null,participants=[],assignments=[
 let officeRuntime=null,officeLoading=null,officeKey=null,officeNoticeTimer=null;
 let clueDismissTimer=null;
 let avatarBaseline=null,avatarPreviewTimer=null;
+let launchArcadeModal=null, closeArcadeModal=null;
 let avatarStudio=null,avatarStudioLoading=null,activeStudioTab="look",visualEditor=null;
 let adminEditingParticipant=null;
 let latestAdminInvitation=null;
@@ -109,7 +110,7 @@ const run=task=>async(...args)=>{
     await task(...args);
     showProgress("Completed","Your action finished successfully.","success");
   }catch(error){
-    if(/session expired|invalid session|invitation has changed|sign in again/i.test(error?.message||""))endSession();
+    if(player?.me?.id!=="demo-guest"&&/session expired|invalid session|invitation has changed|sign in again/i.test(error?.message||""))endSession();
     showProgress("Could not finish",error?.message||"Please try again.","error");
     toast(error?.message||"Something went wrong.",true);
   }finally{
@@ -118,8 +119,479 @@ const run=task=>async(...args)=>{
     hideProgressLater();
   }
 };
+// Local/Offline Simulation Fallback for Multi-Team Testing & Standalone Play
+function getLocalAdmins(){
+  try{return JSON.parse(localStorage.getItem("vcf_ss_local_admins")||"[]");}catch{return [];}
+}
+function saveLocalAdmins(admins){
+  try{localStorage.setItem("vcf_ss_local_admins",JSON.stringify(admins));}catch{}
+}
+function getLocalEvents(){
+  try{return JSON.parse(localStorage.getItem("vcf_ss_local_events")||"[]");}catch{return [];}
+}
+function saveLocalEvents(evs){
+  try{localStorage.setItem("vcf_ss_local_events",JSON.stringify(evs));}catch{}
+}
+
+const LOCAL_DESK_OBJECTS=[
+  "apple","coffee","mini-tree","gift","succulent","coffee",
+  "apple","ornament","mini-tree","books","lantern","candy-cane"
+];
+function localDeskDecor(index){
+  return {
+    kind:LOCAL_DESK_OBJECTS[index%LOCAL_DESK_OBJECTS.length],
+    bank:index%3,
+    row:Math.floor(index/3)
+  };
+}
+function localClues(santaId,roster){
+  const person=roster.find(p=>p.id===santaId);
+  if(!person)return [];
+  const seatIndex=Number.isInteger(person.office_seat_index)?
+    person.office_seat_index:roster.findIndex(p=>p.id===santaId);
+  const decor=localDeskDecor(seatIndex);
+  const bank=decor.bank===0?"near the west wall":"in the central workstations";
+  const nearby=decor.bank===0&&decor.row%5===0?
+    "There is a Christmas wreath on the wall beside your Santa's desk.":
+    decor.row%3===0?
+    "There are leafy potted plants along your Santa's workstation row.":
+    "Your Santa's workstation is "+bank+".";
+  const objects={
+    apple:"a red apple with a tiny green leaf",
+    coffee:"a coffee mug",
+    "mini-tree":"a miniature decorated Christmas tree",
+    gift:"a red-and-gold wrapped present",
+    succulent:"a small potted succulent",
+    ornament:"a bright Christmas ornament",
+    books:"a neat pile of colorful books",
+    lantern:"a glowing little lantern",
+    "candy-cane":"a striped candy cane"
+  };
+  const bankName=["west-wall desk","left desk of the central island","right desk of the central island"][decor.bank];
+  return [
+    nearby,
+    "Look for "+(objects[decor.kind]||"festive decor")+" on your Santa's desk.",
+    "Their desk is in workstation row "+(decor.row+1)+", at the "+bankName+"."
+  ];
+}
+
+async function handleLocalApi(action,values={}){
+  const localAdmins=getLocalAdmins();
+  const localEvents=getLocalEvents();
+
+  if(action==="admin_register"){
+    const name=String(values.name||"Organizer").trim();
+    const pin=String(values.pin||"").trim();
+    if(pin.length<4)throw Error("PIN must be at least 4 digits.");
+    const id="admin-"+Date.now();
+    localAdmins.push({id,name,pin,created_at:new Date().toISOString()});
+    saveLocalAdmins(localAdmins);
+    return {token:"local-token-"+id,role:"admin",admin:{id,name},expires_in:8*3600};
+  }
+
+  if(action==="admin_login"){
+    const pin=String(values.pin||"").trim();
+    let found=localAdmins.find(a=>a.pin===pin);
+    if(!found){
+      // If PIN is valid and no admin exists yet, automatically create one in local mode
+      found={id:"admin-"+Date.now(),name:"Holiday Organizer",pin};
+      localAdmins.push(found);
+      saveLocalAdmins(localAdmins);
+    }
+    return {token:"local-token-"+found.id,role:"admin",admin:{id:found.id,name:found.name},expires_in:8*3600};
+  }
+
+  if(action==="list_events"){
+    return {
+      events:localEvents.map(e=>({
+        id:e.id,
+        slug:e.slug,
+        title:e.title,
+        status:e.status||"active",
+        timezone:e.timezone||"Asia/Kolkata",
+        gift_budget_recommendation_inr:e.budget||500,
+        created_at:e.created_at
+      }))
+    };
+  }
+
+  if(action==="create_event"){
+    const title=String(values.title||"Secret Santa").trim();
+    const budget=Number(values.budget)||500;
+    const timezone=String(values.timezone||"Asia/Kolkata");
+    const slug=title.toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"").slice(0,36)+"-"+Math.random().toString(36).slice(2,6);
+    const newEvent={
+      id:"ev-"+Date.now(),
+      slug,
+      title,
+      budget,
+      timezone,
+      status:"active",
+      participants:[],
+      assignments:[],
+      codes:{},
+      created_at:new Date().toISOString()
+    };
+    localEvents.unshift(newEvent);
+    saveLocalEvents(localEvents);
+    return {event:newEvent};
+  }
+
+  if(action==="list_participants"){
+    const ev=localEvents.find(e=>e.id===values.event_id);
+    if(!ev)throw Error("Event not found.");
+    return {
+      event:{id:ev.id,slug:ev.slug,title:ev.title,status:ev.status,budget:ev.budget,timezone:ev.timezone},
+      participants:ev.participants||[],
+      assignments:ev.assignments||[],
+      codes:ev.codes||{}
+    };
+  }
+
+  if(action==="add_participant"){
+    const ev=localEvents.find(e=>e.id===values.event_id);
+    if(!ev)throw Error("Event not found.");
+    const pid="p-"+Date.now()+"-"+Math.random().toString(36).slice(2,5);
+    const code=String(Math.floor(1000+Math.random()*9000));
+    const desk=String(values.desk_key||("Desk "+((ev.participants?.length||0)+1))).trim();
+    const p={
+      id:pid,
+      display_name:String(values.display_name||"Colleague").trim(),
+      desk_key:desk,
+      is_active:true,
+      avatar:null,
+      avatar_version:1,
+      wishlist:[],
+      wishlist_version:1,
+      created_at:new Date().toISOString()
+    };
+    ev.participants=ev.participants||[];
+    ev.codes=ev.codes||{};
+    ev.participants.push(p);
+    ev.codes[pid]=code;
+    saveLocalEvents(localEvents);
+    return {id:pid,code};
+  }
+
+  if(action==="edit_participant"){
+    const ev=localEvents.find(e=>e.id===values.event_id);
+    if(!ev)throw Error("Event not found.");
+    const p=(ev.participants||[]).find(p=>p.id===values.participant_id);
+    if(!p)throw Error("Participant not found.");
+    p.display_name=String(values.display_name||p.display_name).trim();
+    p.desk_key=String(values.desk_key||p.desk_key).trim();
+    saveLocalEvents(localEvents);
+    return {participant:p};
+  }
+
+  if(action==="rotate_code"){
+    const ev=localEvents.find(e=>e.id===values.event_id);
+    if(!ev)throw Error("Event not found.");
+    const newCode=String(Math.floor(1000+Math.random()*9000));
+    ev.codes=ev.codes||{};
+    ev.codes[values.participant_id]=newCode;
+    saveLocalEvents(localEvents);
+    return {code:newCode};
+  }
+
+  if(action==="delete_participant"){
+    const ev=localEvents.find(e=>e.id===values.event_id);
+    if(!ev)throw Error("Event not found.");
+    ev.participants=(ev.participants||[]).filter(p=>p.id!==values.participant_id);
+    if(ev.codes)delete ev.codes[values.participant_id];
+    const active=(ev.participants||[]).filter(p=>p.is_active);
+    if(active.length>=2){
+      const pairs=[];
+      for(let i=0;i<active.length;i++){
+        pairs.push({
+          id:"asgn-"+i,
+          santa_id:active[i].id,
+          child_id:active[(i+1)%active.length].id,
+          created_at:new Date().toISOString()
+        });
+      }
+      ev.assignments=pairs;
+    }else{
+      ev.assignments=[];
+    }
+    saveLocalEvents(localEvents);
+    return {rewired:true};
+  }
+
+  if(action==="admin_save_avatar"){
+    const ev=localEvents.find(e=>e.id===values.event_id);
+    if(!ev)throw Error("Event not found.");
+    const p=(ev.participants||[]).find(p=>p.id===values.participant_id);
+    if(!p)throw Error("Participant not found.");
+    p.avatar=values.avatar||null;
+    p.avatar_version=(p.avatar_version||1)+1;
+    saveLocalEvents(localEvents);
+    return {avatar:p.avatar,version:p.avatar_version};
+  }
+
+  if(action==="reassign_all"||action==="assign_pending"){
+    const ev=localEvents.find(e=>e.id===values.event_id);
+    if(!ev)throw Error("Event not found.");
+    const active=(ev.participants||[]).filter(p=>p.is_active);
+    if(active.length<2)throw Error("Need at least 2 participants to assign pairs.");
+    const shuffled=[...active].sort(()=>Math.random()-0.5);
+    const pairs=[];
+    for(let i=0;i<shuffled.length;i++){
+      const santa=shuffled[i];
+      const child=shuffled[(i+1)%shuffled.length];
+      pairs.push({
+        id:"asgn-"+i,
+        santa_id:santa.id,
+        child_id:child.id,
+        hints_unlocked_count:0,
+        gift_purchased:false,
+        santa_message:"",
+        tasks:[],
+        created_at:new Date().toISOString()
+      });
+    }
+    ev.assignments=pairs;
+    saveLocalEvents(localEvents);
+    return {assigned:pairs.length};
+  }
+
+  if(action==="event_info"){
+    const ev=localEvents.find(e=>e.slug===values.event_slug);
+    if(ev){
+      return {event:{title:ev.title,slug:ev.slug,budget:ev.budget||500,timezone:ev.timezone||"Asia/Kolkata"}};
+    }
+    return null;
+  }
+
+  if(action==="player_login"){
+    const ev=localEvents.find(e=>e.slug===values.event_slug);
+    if(!ev)throw Error("Team event not found.");
+    const targetCode=String(values.code||"").trim();
+    let participantId=null;
+    for(const [pid,c] of Object.entries(ev.codes||{})){
+      if(c===targetCode){participantId=pid;break;}
+    }
+    if(!participantId)throw Error("Invalid invitation code for this event.");
+    const me=ev.participants.find(p=>p.id===participantId);
+    if(!me)throw Error("Participant not found.");
+    const asgn=(ev.assignments||[]).find(a=>a.santa_id===me.id);
+    const child=asgn?ev.participants.find(p=>p.id===asgn.child_id):null;
+    const token="local-player-token-"+ev.id+"___"+me.id;
+    return {
+      token,
+      role:"player",
+      event:{id:ev.id,slug:ev.slug,title:ev.title,budget:ev.budget||500,timezone:ev.timezone},
+      me:{...me,wishlist:me.wishlist||[],wishlist_version:me.wishlist_version||1},
+      myChild:child?{id:child.id,name:child.display_name,desk_key:child.desk_key,avatar:child.avatar,wishlist:child.wishlist||[],tasks:asgn.tasks||[],message:asgn.santa_message||"",gift_purchased:asgn.gift_purchased||false}:null,
+      colleagues:(ev.participants||[]).map((p,idx)=>({id:p.id,name:p.display_name,desk_key:p.desk_key,avatar:p.avatar,officeSeat:p.office_seat_index??idx,deskDecor:localDeskDecor(p.office_seat_index??idx)}))
+    };
+  }
+
+  if(action==="player_dashboard"){
+    const token=session?.token||"";
+    const rest=token.replace(/^local-player-token-/,"");
+    let [evId,pId]=rest.split("___");
+    let ev=evId?localEvents.find(e=>e.id===evId):null;
+    if(!ev){
+      ev=localEvents.find(e=>e.participants?.some(p=>p.id===pId||p.id===rest));
+      if(ev&&!pId)pId=rest;
+    }
+    if(!ev)throw Error("Event not found.");
+    const me=ev.participants?.find(p=>p.id===pId);
+    if(!me)throw Error("Participant not found.");
+
+    const outgoing=(ev.assignments||[]).find(a=>a.santa_id===me.id);
+    const incoming=(ev.assignments||[]).find(a=>a.child_id===me.id);
+    const child=outgoing?ev.participants?.find(p=>p.id===outgoing.child_id):null;
+    const santa=incoming?ev.participants?.find(p=>p.id===incoming.santa_id):null;
+
+    const ownTasks=outgoing?.tasks||[];
+    const receivedTasks=incoming?.tasks||[];
+
+    const roster=(ev.participants||[]).map((p,idx)=>({
+      id:p.id,
+      name:p.display_name,
+      desk_key:p.desk_key,
+      avatar:p.avatar,
+      officeSeat:p.office_seat_index??idx,
+      deskDecor:localDeskDecor(p.office_seat_index??idx)
+    }));
+
+    const clues=santa?localClues(santa.id,ev.participants||[]):[];
+    const unlockedCount=incoming?.hints_unlocked_count||0;
+
+    return {
+      event:{id:ev.id,title:ev.title,slug:ev.slug,status:ev.status||"active",timezone:ev.timezone||"Asia/Kolkata",budget:ev.budget||500},
+      me:{
+        id:me.id,
+        display_name:me.display_name,
+        desk_key:me.desk_key,
+        avatar:me.avatar,
+        avatar_version:me.avatar_version||1,
+        wishlist:me.wishlist||[],
+        wishlist_version:me.wishlist_version||1
+      },
+      colleagues:roster,
+      myChild:child?{
+        id:child.id,
+        name:child.display_name,
+        desk_key:child.desk_key,
+        avatar:child.avatar,
+        wishlist:child.wishlist||[],
+        gift_purchased:outgoing?.gift_purchased||false,
+        message:outgoing?.santa_message||"",
+        tasks:ownTasks
+      }:null,
+      mystery:incoming?{
+        unlocked:unlockedCount,
+        hints:clues.slice(0,unlockedCount),
+        can_unlock:unlockedCount<3&&clues.length===3,
+        next_at:null
+      }:null,
+      receivedTasks,
+      office:null,
+      hint:null,
+      today:new Date().toISOString().slice(0,10)
+    };
+  }
+
+  if(action==="save_wishlist"){
+    const token=session?.token||"";
+    const rest=token.replace(/^local-player-token-/,"");
+    let [evId,pId]=rest.split("___");
+    let ev=evId?localEvents.find(e=>e.id===evId):null;
+    if(!ev){
+      ev=localEvents.find(e=>e.participants?.some(p=>p.id===pId||p.id===rest));
+      if(ev&&!pId)pId=rest;
+    }
+    if(!ev)throw Error("Event not found.");
+    const me=ev.participants?.find(p=>p.id===pId);
+    if(!me)throw Error("Participant not found.");
+    me.wishlist=Array.isArray(values.items)?values.items:[];
+    me.wishlist_version=(me.wishlist_version||1)+1;
+    saveLocalEvents(localEvents);
+    return {version:me.wishlist_version};
+  }
+
+  if(action==="save_avatar"){
+    const token=session?.token||"";
+    const rest=token.replace(/^local-player-token-/,"");
+    let [evId,pId]=rest.split("___");
+    let ev=evId?localEvents.find(e=>e.id===evId):null;
+    if(!ev){
+      ev=localEvents.find(e=>e.participants?.some(p=>p.id===pId||p.id===rest));
+      if(ev&&!pId)pId=rest;
+    }
+    if(!ev)throw Error("Event not found.");
+    const me=ev.participants?.find(p=>p.id===pId);
+    if(!me)throw Error("Participant not found.");
+    me.avatar=values.avatar||null;
+    me.avatar_version=(me.avatar_version||1)+1;
+    saveLocalEvents(localEvents);
+    return {avatar:me.avatar,version:me.avatar_version};
+  }
+
+  if(action==="add_task"){
+    const token=session?.token||"";
+    const rest=token.replace(/^local-player-token-/,"");
+    let [evId,pId]=rest.split("___");
+    let ev=evId?localEvents.find(e=>e.id===evId):null;
+    if(!ev){
+      ev=localEvents.find(e=>e.participants?.some(p=>p.id===pId||p.id===rest));
+      if(ev&&!pId)pId=rest;
+    }
+    if(!ev)throw Error("Event not found.");
+    const outgoing=(ev.assignments||[]).find(a=>a.santa_id===(pId||rest));
+    if(!outgoing)throw Error("No child assigned to give tasks to.");
+    outgoing.tasks=outgoing.tasks||[];
+    const newTask={
+      id:"task-"+Date.now()+"-"+Math.random().toString(36).slice(2,5),
+      task_date:values.task_date||new Date().toISOString().slice(0,10),
+      task_text:String(values.task_text||"").trim(),
+      status:"pending"
+    };
+    outgoing.tasks.push(newTask);
+    saveLocalEvents(localEvents);
+    return {task:newTask};
+  }
+
+  if(action==="complete_task"){
+    const taskId=values.task_id;
+    const completed=!!values.completed;
+    let found=false;
+    for(const ev of localEvents){
+      for(const asgn of (ev.assignments||[])){
+        const t=(asgn.tasks||[]).find(item=>item.id===taskId);
+        if(t){
+          t.status=completed?"completed":"pending";
+          found=true;break;
+        }
+      }
+      if(found)break;
+    }
+    saveLocalEvents(localEvents);
+    return {success:true};
+  }
+
+  if(action==="gift_status"){
+    const token=session?.token||"";
+    const rest=token.replace(/^local-player-token-/,"");
+    let [evId,pId]=rest.split("___");
+    let ev=evId?localEvents.find(e=>e.id===evId):null;
+    if(!ev)ev=localEvents.find(e=>e.participants?.some(p=>p.id===pId||p.id===rest));
+    if(ev){
+      const asgn=(ev.assignments||[]).find(a=>a.santa_id===(pId||rest));
+      if(asgn){
+        asgn.gift_purchased=!!values.purchased;
+        saveLocalEvents(localEvents);
+      }
+    }
+    return {success:true};
+  }
+
+  if(action==="save_message"){
+    const token=session?.token||"";
+    const rest=token.replace(/^local-player-token-/,"");
+    let [evId,pId]=rest.split("___");
+    let ev=evId?localEvents.find(e=>e.id===evId):null;
+    if(!ev)ev=localEvents.find(e=>e.participants?.some(p=>p.id===pId||p.id===rest));
+    if(ev){
+      const asgn=(ev.assignments||[]).find(a=>a.santa_id===(pId||rest));
+      if(asgn){
+        asgn.santa_message=String(values.message||"");
+        saveLocalEvents(localEvents);
+      }
+    }
+    return {success:true};
+  }
+
+  if(action==="unlock_santa_hint"){
+    const token=session?.token||"";
+    const rest=token.replace(/^local-player-token-/,"");
+    let [evId,pId]=rest.split("___");
+    let ev=evId?localEvents.find(e=>e.id===evId):null;
+    if(!ev)ev=localEvents.find(e=>e.participants?.some(p=>p.id===pId||p.id===rest));
+    if(ev){
+      const asgn=(ev.assignments||[]).find(a=>a.child_id===(pId||rest));
+      if(asgn){
+        asgn.hints_unlocked_count=Math.min(3,(asgn.hints_unlocked_count||0)+1);
+        saveLocalEvents(localEvents);
+        return {unlocked:asgn.hints_unlocked_count};
+      }
+    }
+    return {unlocked:1};
+  }
+
+  return undefined;
+}
+
 async function api(action,values={}){
   if(busy&&ACTION_STEPS[action])showProgress(ACTION_STEPS[action],"Preparing your Christmas event…");
+  // Fast-path: local session tokens never exist on remote Supabase gateway
+  if(session?.token?.startsWith("local-")){
+    const localResult=await handleLocalApi(action,values);
+    if(localResult!==undefined)return localResult;
+  }
   let reply;
   try{
     reply=await fetch(GATEWAY,{
@@ -131,12 +603,19 @@ async function api(action,values={}){
       },
       body:JSON.stringify({action,...values})
     });
-  }catch{
-    throw Error("Connection failed. Check your internet connection and try again.");
+    const data=await reply.json().catch(()=>({}));
+    if(!reply.ok)throw Error(data.error||"The server returned "+reply.status);
+    return data;
+  }catch(err){
+    // Graceful offline & local demo fallback
+    try{
+      const localResult=await handleLocalApi(action,values);
+      if(localResult!==undefined)return localResult;
+    }catch(localErr){
+      throw localErr;
+    }
+    throw Error(err.message||"Connection failed. Check your internet connection and try again.");
   }
-  const data=await reply.json().catch(()=>({}));
-  if(!reply.ok)throw Error(data.error||"The server returned "+reply.status);
-  return data;
 }
 function setSession(info){
   session=info;
@@ -350,6 +829,9 @@ async function openEvent(e){
   $("workspace-slug").textContent=eventUrl();
   const shareUrlInput=$("team-share-url-input");
   if(shareUrlInput)shareUrlInput.value=eventUrl();
+  const budgetVal=event.gift_budget_recommendation_inr||event.budget||500;
+  if($("workspace-budget"))$("workspace-budget").textContent="₹"+budgetVal+" Budget";
+  if($("workspace-tz"))$("workspace-tz").textContent=event.timezone||"Asia/Kolkata";
   const open=["draft","active"].includes(event.status);
   const pending=pendingPeople();
   $("workspace-state").textContent=!open?"CLOSED":assignments.length?"DRAWN · OPEN":"OPEN";
@@ -612,44 +1094,74 @@ function showClue(title,message,canUnlock=false){
   $("clue-popover").classList.remove("hidden");
   clueDismissTimer=setTimeout(hideClue,8500);
 }
+function getCompletedTasksCount(){
+  if(!player)return 0;
+  const list=player.receivedTasks||[];
+  return list.filter(t=>t.status==="completed").length;
+}
+
+function checkOverdueTasks(showToast=false){
+  const banner=$("received-tasks-overdue-banner");
+  if(!player?.receivedTasks)return;
+  const todayStr=new Date().toISOString().slice(0,10);
+  const pendingTasks=player.receivedTasks.filter(t=>t.status!=="completed");
+  const overdueTasks=pendingTasks.filter(t=>t.task_date&&t.task_date<todayStr);
+  const dueTodayTasks=pendingTasks.filter(t=>t.task_date===todayStr);
+
+  if(!banner)return;
+  if(overdueTasks.length>0){
+    banner.classList.remove("hidden");
+    banner.innerHTML=`⚠️ <strong>Friendly Santa Reminder:</strong> You have <strong>${overdueTasks.length} overdue task${overdueTasks.length>1?"s":""}</strong> from your Secret Santa! Complete ${overdueTasks.length>1?"them":"it"} to unlock your mystery clues.`;
+    if(showToast){
+      const msg=`⏰ Friendly reminder from Santa: You have ${overdueTasks.length} overdue task${overdueTasks.length>1?"s":""} to complete!`;
+      if(typeof officeToast==="function")officeToast(msg);
+      else toast(msg);
+    }
+  }else if(dueTodayTasks.length>0){
+    banner.classList.remove("hidden");
+    banner.innerHTML=`📌 <strong>Santa Reminder:</strong> You have <strong>${dueTodayTasks.length} task${dueTodayTasks.length>1?"s":""} due today</strong>! Finish today's task to reveal your next clue.`;
+  }else{
+    banner.classList.add("hidden");
+    banner.replaceChildren();
+  }
+}
+
 function updateClueButton(){
   const mystery=player?.mystery;
-  const count=mystery?.unlocked||0;
-  const valid=Array.isArray(mystery?.hints);
-  const available=Boolean(mystery?.can_unlock && count<3 &&
-    (!mystery.next_at || Date.parse(mystery.next_at)<=Date.now()));
+  const completed=getCompletedTasksCount();
+  const count=Math.min(3,completed);
   const control=$("player-clue");
+  if(!control)return {available:false,count:0,valid:false};
   control.disabled=!mystery;
-  control.classList.toggle("clue-ready",available);
+  const hasClues=count>0;
+  control.classList.toggle("clue-ready",hasClues);
   control.title=!mystery?"Available after Santa assignments":
-    available?"A new Santa clue is ready":"See your Santa clue";
+    hasClues?`${count} Santa clue${count>1?"s":""} unlocked! (Tap to view)`:"Complete tasks from Santa to unlock clues";
   control.setAttribute("aria-label",control.title);
-  $("clue-next").classList.toggle("hidden",!available);
-  return {available,count,valid};
+  $("clue-next")?.classList.add("hidden");
+  return {available:hasClues,count,valid:true};
 }
 function revealClue(){
   const mystery=player?.mystery;
-  const {available,count}=updateClueButton();
+  const completed=getCompletedTasksCount();
+  const count=Math.min(3,completed);
   if(!mystery){
     showClue("Santa clue","Clues will appear after the Santa draw.");
     return;
   }
-  const hints=(mystery.hints||[]).filter(t=>typeof t==="string"&&t.trim());
-  if(hints.length){
-    const last=hints[hints.length-1];
-    const note=available?"You can reveal the next clue when you're ready.":"";
-    const daily=player?.hint?"\nToday's note: "+player.hint:"";
-    showClue("Clue "+hints.length+" of 3",last+daily+(note?"\n"+note:""),available);
+  const allHints=Array.isArray(mystery.hints)&&mystery.hints.length?mystery.hints:[
+    "Your Secret Santa loves retro gaming and hot chocolate!",
+    "Your Secret Santa sits on the bright window side of the office!",
+    "Your Secret Santa always keeps hot cocoa and peppermint treats nearby!"
+  ];
+  if(count===0){
+    showClue("Mystery Clues (Locked 🔒)","Complete Task #1 from your Secret Santa in your Santa Hub to unlock your first clue!",false);
     return;
   }
-  if(available){
-    showClue("Your first Santa clue","Your first clue is ready.",true);
-    return;
-  }
-  const next=mystery.next_at?Date.parse(mystery.next_at):0;
-  const wait=next>Date.now()?"Next clue available "+new Intl.DateTimeFormat("en-IN",{dateStyle:"medium",timeStyle:"short"}).format(new Date(next))+".":"Your Santa clues aren't ready yet.";
-  showClue("Santa clue",player?.hint?player.hint:count>=3?
-    "All three clues have been revealed.":wait);
+  const unlockedHints=allHints.slice(0,count);
+  const formattedClues=unlockedHints.map((hint,i)=>`💡 Clue ${i+1}: ${hint}`).join("\n\n");
+  const footer=count<3?`\n\n📌 Complete Task #${count+1} to unlock Clue #${count+1}!`:`\n\n🎉 All 3 clues unlocked! Meet at the Christmas Tree to reveal your Santa!`;
+  showClue(`Santa Clues (${count} of 3 Unlocked)`,formattedClues+footer,false);
 }
 function showOfficeTutorial(){
   if(!player?.me||!player?.event)return;
@@ -716,7 +1228,7 @@ async function enterOffice(info){
   }
   $("office-loading").classList.remove("hidden");
   officeLoading=(async()=>{
-    const module=await import("./game/main.js?v=arcade-large-v7");
+    const module=await import("./game/main.js?v=arcade-grand-v14");
     officeRuntime=module.mountOffice($("office-canvas"),info,officeToast);
     officeRuntime.setCamera("wide");
     officeKey=identity;
@@ -724,6 +1236,13 @@ async function enterOffice(info){
     setAvatarEditor(avatarBaseline);
     $("office-loading").classList.add("hidden");
     showOfficeTutorial();
+    setTimeout(()=>{
+      if(!$("player").classList.contains("hidden")){
+        if(!localStorage.getItem("vcf_ss_tour_welcomed")){
+          showTourWelcomeModal();
+        }
+      }
+    },1000);
   })();
   try{await officeLoading;}
   catch(error){
@@ -969,9 +1488,11 @@ function analyzePhotoForAvatar(img){
     hairLum=0.299*avgR+0.587*avgG+0.114*avgB;
     hairRgb=[avgR,avgG,avgB];
     let matchedIdx=closestColorIndex(hairRgb,HAIR_COLORS);
-    // Disallow pure white (index 5) from background wall bleed; only pick white if intentionally gray/white
-    if(matchedIdx===5 && hairLum<210){
-      matchedIdx=0; // Jet Black default
+    // Disallow pure white (index 5) or silver-gray (index 7) from background wall bleed; default to Jet Black (0)
+    if(matchedIdx===5 || matchedIdx===7){
+      if(chinDiff > 6 || moustDiff > 6 || hairLum < 235){
+        matchedIdx=0; // Jet Black default
+      }
     }
     if(hairLum<70 && matchedIdx!==0 && matchedIdx!==6){
       matchedIdx=0;
@@ -1342,6 +1863,7 @@ function applyMatchedPhoto(img,rawDataUrl){
   }
 
   if(summaryEl)summaryEl.textContent="✨ Features auto-matched! Click any pill below to fine-tune beard, glasses, or hair in real-time.";
+  if(typeof updateDeskCustomizerPhotoBadge==="function")updateDeskCustomizerPhotoBadge(faceDataUrl);
   if(typeof officeToast==="function")officeToast("✨ Voxel look-alike updated! Quick-tune ready.");
   else toast("✨ Voxel look-alike updated! Quick-tune ready.");
 }
@@ -1396,6 +1918,8 @@ function setupPhotoAvatarMatcher(){
     else toast("Reverted to 3D voxel face.");
   });
 }
+
+let updateDeskCustomizerPhotoBadge=null;
 
 function setupWebcamSelfie(){
   const openBtn=$("photo-webcam-btn");
@@ -1454,12 +1978,26 @@ function setupWebcamSelfie(){
     ctx.drawImage(video,sx,sy,size,size,0,0,320,320);
     const dataUrl=canvas.toDataURL("image/jpeg",0.88);
 
+    // Guaranteed instant teardown so viewfinder box doesn't linger open
+    stopCamera();
+
     const img=new Image();
     img.onload=()=>{
-      applyMatchedPhoto(img,dataUrl);
-      stopCamera();
+      try{
+        applyMatchedPhoto(img,dataUrl);
+      }catch(err){
+        console.warn("Avatar auto-match error:",err);
+      }
+      try{
+        updateDeskCustomizerPhotoBadge?.(dataUrl);
+      }catch(err){
+        console.warn("Desk customizer photo sync error:",err);
+      }
     };
     img.src=dataUrl;
+
+    if(typeof officeToast==="function")officeToast("📸 Selfie captured! Desk badge & avatar updated.");
+    else if(typeof toast==="function")toast("📸 Selfie captured! Desk badge & avatar updated.");
   }
 
   openBtn?.addEventListener("click",startCamera);
@@ -1481,8 +2019,45 @@ function setupDeskCustomizer(){
   const themeCards=document.querySelectorAll(".theme-choice-card");
   const presetPills=document.querySelectorAll(".motto-preset-pill");
 
+  const badgeThumb=$("customizer-badge-thumb");
+  const badgePlaceholder=$("customizer-badge-placeholder");
+  const badgeStatus=$("customizer-badge-status");
+  const badgeClearBtn=$("customizer-clear-photo");
+  const badgeSelfieBtn=$("customizer-take-selfie");
+
   let selectedProp="mini-tree";
   let selectedTheme="emerald";
+
+  function syncDeskBadgePhoto(photoUrl){
+    if(photoUrl){
+      if(badgeThumb){
+        badgeThumb.src=photoUrl;
+        badgeThumb.classList.remove("hidden");
+      }
+      badgePlaceholder?.classList.add("hidden");
+      if(badgeStatus)badgeStatus.innerHTML="✅ <strong>Selfie captured!</strong> Looking sharp.";
+      badgeClearBtn?.classList.remove("hidden");
+      if(badgeSelfieBtn)badgeSelfieBtn.textContent="📸 Retake Selfie";
+    }else{
+      badgeThumb?.classList.add("hidden");
+      badgePlaceholder?.classList.remove("hidden");
+      if(badgeStatus)badgeStatus.textContent="No photo captured yet";
+      badgeClearBtn?.classList.add("hidden");
+      if(badgeSelfieBtn)badgeSelfieBtn.textContent="📸 Take Live Selfie";
+    }
+  }
+  updateDeskCustomizerPhotoBadge=syncDeskBadgePhoto;
+
+  badgeClearBtn?.addEventListener("click",()=>{
+    try{localStorage.removeItem("vcf_ss_avatar_photo");}catch{}
+    syncDeskBadgePhoto("");
+    if(officeRuntime?.updateAvatarPhoto)officeRuntime.updateAvatarPhoto("");
+    const matcherThumb=$("photo-matcher-thumb");
+    const matcherPreview=$("photo-matcher-preview");
+    if(matcherThumb)matcherThumb.src="";
+    if(matcherPreview)matcherPreview.classList.add("hidden");
+    if(typeof officeToast==="function")officeToast("Photo badge removed from desk.");
+  });
 
   function loadSavedSettings(){
     let saved={};
@@ -1498,6 +2073,10 @@ function setupDeskCustomizer(){
     themeCards.forEach(c=>{
       c.classList.toggle("active",c.dataset.theme===selectedTheme);
     });
+
+    let currentPhoto="";
+    try{currentPhoto=localStorage.getItem("vcf_ss_avatar_photo")||"";}catch{}
+    syncDeskBadgePhoto(currentPhoto);
   }
 
   propCards.forEach(card=>{
@@ -1676,26 +2255,149 @@ function setupChildQuestAndArcade(){
   const arcadeFullscreen=$("arcade-fullscreen-link");
   const arcadeStatEl=$("arcade-last-stat");
 
-  function openArcade(gameId="voxel-racers"){
+  const gameTitles={
+    "chimney-drop":"Chimney Gift Drop",
+    "memory-match":"Holiday Memory Match",
+    "voxel-racers":"Voxel Racers",
+    "voxel-bike":"Voxel Bikes"
+  };
+  const gameObjectives={
+    "chimney-drop":"Catch 20 holiday gifts in stocking sack to verify!",
+    "memory-match":"Find all 8 office desk prop pairs to verify!",
+    "voxel-racers":"Complete Lap 1 or finish the circuit to auto-verify!",
+    "voxel-bike":"Complete 1 Lap or finish the moto circuit to auto-verify!"
+  };
+
+  function updateArcadeControlsFooter(gameId){
+    const hintsEl=$("arcade-footer-hints");
+    if(!hintsEl)return;
+    if(gameId==="voxel-bike"){
+      hintsEl.innerHTML=`
+        <span>🏍️ Throttle: <strong>Z</strong></span>
+        <span>⚡ Turbo: <strong>X / Shift</strong></span>
+        <span>↕️ Lanes: <strong>↑ / ↓ or W / S</strong></span>
+        <span>↔️ Pitch: <strong>← / → or A / D</strong></span>
+        <span>🛑 Brake: <strong>Space</strong></span>
+      `;
+    }else if(gameId==="voxel-racers"){
+      hintsEl.innerHTML=`
+        <span>🏎️ Steer: <strong>W A S D / Arrows</strong></span>
+        <span>⚡ Boost: <strong>Shift / Space</strong></span>
+        <span>🛑 Brake: <strong>S / ↓</strong></span>
+      `;
+    }else if(gameId==="chimney-drop"){
+      hintsEl.innerHTML=`
+        <span>🎁 Catch Gifts: <strong>← / → or A / D or Mouse</strong></span>
+      `;
+    }else if(gameId==="memory-match"){
+      hintsEl.innerHTML=`
+        <span>🃏 Flip Cards: <strong>Click / Tap Matching Pairs</strong></span>
+      `;
+    }
+  }
+
+  function updateArcadeTelemetryDisplay(gameId){
+    const statEl=$("arcade-last-stat");
+    const badgeEl=$("arcade-auto-badge");
+    const taskHintEl=$("arcade-task-hint");
+    if(!statEl)return;
+
+    let recs={};
+    try{
+      recs=JSON.parse(localStorage.getItem("vcf_ss_arcade_records")||"{}");
+    }catch(_e){}
+
+    const rec=recs[gameId];
+    if(rec&&rec.summary){
+      statEl.textContent=`⚡ ${rec.gameTitle||gameTitles[gameId]}: ${rec.summary}`;
+      if(badgeEl){
+        badgeEl.textContent="⚡ Auto-Verified";
+        badgeEl.className="telemetry-badge verified";
+      }
+    }else{
+      statEl.textContent=`🕹️ Objective: ${gameObjectives[gameId]||"Complete the game challenge to auto-verify!"}`;
+      if(badgeEl){
+        badgeEl.textContent="⏳ Objective Pending";
+        badgeEl.className="telemetry-badge pending";
+      }
+    }
+
+    if(taskHintEl){
+      const allGameKws={
+        "chimney-drop":["chimney","gift drop","presents","drop","catch 20"],
+        "memory-match":["memory","desk props","props","pairs","match"],
+        "voxel-racers":["racer","racers","car","lap","grand prix","speed"],
+        "voxel-bike":["bike","moto","nitro","redline"]
+      };
+      const gameKws=allGameKws[gameId]||[];
+      let linkedTask=null;
+      if(player&&Array.isArray(player.receivedTasks)){
+        linkedTask=player.receivedTasks.find(t=>{
+          const txt=(t.task_text||t.text||"").toLowerCase();
+          return gameKws.some(kw=>txt.includes(kw));
+        });
+      }
+      if(linkedTask){
+        const isDone=linkedTask.status==="completed";
+        taskHintEl.innerHTML=`<span class="arcade-task-pill ${isDone?'done':'active'}">${isDone?'✓ Santa Task Completed:':'🎯 Active Santa Task:'}</span> <span class="arcade-task-name">${linkedTask.task_text||linkedTask.text}</span>`;
+        taskHintEl.classList.remove("hidden");
+      }else{
+        taskHintEl.textContent="";
+        taskHintEl.classList.add("hidden");
+      }
+    }
+  }
+
+  function openArcade(gameId="chimney-drop"){
     quest.activeGame=gameId;
     document.querySelectorAll(".arcade-tab-btn").forEach(btn=>{
       btn.classList.toggle("active",btn.getAttribute("data-game")===gameId);
     });
 
-    const url=gameId==="voxel-bike"
-      ?"./games/voxel-bike/index.html"
-      :"./games/voxel-racers/index.html";
+    let url="./games/chimney-drop/index.html";
+    if(gameId==="voxel-bike")url="./games/voxel-bike/index.html";
+    else if(gameId==="voxel-racers")url="./games/voxel-racers/index.html";
+    else if(gameId==="memory-match")url="./games/memory-match/index.html";
 
-    if(typeof arcadeModal?.showModal==="function")arcadeModal.showModal();
-    else arcadeModal?.classList.remove("hidden");
+    updateArcadeTelemetryDisplay(gameId);
+    updateArcadeControlsFooter(gameId);
+
+    if(arcadeModal){
+      arcadeModal.classList.remove("hidden");
+      if(!arcadeModal.open){
+        try{
+          if(typeof arcadeModal.showModal==="function"){
+            arcadeModal.showModal();
+          }else{
+            arcadeModal.setAttribute("open","");
+          }
+        }catch(e){
+          arcadeModal.setAttribute("open","");
+        }
+      }
+    }
 
     if(arcadeIframe){
-      if(!arcadeIframe.src || !arcadeIframe.src.endsWith(url.replace("./",""))){
-        arcadeIframe.src=url;
-      }
+      arcadeIframe.src=url;
     }
     if(arcadeFullscreen)arcadeFullscreen.href=url;
   }
+  launchArcadeModal=openArcade;
+
+  function stopAndCloseArcade(){
+    if(arcadeIframe){
+      arcadeIframe.src="about:blank";
+    }
+    try{
+      if(arcadeModal?.open){
+        arcadeModal.close();
+      }else if(arcadeModal){
+        arcadeModal.removeAttribute("open");
+      }
+    }catch(_e){}
+    arcadeModal?.classList.remove("hidden");
+  }
+  closeArcadeModal=stopAndCloseArcade;
 
   document.querySelectorAll(".arcade-tab-btn").forEach(tab=>{
     tab.addEventListener("click",()=>{
@@ -1704,76 +2406,193 @@ function setupChildQuestAndArcade(){
     });
   });
 
-  $("arcade-close-btn")?.addEventListener("click",()=>{
-    arcadeModal.close();
+  $("arcade-close-btn")?.addEventListener("click",stopAndCloseArcade);
+
+  arcadeModal?.addEventListener("close",()=>{
+    if(arcadeIframe && arcadeIframe.src && !arcadeIframe.src.endsWith("about:blank")){
+      arcadeIframe.src="about:blank";
+    }
   });
+
+  arcadeModal?.addEventListener("click",(e)=>{
+    if(e.target===arcadeModal){
+      stopAndCloseArcade();
+    }
+  });
+
+  $("arcade-fullscreen-link")?.addEventListener("click",()=>{
+    setTimeout(()=>{
+      stopAndCloseArcade();
+    },150);
+  });
+
   $("arcade-reload-btn")?.addEventListener("click",()=>{
     if(arcadeIframe){
-      const src=arcadeIframe.src;
-      arcadeIframe.src="";
-      setTimeout(()=>{ arcadeIframe.src=src; },60);
+      const currentGame=quest.activeGame||"chimney-drop";
+      let url="./games/chimney-drop/index.html";
+      if(currentGame==="voxel-bike")url="./games/voxel-bike/index.html";
+      else if(currentGame==="voxel-racers")url="./games/voxel-racers/index.html";
+      else if(currentGame==="memory-match")url="./games/memory-match/index.html";
+      arcadeIframe.src="about:blank";
+      setTimeout(()=>{ arcadeIframe.src=url; },80);
     }
   });
 
   function handleGameTelemetry(data){
     if(!data)return;
     const statEl=$("arcade-last-stat");
-    if(data.type==="VOXEL_RACE_LAP"||data.type==="VOXEL_RACE_COMPLETED"){
+
+    let isCompleted=false;
+    let gameTitle="";
+    let summaryText="";
+    let gameId="";
+
+    if(data.type==="ARCADE_TASK_EVENT"){
+      isCompleted=!!data.completed;
+      gameId=data.gameId;
+      gameTitle=data.gameTitle||data.gameId;
+      summaryText=data.summary||`Goal achieved in ${gameTitle}!`;
+    }else if(data.type==="VOXEL_RACE_LAP"||data.type==="VOXEL_RACE_COMPLETED"){
+      gameId="voxel-racers";
+      gameTitle="Voxel Racers";
       const lapTime=data.lapTime?Number(data.lapTime).toFixed(2)+"s":"";
       const bestLap=data.bestLap?Number(data.bestLap).toFixed(2)+"s":"";
-      if(statEl){
-        statEl.textContent=data.type==="VOXEL_RACE_COMPLETED"
-          ?`🏁 Race Completed! Best Lap: ${bestLap || lapTime}`
-          :`⚡ Lap ${data.lapNumber || 1} Finished! Time: ${lapTime}`;
+      isCompleted=true;
+      summaryText=data.type==="VOXEL_RACE_COMPLETED"
+        ?`Race Completed! Place: ${data.place || "1st"}, Best Lap: ${bestLap || lapTime}`
+        :`Lap ${data.lapNumber || data.lap || 1} Finished: ${lapTime || bestLap || "Completed"}`;
+    }else if(data.type==="VOXEL_BIKE_COMPLETED"||data.type==="VOXEL_BIKE_LAP"){
+      gameId="voxel-bike";
+      gameTitle="Voxel Bikes";
+      isCompleted=true;
+      if(data.type==="VOXEL_BIKE_LAP"){
+        summaryText=`Lap 1 Finished: ${data.lapTimeText || "1 Lap Completed"}`;
+      }else{
+        summaryText=`Moto Race Finished: ${data.resultTime || data.finishTimeText || "Completed"}`;
       }
-      const racerTask=quest.tasks.find(t=>t.id==="voxel-racers");
-      if(racerTask&&!racerTask.completed){
-        racerTask.completed=true;
+    }
+
+    // Persist to local arcade records so achievements survive sessions
+    if(gameId&&isCompleted){
+      try{
+        const recs=JSON.parse(localStorage.getItem("vcf_ss_arcade_records")||"{}");
+        recs[gameId]={
+          gameId,
+          gameTitle,
+          summary:summaryText,
+          timestamp:Date.now()
+        };
+        localStorage.setItem("vcf_ss_arcade_records",JSON.stringify(recs));
+      }catch(_e){}
+    }
+
+    if(quest.activeGame===gameId){
+      updateArcadeTelemetryDisplay(gameId);
+    updateArcadeControlsFooter(gameId);
+    }
+
+    // Check Workshop quest tasks if any
+    if(quest&&Array.isArray(quest.tasks)){
+      const qTask=quest.tasks.find(t=>t.id===gameId);
+      if(qTask&&!qTask.completed&&isCompleted){
+        qTask.completed=true;
         saveQuest();
         playFestiveChime("unlock");
         officeRuntime?.triggerCelebration?.();
-        const msg=`🎉 MONSTER RACERS GOAL ACHIEVED!
-💡 Clue Unlocked: "${racerTask.clue}"`;
+        const msg=`🎉 ${gameTitle.toUpperCase()} GOAL ACHIEVED!\n💡 Clue Unlocked: "${qTask.clue}"`;
         if(typeof officeToast==="function")officeToast(msg);
         else toast(msg);
       }
-    }else if(data.type==="VOXEL_BIKE_COMPLETED"){
-      if(statEl){
-        statEl.textContent=`🏍️ Moto Race Finished! Time: ${data.resultTime || data.finishTimeText || "Completed"}`;
+    }
+
+    // Auto-validate matching Secret Santa received tasks
+    if(isCompleted&&player&&Array.isArray(player.receivedTasks)){
+      const kwMap={
+        "chimney-drop":["chimney","gift drop","presents","drop","catch 20"],
+        "memory-match":["memory","desk props","props","pairs","match"],
+        "voxel-racers":["racer","racers","car","lap","grand prix","speed"],
+        "voxel-bike":["bike","bikes","moto","nitro","redline","circuit"]
+      };
+      const gameKws=kwMap[gameId]||[];
+
+      let matchedTask=player.receivedTasks.find(t=>{
+        if(t.status==="completed")return false;
+        const txt=(t.task_text||t.text||"").toLowerCase();
+        return gameKws.some(kw=>txt.includes(kw));
+      });
+
+      if(!matchedTask){
+        matchedTask=player.receivedTasks.find(t=>{
+          if(t.status==="completed")return false;
+          const txt=(t.task_text||t.text||"").toLowerCase();
+          if(!txt.includes("arcade"))return false;
+          for(const [otherId,otherKws] of Object.entries(kwMap)){
+            if(otherId!==gameId&&otherKws.some(kw=>txt.includes(kw)))return false;
+          }
+          return true;
+        });
       }
-      const bikeTask=quest.tasks.find(t=>t.id==="voxel-bike");
-      if(bikeTask&&!bikeTask.completed){
-        bikeTask.completed=true;
-        saveQuest();
-        playFestiveChime("unlock");
-        officeRuntime?.triggerCelebration?.();
-        const msg=`🎉 VOXEL BIKE GOAL ACHIEVED!
-💡 Clue Unlocked: "${bikeTask.clue}"`;
-        if(typeof officeToast==="function")officeToast(msg);
-        else toast(msg);
+
+      if(matchedTask){
+        matchedTask.status="completed";
+        if(player.me?.id==="demo-guest"){
+          try{localStorage.setItem("vcf_ss_demo_received_tasks",JSON.stringify(player.receivedTasks||[]));}catch(_e){}
+          const newCount=getCompletedTasksCount();
+          playFestiveChime("unlock");
+          officeRuntime?.triggerCelebration?.();
+          const celebrateMsg=`🎉 ARCADE TASK VERIFIED!\n"${matchedTask.task_text||matchedTask.text}" completed! Mystery Clue #${Math.min(3,newCount)} unlocked! 💡`;
+          if(typeof officeToast==="function")officeToast(celebrateMsg);
+          else toast(celebrateMsg);
+          renderPersonalHub();
+          checkOverdueTasks();
+        }else{
+          api("complete_task",{task_id:matchedTask.id,completed:true}).then(async()=>{
+            await loadPlayer();
+            const newCount=getCompletedTasksCount();
+            playFestiveChime("unlock");
+            officeRuntime?.triggerCelebration?.();
+            const celebrateMsg=`🎉 ARCADE TASK VERIFIED!\n"${matchedTask.task_text||matchedTask.text}" completed! Mystery Clue #${Math.min(3,newCount)} unlocked! 💡`;
+            if(typeof officeToast==="function")officeToast(celebrateMsg);
+            else toast(celebrateMsg);
+          }).catch(err=>{
+            console.warn("Arcade task auto-complete error:",err);
+          });
+        }
       }
     }
   }
 
   // Same-origin postMessage listener
   window.addEventListener("message",e=>{
-    if(e.data&&(e.data.type==="VOXEL_RACE_LAP"||e.data.type==="VOXEL_RACE_COMPLETED"||e.data.type==="VOXEL_BIKE_COMPLETED")){
+    if(e.data&&(e.data.type==="VOXEL_RACE_LAP"||e.data.type==="VOXEL_RACE_COMPLETED"||e.data.type==="VOXEL_BIKE_COMPLETED"||e.data.type==="ARCADE_TASK_EVENT")){
       handleGameTelemetry(e.data);
     }
   });
 
   // Cross-storage listener fallback
   window.addEventListener("storage",e=>{
-    if(e.key==="vcf_last_race_result"&&e.newValue){
+    if((e.key==="vcf_secret_santa_last_race"||e.key==="vcf_last_race_result")&&e.newValue){
       try{
         const val=JSON.parse(e.newValue);
         handleGameTelemetry(Object.assign({type:"VOXEL_RACE_COMPLETED"},val));
       }catch(_e){}
-    }else if(e.key==="vcf_last_bike_result"&&e.newValue){
+    }else if(e.key==="vcf_secret_santa_last_lap"&&e.newValue){
+      try{
+        const val=JSON.parse(e.newValue);
+        handleGameTelemetry(Object.assign({type:"VOXEL_RACE_LAP"},val));
+      }catch(_e){}
+    }else if((e.key==="vcf_secret_santa_last_bike"||e.key==="vcf_last_bike_result")&&e.newValue){
       try{
         const val=JSON.parse(e.newValue);
         handleGameTelemetry(Object.assign({type:"VOXEL_BIKE_COMPLETED"},val));
       }catch(_e){}
+    }else if((e.key==="vcf_last_arcade_event"||e.key==="vcf_last_chimney_drop_result"||e.key==="vcf_last_memory_match_result")&&e.newValue){
+      try{
+        const val=JSON.parse(e.newValue);
+        handleGameTelemetry(val);
+      }catch(_e){}
+    }else if(e.key==="vcf_ss_team_messages"||e.key==="vcf_ss_whisper_messages"){
+      renderBreakRoomChat();
     }
   });
 
@@ -1927,12 +2746,9 @@ function setupChildQuestAndArcade(){
   $("hud-btn-workshop")?.addEventListener("click",openWorkshop);
   $("nav-btn-workshop")?.addEventListener("click",openWorkshop);
 
-  // Top Bar "☰ Menu" & Options Dialog
+  // Top Bar "⏸ Menu" button
   $("player-pause")?.addEventListener("click",()=>{
-    christmasMusic.unlock();
-    const moreDlg=$("more-menu-dialog");
-    if(typeof moreDlg?.showModal==="function")moreDlg.showModal();
-    else moreDlg?.classList.remove("hidden");
+    openPlayerMenu("personal");
   });
   $("more-menu-close-btn")?.addEventListener("click",()=>$("more-menu-dialog")?.close());
 
@@ -2145,20 +2961,89 @@ function closePlayerMenu(){
   $("player-menu").classList.add("hidden");
   officeRuntime?.setPaused(false);
   if(avatarStudio){avatarStudio.dispose();avatarStudio=null;}
+  if(typeof closeArcadeModal==="function")closeArcadeModal();
+}
+
+function openPlayerMenu(tab="personal"){
+  christmasMusic.unlock();
+  const menu=$("player-menu");
+  menu.classList.remove("hidden");
+  $("notebook-scroll").scrollTop=0;
+  officeRuntime?.setPaused(true);
+  showPlayerTab(tab);
+}
+
+function renderHubClues(){
+  const list=$("santa-hub-clues-list");
+  if(!list)return;
+  list.replaceChildren();
+  const mystery=player?.mystery;
+  const allHints=Array.isArray(mystery?.hints)&&mystery.hints.length?mystery.hints:[
+    "Your Secret Santa loves retro gaming and hot chocolate!",
+    "Your Secret Santa sits on the bright window side of the office!",
+    "Your Secret Santa always keeps hot cocoa and peppermint treats nearby!"
+  ];
+  const completed=getCompletedTasksCount();
+  const count=Math.min(3,completed);
+
+  for(let i=0;i<3;i++){
+    const isUnlocked=i<count;
+    const row=node("div","personal-item santa-hub-clue-entry"+(isUnlocked?"":" clue-locked"));
+    const badge=node("span","clue-number-badge"+(isUnlocked?"":" locked"),"CLUE "+(i+1));
+    const text=node("span","clue-text"+(isUnlocked?"":" locked-text"),
+      isUnlocked?allHints[i]:`🔒 Complete Task #${i+1} from your Secret Santa above to unlock this clue!`
+    );
+    row.append(badge,text);
+    list.append(row);
+  }
+
+  const clueBadge=$("santa-clue-badge");
+  if(clueBadge)clueBadge.textContent=count+" / 3 Unlocked";
+
+  const unlockBtn=$("hub-unlock-clue-btn");
+  const timerText=$("hub-clue-timer-text");
+  if(unlockBtn){
+    if(count>=3){
+      unlockBtn.disabled=false;
+      unlockBtn.textContent="🎉 All 3 Clues Unlocked!";
+      unlockBtn.onclick=revealClue;
+      if(timerText)timerText.textContent="✨ Fantastic job! All clues unlocked. Head to the Christmas Tree for the grand reveal!";
+    }else if(count>0){
+      unlockBtn.disabled=false;
+      unlockBtn.textContent=`💡 View ${count} Unlocked Clue${count>1?"s":""}`;
+      unlockBtn.onclick=revealClue;
+      if(timerText)timerText.textContent=`Task #${count+1} must be completed to unlock Clue #${count+1}.`;
+    }else{
+      unlockBtn.disabled=true;
+      unlockBtn.textContent="🔒 Complete Task #1 to Unlock First Clue";
+      if(timerText)timerText.textContent="Each task you complete from your Secret Santa unlocks 1 mystery clue.";
+    }
+  }
 }
 
 function showPlayerTab(name){
-  const personal=name==="personal";
-  $("player-character").classList.toggle("hidden",personal);
-  $("player-personal").classList.toggle("hidden",!personal);
-  $("player-tab-character").classList.toggle("active",!personal);
-  $("player-tab-personal").classList.toggle("active",personal);
-  $("player-tab-character").setAttribute("aria-selected",String(!personal));
-  $("player-tab-personal").setAttribute("aria-selected",String(personal));
+  const tabs=["personal","character","arcade","breakroom","rules"];
+  const currentTab=tabs.includes(name)?name:"personal";
+
+  if(currentTab!=="arcade" && typeof closeArcadeModal==="function"){
+    closeArcadeModal();
+  }
+
+  for(const t of tabs){
+    const panel=$("player-"+t);
+    const tabBtn=$("player-tab-"+t);
+    const isActive=t===currentTab;
+    if(panel)panel.classList.toggle("hidden",!isActive);
+    if(tabBtn){
+      tabBtn.classList.toggle("active",isActive);
+      tabBtn.setAttribute("aria-selected",String(isActive));
+    }
+  }
+
   // Changing panels must never carry over the previous panel's scroll
   // offset; scrolling now affects only the body, leaving tabs stationary.
   $("notebook-scroll").scrollTop=0;
-  if(!personal){
+  if(currentTab==="character"){
     setStudioTab(activeStudioTab);
     void ensureAvatarStudio();
     const chipsBox=$("photo-matcher-chips");
@@ -2169,20 +3054,14 @@ function showPlayerTab(name){
   }else if(avatarStudio){
     avatarStudio.dispose();avatarStudio=null;
   }
-}
-async function loadPlayer(){
-  const firstEntry=!player||$("player").classList.contains("hidden");
-  player=await api("player_dashboard");
-  // The daily note is available from the gameplay bulb, not a redundant
-  // Santa Hub mystery/office-puzzle panel.
-  if(firstEntry){
-    $("welcome").classList.add("hidden");
-    $("admin").classList.add("hidden");
-    $("player").classList.remove("hidden");
-    document.body.classList.add("office-playing");
-    christmasMusic.enter();
-    void enterOffice(player);
+  if(currentTab==="personal"){
+    renderPersonalHub();
+  }else if(currentTab==="breakroom"){
+    renderBreakRoomChat();
   }
+}
+function renderPersonalHub(){
+  if(!player)return;
   $("player-greeting").textContent="✦ "+player.me.display_name;
   $("player-event-title").textContent=player.event.title;
   if($("hud-event-name")&&player.event?.title){
@@ -2207,8 +3086,11 @@ async function loadPlayer(){
     })));
   }
   const incoming=$("received-tasks");incoming.replaceChildren();
+  const isDemo=player?.me?.id==="demo-guest";
+  $("btn-reset-demo-tasks")?.classList.toggle("hidden",!isDemo);
   if(!player.receivedTasks.length)itemLine(incoming,"No tasks assigned yet.");
   for(const t of player.receivedTasks)renderSantaTask(incoming,t,false);
+  checkOverdueTasks(false);
   const label=$("child-name");
   label.classList.toggle("hidden",!child||!childVisible);
   label.textContent=child&&childVisible?privateChildLabel():"";
@@ -2221,9 +3103,13 @@ async function loadPlayer(){
   $("gift-purchased").disabled=!child;
   $("task-form").querySelectorAll("input,textarea,button").forEach(x=>x.disabled=!child);
 
-  // Clues now live exclusively behind the in-office lightbulb.
-  // Preserve the existing server-side unlock count and 24h cooldown.
+  if($("task-date")&&!$("task-date").value){
+    $("task-date").value=new Date().toISOString().slice(0,10);
+  }
+
+  // Clues live in the lightbulb and Santa Hub tab.
   updateClueButton();
+  renderHubClues();
   if(!child){
     itemLine(childWishes,"Your Secret Child's wishlist will appear after the draw.");
     itemLine(myTasks,"No assigned Secret Child yet. Tasks are optional.");
@@ -2231,35 +3117,282 @@ async function loadPlayer(){
     $("gift-purchased").checked=false;
     return;
   }
-  if(!child.wishlist.length)itemLine(childWishes,"Your Child hasn't added wishes yet.");
+  if(!child.wishlist?.length)itemLine(childWishes,"Your Child hasn't added wishes yet.");
   else child.wishlist.forEach(w=>itemLine(childWishes,w.text));
   $("santa-message").value=child.message||"";
   $("gift-purchased").checked=!!child.gift_purchased;
-  if(!child.tasks.length)itemLine(myTasks,"No tasks assigned yet.");
-  for(const task of child.tasks)renderSantaTask(myTasks,task,true);
+  const childTasks=child.tasks||[];
+  if(!childTasks.length)itemLine(myTasks,"No tasks assigned yet.");
+  for(const task of childTasks)renderSantaTask(myTasks,task,true);
 }
-// Both columns use the same dated task visual; only the author can mark
-// the tasks they sent as completed, preserving the current permission model.
+async function loadPlayer(){
+  if(player?.me?.id==="demo-guest"){
+    renderPersonalHub();
+    return;
+  }
+  const firstEntry=!player||$("player").classList.contains("hidden");
+  player=await api("player_dashboard");
+  // The daily note is available from the gameplay bulb, not a redundant
+  // Santa Hub mystery/office-puzzle panel.
+  if(firstEntry){
+    $("welcome").classList.add("hidden");
+    $("admin").classList.add("hidden");
+    $("player").classList.remove("hidden");
+    document.body.classList.add("office-playing");
+    christmasMusic.enter();
+    void enterOffice(player);
+  }
+  renderPersonalHub();
+}
+function getTaskProof(taskId){
+  try{
+    const all=JSON.parse(localStorage.getItem("vcf_ss_task_proofs")||"{}");
+    return all[taskId]||null;
+  }catch(_e){return null;}
+}
+function setTaskProof(taskId,proofObj){
+  try{
+    const all=JSON.parse(localStorage.getItem("vcf_ss_task_proofs")||"{}");
+    all[taskId]=proofObj;
+    localStorage.setItem("vcf_ss_task_proofs",JSON.stringify(all));
+  }catch(_e){}
+}
+
+let currentProofTask=null;
+let proofPreviewBase64=null;
+
+function openProofDialog(task,proof,isSanta){
+  currentProofTask=task;
+  proofPreviewBase64=null;
+  const modal=$("task-proof-dialog");
+  if(!modal)return;
+
+  const viewMode=$("proof-view-mode");
+  const uploadForm=$("proof-upload-form");
+
+  if(proof){
+    viewMode?.classList.remove("hidden");
+    uploadForm?.classList.add("hidden");
+    if($("proof-view-task-name"))$("proof-view-task-name").textContent="Task: "+(task.task_text||task.title||"Holiday Challenge");
+    const imgEl=$("proof-view-image");
+    if(imgEl){
+      if(proof.image){
+        imgEl.src=proof.image;
+        imgEl.classList.remove("hidden");
+      }else{
+        imgEl.classList.add("hidden");
+      }
+    }
+    if($("proof-view-note"))$("proof-view-note").textContent=proof.note||"No additional text notes.";
+    
+    const approveBtn=$("proof-approve-btn");
+    if(approveBtn){
+      if(isSanta&&task.status!=="completed"){
+        approveBtn.classList.remove("hidden");
+        approveBtn.onclick=run(async()=>{
+          task.status="completed";
+          if(player?.me?.id==="demo-guest"){
+            try{localStorage.setItem("vcf_ss_demo_child_tasks",JSON.stringify(player?.myChild?.tasks||[]));}catch{}
+          }else{
+            await api("complete_task",{task_id:task.id,completed:true});
+            await loadPlayer();
+          }
+          modal.close();
+          playFestiveChime("unlock");
+          officeRuntime?.triggerCelebration?.();
+          toast("✓ Task verified & clue unlocked for your Child! 🎁");
+          renderPersonalHub();
+        });
+      }else{
+        approveBtn.classList.add("hidden");
+      }
+    }
+  }else{
+    viewMode?.classList.add("hidden");
+    uploadForm?.classList.remove("hidden");
+    if($("proof-upload-task-name"))$("proof-upload-task-name").textContent="Task: "+(task.task_text||task.title||"Holiday Challenge");
+    if($("proof-note-input"))$("proof-note-input").value="";
+    if($("proof-file-input"))$("proof-file-input").value="";
+    $("proof-file-preview-wrap")?.classList.add("hidden");
+  }
+
+  if(typeof modal.showModal==="function")modal.showModal();
+  else modal.classList.remove("hidden");
+}
+
+$("proof-close-btn")?.addEventListener("click",()=>{$("task-proof-dialog")?.close();});
+$("proof-view-close-btn")?.addEventListener("click",()=>{$("task-proof-dialog")?.close();});
+$("proof-upload-cancel-btn")?.addEventListener("click",()=>{$("task-proof-dialog")?.close();});
+
+$("proof-file-input")?.addEventListener("change",e=>{
+  const file=e.target.files?.[0];
+  if(!file)return;
+  const reader=new FileReader();
+  reader.onload=ev=>{
+    proofPreviewBase64=ev.target?.result;
+    const previewImg=$("proof-file-preview");
+    if(previewImg){
+      previewImg.src=proofPreviewBase64;
+      $("proof-file-preview-wrap")?.classList.remove("hidden");
+    }
+  };
+  reader.readAsDataURL(file);
+});
+
+$("proof-upload-form")?.addEventListener("submit",e=>{
+  e.preventDefault();
+  if(!currentProofTask)return;
+  const note=$("proof-note-input")?.value?.trim()||"";
+  const proofObj={
+    image:proofPreviewBase64||null,
+    note:note||"Evidence submitted",
+    timestamp:Date.now()
+  };
+  setTaskProof(currentProofTask.id,proofObj);
+  currentProofTask.proof=proofObj;
+
+  if(player?.me?.id==="demo-guest"){
+    try{localStorage.setItem("vcf_ss_demo_received_tasks",JSON.stringify(player.receivedTasks||[]));}catch{}
+  }
+  $("task-proof-dialog")?.close();
+  toast("📷 Proof submitted for your Secret Santa to review!");
+  renderPersonalHub();
+});
+
+// Both columns use dated task visuals; child can mark tasks as completed
+// to unlock mystery clues, and Santa can mark or verify tasks they gave.
 function renderSantaTask(parent,task,editable){
   const row=node("div","personal-item santa-task-entry");
+  const todayStr=new Date().toISOString().slice(0,10);
+  const isDone=task.status==="completed";
+  const isOverdue=!isDone&&task.task_date&&task.task_date<todayStr;
+  const isToday=!isDone&&task.task_date===todayStr;
+
+  if(isOverdue)row.classList.add("is-overdue");
+
+  const metaCol=node("div","task-meta-col");
   const date=node("time","santa-task-date",niceDate(task.task_date));
   date.dateTime=task.task_date;
-  const words=node("span","santa-task-text",task.task_text);
-  const state=node("span","santa-task-status",task.status==="completed"?"✓ Done":"");
-  row.append(date,words);
+
+  let badgeText="";
+  let badgeClass="task-badge";
+  if(isDone){
+    badgeText="✓ COMPLETED";
+    badgeClass+=" task-badge-done";
+  }else if(isOverdue){
+    badgeText="⏰ OVERDUE";
+    badgeClass+=" task-badge-overdue";
+  }else if(isToday){
+    badgeText="⏳ DUE TODAY";
+    badgeClass+=" task-badge-today";
+  }else{
+    badgeText="📅 UPCOMING";
+    badgeClass+=" task-badge-upcoming";
+  }
+  const badge=node("span",badgeClass,badgeText);
+  metaCol.append(date,badge);
+
+  const words=node("span","santa-task-text",task.task_text||task.title||"Task");
+  const proof=task.proof||getTaskProof(task.id);
+
+  if(proof){
+    const viewProofBtn=node("button","task-proof-badge",editable?"📷 View Proof":"📷 Proof Attached");
+    viewProofBtn.type="button";
+    viewProofBtn.title="Inspect attached evidence";
+    viewProofBtn.addEventListener("click",e=>{
+      e.stopPropagation();
+      openProofDialog(task,proof,editable);
+    });
+    words.append(viewProofBtn);
+  }else if(!editable&&!isDone){
+    const txt=(task.task_text||task.title||"").toLowerCase();
+    let arcadeGame=null;
+    if(txt.includes("chimney")||txt.includes("gift drop")) arcadeGame="chimney-drop";
+    else if(txt.includes("memory")||txt.includes("match")) arcadeGame="memory-match";
+    else if(txt.includes("racer")||txt.includes("lap")||txt.includes("car")) arcadeGame="voxel-racers";
+    else if(txt.includes("bike")||txt.includes("moto")) arcadeGame="voxel-bike";
+    else if(txt.includes("arcade")) arcadeGame="chimney-drop";
+
+    if(arcadeGame){
+      const playBtn=node("button","task-arcade-play-btn","🕹️ Play");
+      playBtn.type="button";
+      playBtn.title="Launch this game directly in Retro Arcade Lounge";
+      playBtn.addEventListener("click",e=>{
+        e.stopPropagation();
+        closePlayerMenu();
+        if(typeof launchArcadeModal==="function") launchArcadeModal(arcadeGame);
+      });
+      words.append(playBtn);
+    }
+
+    const attachBtn=node("button","task-attach-proof-btn","📎 Proof");
+    attachBtn.type="button";
+    attachBtn.title="Attach evidence or photo proof for this task";
+    attachBtn.addEventListener("click",e=>{
+      e.stopPropagation();
+      openProofDialog(task,null,false);
+    });
+    words.append(attachBtn);
+  }
+
+  row.append(metaCol,words);
+
   if(editable){
-    const box=node("input");box.type="checkbox";box.checked=task.status==="completed";
+    // Santa view of tasks given to Child
+    const actGroup=node("div","task-actions-group");
+    const box=node("input");box.type="checkbox";box.checked=isDone;
     box.disabled=task.status==="cancelled";
-    box.setAttribute("aria-label","Mark task completed: "+task.task_text);
+    box.setAttribute("aria-label","Mark task completed: "+(task.task_text||""));
     box.addEventListener("change",run(async()=>{
+      if(player?.me?.id==="demo-guest"){
+        task.status=box.checked?"completed":"pending";
+        try{localStorage.setItem("vcf_ss_demo_child_tasks",JSON.stringify(player?.myChild?.tasks||[]));}catch{}
+        renderPersonalHub();
+        return;
+      }
       await api("complete_task",{task_id:task.id,completed:box.checked});
       await loadPlayer();
     }));
-    row.append(box);
-  }else if(task.status==="completed")row.append(state);
+    actGroup.append(box);
+    row.append(actGroup);
+  }else{
+    // Child view of tasks received from Santa
+    if(!isDone){
+      const completeBtn=node("button","button mini-button task-complete-btn","✓ Mark Completed");
+      completeBtn.addEventListener("click",run(async()=>{
+        task.status="completed";
+        if(player?.me?.id==="demo-guest"){
+          try{localStorage.setItem("vcf_ss_demo_received_tasks",JSON.stringify(player.receivedTasks||[]));}catch{}
+        }else{
+          try{
+            await api("complete_task",{task_id:task.id,completed:true});
+          }catch(err){
+            console.warn("Server task completion sync:",err);
+          }
+        }
+        const newCount=getCompletedTasksCount();
+        const celebrateMsg=`🎉 Task completed! Clue #${Math.min(3,newCount)} is now unlocked!`;
+        if(typeof officeToast==="function")officeToast(celebrateMsg);
+        else toast(celebrateMsg);
+        renderPersonalHub();
+        checkOverdueTasks();
+      }));
+      row.append(completeBtn);
+    }else{
+      const doneState=node("span","santa-task-status","✓ Done");
+      row.append(doneState);
+    }
+  }
   parent.append(row);
 }
 async function saveWishlist(wishes){
+  if(player?.me?.id==="demo-guest"){
+    player.me.wishlist=wishes;
+    try{localStorage.setItem("vcf_ss_demo_wishlist",JSON.stringify(wishes));}catch{}
+    renderPersonalHub();
+    toast("Wishlist saved.");
+    return;
+  }
   await api("save_wishlist",{items:wishes,version:player.me.wishlist_version});
   await loadPlayer();
   toast("Wishlist saved.");
@@ -2310,17 +3443,34 @@ $("admin-register-form").addEventListener("submit",run(async e=>{
   const pin=$("admin-reg-pin").value;
   const confirm_pin=$("admin-reg-pin-confirm").value;
   if(pin!==confirm_pin)throw Error("PIN confirmation does not match.");
+  const name=$("admin-reg-name").value.trim();
+  const eventName=$("admin-reg-event-name")?.value.trim()||(name+"'s Team Secret Santa");
+  const budget=Number($("admin-reg-budget")?.value)||500;
+  const timezone=$("admin-reg-timezone")?.value||"Asia/Kolkata";
+  const invite_code=$("admin-reg-code")?.value.trim()||"";
+
   const result=await api("admin_register",{
-    name:$("admin-reg-name").value.trim(),
-    invite_code:$("admin-reg-code").value.trim(),
+    name,
+    invite_code,
     pin,confirm_pin
   });
+  setSession(result);
+
+  // Automatically create the team's first holiday office space
+  let createdEvent=null;
+  try{
+    const created=await api("create_event",{title:eventName,budget,timezone});
+    createdEvent=created.event;
+  }catch(err){
+    console.warn("Could not auto-create event on registration",err);
+  }
+
   $("admin-register-form").reset();
   $("admin-register-form").classList.add("hidden");
   $("auth-form").classList.remove("hidden");
-  setSession(result);
   await loadEvents();
-  toast("Organizer account created. Your events are private to this PIN.");
+  if(createdEvent)await openEvent(createdEvent);
+  toast("🎉 Holiday Office Space launched! Share your team link with colleagues.");
 }));
 $("admin-invite-create").addEventListener("click",run(async()=>{
   if(!session?.token)throw Error("Sign in as an organizer first.");
@@ -2353,7 +3503,10 @@ $("pin-change-form").addEventListener("submit",run(async e=>{
 }));
 $("event-form").addEventListener("submit",run(async e=>{
   e.preventDefault();
-  const created=await api("create_event",{title:$("event-name").value});
+  const title=$("event-name").value.trim();
+  const budget=Number($("event-budget")?.value)||500;
+  const timezone=$("event-timezone")?.value||"Asia/Kolkata";
+  const created=await api("create_event",{title,budget,timezone});
   $("event-name").value="";
   await loadEvents();await openEvent(created.event);
   toast("Event created.");
@@ -2415,30 +3568,16 @@ $("assign-btn").addEventListener("click",run(async()=>{
   toast(res.assigned+" Santa–Child pairs assigned privately. No tasks created.");
 }));
 $("player-pause")?.addEventListener("click",()=>{
-  christmasMusic.unlock();
-  const moreDlg=$("more-menu-dialog");
-  if(typeof moreDlg?.showModal==="function")moreDlg.showModal();
-  else moreDlg?.classList.remove("hidden");
+  openPlayerMenu("personal");
 });
 $("hud-btn-santa")?.addEventListener("click",()=>{
-  christmasMusic.unlock();
-  const menu=$("player-menu");
-  menu.classList.remove("hidden");
-  $("notebook-scroll").scrollTop=0;
-  officeRuntime?.setPaused(true);
-  showPlayerTab("personal");
+  openPlayerMenu("personal");
 });
 $("hud-btn-avatar")?.addEventListener("click",()=>{
-  christmasMusic.unlock();
-  const menu=$("player-menu");
-  menu.classList.remove("hidden");
-  $("notebook-scroll").scrollTop=0;
-  officeRuntime?.setPaused(true);
-  showPlayerTab("character");
+  openPlayerMenu("character");
 });
 $("hud-btn-rules")?.addEventListener("click",()=>{
-  christmasMusic.unlock();
-  $("rules-dialog")?.showModal();
+  openPlayerMenu("rules");
 });
 $("rules-dialog-close")?.addEventListener("click",()=>{$("rules-dialog")?.close();});
 $("rules-dialog-ok")?.addEventListener("click",()=>{$("rules-dialog")?.close();});
@@ -2503,8 +3642,483 @@ window.addEventListener("keydown",e=>{
   }
 });
 
-$("player-tab-character").addEventListener("click",()=>showPlayerTab("character"));
-$("player-tab-personal").addEventListener("click",()=>showPlayerTab("personal"));
+$("player-tab-personal")?.addEventListener("click",()=>showPlayerTab("personal"));
+$("player-tab-character")?.addEventListener("click",()=>showPlayerTab("character"));
+$("player-tab-arcade")?.addEventListener("click",()=>showPlayerTab("arcade"));
+$("player-tab-breakroom")?.addEventListener("click",()=>showPlayerTab("breakroom"));
+$("player-tab-rules")?.addEventListener("click",()=>showPlayerTab("rules"));
+
+// Break Room Team Chat & Secret Santa Whispers
+let activeBreakRoomChannel="team";
+
+function getTeamMessages(){
+  try{
+    const msgs=JSON.parse(localStorage.getItem("vcf_ss_team_messages")||"[]");
+    if(!msgs.length){
+      return [
+        {
+          id:"seed-1",
+          authorName:"Santa's Elf",
+          desk:"North Pole",
+          text:"🎅 Welcome to the Break Room! Share holiday cheers, banter, and celebrate completed tasks!",
+          timestamp:Date.now()-3600000
+        },
+        {
+          id:"seed-2",
+          authorName:"Arjun Sharma",
+          desk:"Desk 1",
+          text:"🎉 Who has beaten my high score in Chimney Gift Drop? Loving the retro arcade!",
+          timestamp:Date.now()-1800000
+        }
+      ];
+    }
+    return msgs;
+  }catch(_e){return [];}
+}
+
+function getWhisperMessages(){
+  try{
+    const msgs=JSON.parse(localStorage.getItem("vcf_ss_whisper_messages")||"[]");
+    if(!msgs.length){
+      return [
+        {
+          id:"w-seed-1",
+          authorName:"🎅 Secret Santa",
+          text:"Ho Ho Ho! I left you 3 mystery tasks in the Santa Hub. Complete them to unlock my secret clues!",
+          isSanta:true,
+          timestamp:Date.now()-3600000
+        }
+      ];
+    }
+    return msgs;
+  }catch(_e){return [];}
+}
+
+function renderBreakRoomChat(){
+  const teamBtn=$("chat-tab-team");
+  const whisperBtn=$("chat-tab-whisper");
+  const teamChan=$("breakroom-channel-team");
+  const whisperChan=$("breakroom-channel-whisper");
+
+  teamBtn?.classList.toggle("active",activeBreakRoomChannel==="team");
+  whisperBtn?.classList.toggle("active",activeBreakRoomChannel==="whisper");
+  teamChan?.classList.toggle("hidden",activeBreakRoomChannel!=="team");
+  whisperChan?.classList.toggle("hidden",activeBreakRoomChannel!=="whisper");
+
+  if(activeBreakRoomChannel==="team"){
+    const box=$("team-chat-messages");
+    if(!box)return;
+    box.replaceChildren();
+    const msgs=getTeamMessages();
+    msgs.forEach(m=>{
+      const isOwn=player&&m.authorName===player.me?.display_name;
+      const row=node("div","chat-msg-row"+(isOwn?" own-msg":""));
+      const hdr=node("div","chat-msg-header");
+      const author=node("span","chat-msg-author",m.authorName+(m.desk?` (${m.desk})`:""));
+      const timeStr=new Date(m.timestamp||Date.now()).toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"});
+      const time=node("span","chat-msg-time",timeStr);
+      hdr.append(author,time);
+      const body=node("div","chat-msg-body",m.text);
+      row.append(hdr,body);
+      if(m.photo){
+        const img=node("img","chat-msg-photo");
+        img.src=m.photo;
+        img.alt="Attached evidence photo";
+        img.loading="lazy";
+        row.append(img);
+      }
+      box.append(row);
+    });
+    box.scrollTop=box.scrollHeight;
+  }else{
+    const box=$("whisper-chat-messages");
+    if(!box)return;
+    box.replaceChildren();
+    const msgs=getWhisperMessages();
+    msgs.forEach(m=>{
+      const isSanta=!!m.isSanta;
+      const isOwn=player&&m.authorName===player.me?.display_name;
+      const row=node("div","chat-msg-row"+(isSanta?" whisper-santa-msg":(isOwn?" own-msg":"")));
+      const hdr=node("div","chat-msg-header");
+      const author=node("span","chat-msg-author",m.authorName);
+      const timeStr=new Date(m.timestamp||Date.now()).toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"});
+      const time=node("span","chat-msg-time",timeStr);
+      hdr.append(author,time);
+      const body=node("div","chat-msg-body",m.text);
+      row.append(hdr,body);
+      box.append(row);
+    });
+    box.scrollTop=box.scrollHeight;
+  }
+}
+
+$("chat-tab-team")?.addEventListener("click",()=>{
+  activeBreakRoomChannel="team";
+  renderBreakRoomChat();
+});
+$("chat-tab-whisper")?.addEventListener("click",()=>{
+  activeBreakRoomChannel="whisper";
+  renderBreakRoomChat();
+});
+
+let teamChatPhotoBase64=null;
+$("team-chat-file")?.addEventListener("change",e=>{
+  const file=e.target.files?.[0];
+  if(!file)return;
+  const reader=new FileReader();
+  reader.onload=ev=>{
+    teamChatPhotoBase64=ev.target?.result;
+    toast("📷 Photo attached! Ready to send.");
+  };
+  reader.readAsDataURL(file);
+});
+
+$("team-chat-form")?.addEventListener("submit",e=>{
+  e.preventDefault();
+  const input=$("team-chat-input");
+  const text=input?.value?.trim();
+  if(!text)return;
+  const authorName=player?.me?.display_name||"Teammate";
+  const desk=player?.me?.desk||"";
+  const msgs=getTeamMessages();
+  msgs.push({
+    id:"msg-"+Date.now(),
+    authorName,
+    desk,
+    text,
+    photo:teamChatPhotoBase64||null,
+    timestamp:Date.now()
+  });
+  try{localStorage.setItem("vcf_ss_team_messages",JSON.stringify(msgs));}catch(_e){}
+  teamChatPhotoBase64=null;
+  if(input)input.value="";
+  renderBreakRoomChat();
+});
+
+$("whisper-chat-form")?.addEventListener("submit",e=>{
+  e.preventDefault();
+  const input=$("whisper-chat-input");
+  const text=input?.value?.trim();
+  if(!text)return;
+  const msgs=getWhisperMessages();
+  const isSantaWhisper=!player?.myChild||confirm("Send this whisper anonymously as 🎅 Secret Santa?");
+  msgs.push({
+    id:"wh-"+Date.now(),
+    authorName:isSantaWhisper?"🎅 Secret Santa":(player?.me?.display_name||"Teammate"),
+    text,
+    isSanta:isSantaWhisper,
+    timestamp:Date.now()
+  });
+  try{localStorage.setItem("vcf_ss_whisper_messages",JSON.stringify(msgs));}catch(_e){}
+  if(input)input.value="";
+  renderBreakRoomChat();
+});
+
+$("task-preset")?.addEventListener("change",e=>{
+  const val=e.target?.value;
+  if(val&&$("task-text"))$("task-text").value=val;
+});
+
+$("arcade-launch-chimney")?.addEventListener("click",()=>{
+  closePlayerMenu();
+  if(typeof launchArcadeModal==="function")launchArcadeModal("chimney-drop");
+});
+$("arcade-launch-memory")?.addEventListener("click",()=>{
+  closePlayerMenu();
+  if(typeof launchArcadeModal==="function")launchArcadeModal("memory-match");
+});
+
+$("hub-unlock-clue-btn")?.addEventListener("click",run(async()=>{
+  const {available}=updateClueButton();
+  if(!available)throw Error("The next Santa clue isn't ready yet.");
+  await api("unlock_santa_hint");
+  await loadPlayer();
+  renderHubClues();
+  toast("New Santa clue revealed!");
+}));
+
+$("arcade-launch-racers")?.addEventListener("click",()=>{
+  closePlayerMenu();
+  if(typeof launchArcadeModal==="function")launchArcadeModal("voxel-racers");
+});
+$("arcade-launch-bikes")?.addEventListener("click",()=>{
+  closePlayerMenu();
+  if(typeof launchArcadeModal==="function")launchArcadeModal("voxel-bike");
+});
+$("arcade-nav-mydesk")?.addEventListener("click",()=>{
+  closePlayerMenu();
+  officeRuntime?.goToDesk?.();
+  officeToast("Walking to your desk ⭐");
+});
+$("arcade-nav-tree")?.addEventListener("click",()=>{
+  closePlayerMenu();
+  officeRuntime?.goToTree?.();
+  officeToast("Walking to Christmas Tree 🎄");
+});
+$("arcade-nav-lounge")?.addEventListener("click",()=>{
+  closePlayerMenu();
+  officeRuntime?.goToArcade?.();
+  officeToast("Walking to Arcade Lounge 🕹️");
+});
+$("arcade-toggle-party")?.addEventListener("click",()=>{
+  officeRuntime?.toggleParty?.();
+  officeToast("Toggled Holiday Party Mode! 🎉");
+});
+$("arcade-toggle-lighting")?.addEventListener("click",()=>{
+  officeRuntime?.cycleTimeTheme?.();
+  officeToast("Switched Office Lighting 🌙");
+});
+
+$("rules-toggle-sound")?.addEventListener("click",()=>{
+  christmasMusic.unlock();
+  christmasMusic.toggle();
+  syncChristmasMusic();
+  officeToast(christmasMusic.muted?"Music muted 🔇":"Music playing 🔊");
+});
+$("rules-sign-out")?.addEventListener("click",()=>{
+  if(confirm("Sign out of the Christmas office?")){
+    closePlayerMenu();
+    endSession();
+  }
+});
+
+// ==========================================
+// Interactive Quick Tour Controller
+// ==========================================
+const tourSteps=[
+  {
+    icon:"🏢",
+    title:"Welcome to the 3D Christmas Office!",
+    description:"Walk around using W, A, S, D or arrow keys. Explore teammate desks, grab hot cocoa from the break room, and dance using keys 1, 2, 3, 4!",
+    targetId:null,
+    targetLabel:"3D Holiday Office",
+    prepare:()=>{
+      closePlayerMenu();
+    }
+  },
+  {
+    icon:"⏸️",
+    title:"Game Menu & Santa Hub",
+    description:"Click Menu in the top corner (or press Esc anytime) to open your private Secret Santa Hub, customize your 3D avatar, or chat with teammates.",
+    targetId:"player-pause",
+    targetLabel:"Top Menu Button",
+    prepare:()=>{
+      closePlayerMenu();
+    }
+  },
+  {
+    icon:"📜",
+    title:"Tasks From Your Secret Santa",
+    description:"Your Santa gives you mystery daily tasks! Complete them or play featured Retro Arcade challenges to auto-verify tasks and unlock mystery clues!",
+    targetId:"received-tasks",
+    targetLabel:"Received Santa Tasks",
+    prepare:()=>{
+      openPlayerMenu("personal");
+    }
+  },
+  {
+    icon:"🎁",
+    title:"My Secret Child & Challenges",
+    description:"See who you were matched with as Secret Santa! View their wishlist, and assign up to 3 festive tasks using fun arcade presets or custom ideas.",
+    targetId:"child-card",
+    targetLabel:"Secret Child & Challenges",
+    prepare:()=>{
+      openPlayerMenu("personal");
+    }
+  },
+  {
+    icon:"🕹️",
+    title:"Retro Arcade Lounge",
+    description:"Play 4 exciting holiday games: Chimney Gift Drop, Memory Match, Voxel Racers, and Voxel Bikes! Laps and high scores auto-validate tasks in real time!",
+    targetId:"player-tab-arcade",
+    targetLabel:"Retro Arcade Lounge",
+    prepare:()=>{
+      openPlayerMenu("arcade");
+    }
+  },
+  {
+    icon:"☕",
+    title:"Break Room & Anonymous Whispers",
+    description:"Hang out at the kitchen counter, share holiday banter and photos with colleagues, or send anonymous whispers to your child as Secret Santa!",
+    targetId:"player-tab-breakroom",
+    targetLabel:"Break Room Chat",
+    prepare:()=>{
+      openPlayerMenu("breakroom");
+    }
+  },
+  {
+    icon:"💡",
+    title:"Mystery Clues & Santa Reveal",
+    description:"Each completed task unlocks a new clue about your Santa (their desk prop, avatar, or hints). When ready, celebrate and reveal who your Santa was!",
+    targetId:"player-clue",
+    targetLabel:"Mystery Clues Lightbulb",
+    prepare:()=>{
+      closePlayerMenu();
+    }
+  }
+];
+
+let currentTourIndex=0;
+let activeHighlightEl=null;
+
+function clearTourHighlight(){
+  if(activeHighlightEl){
+    activeHighlightEl.classList.remove("tour-highlight");
+    activeHighlightEl=null;
+  }
+}
+
+function renderTourStep(index){
+  if(index<0)index=0;
+  if(index>=tourSteps.length){
+    endTour();
+    return;
+  }
+  currentTourIndex=index;
+  const step=tourSteps[index];
+
+  clearTourHighlight();
+
+  if(typeof step.prepare==="function"){
+    try{step.prepare();}catch(_e){}
+  }
+
+  const overlay=$("quick-tour-overlay");
+  const badgeEl=$("tour-step-badge");
+  const targetBadgeEl=$("tour-target-badge");
+  const iconEl=$("tour-icon");
+  const titleEl=$("tour-title");
+  const descEl=$("tour-description");
+  const prevBtn=$("tour-prev-btn");
+  const nextBtn=$("tour-next-btn");
+  const dotsEl=$("tour-dots");
+
+  if(!overlay)return;
+
+  if(badgeEl)badgeEl.textContent=`Step ${index+1} of ${tourSteps.length}`;
+  if(targetBadgeEl){
+    if(step.targetLabel){
+      targetBadgeEl.textContent="🎯 "+step.targetLabel;
+      targetBadgeEl.classList.remove("hidden");
+    }else{
+      targetBadgeEl.classList.add("hidden");
+    }
+  }
+  if(iconEl)iconEl.textContent=step.icon||"✨";
+  if(titleEl)titleEl.textContent=step.title||"";
+  if(descEl)descEl.textContent=step.description||"";
+
+  if(prevBtn){
+    prevBtn.disabled=index===0;
+    prevBtn.style.opacity=index===0?"0.4":"1";
+  }
+  if(nextBtn){
+    nextBtn.textContent=index===tourSteps.length-1?"Finish ✓":"Next →";
+  }
+
+  if(dotsEl){
+    dotsEl.innerHTML="";
+    tourSteps.forEach((_,i)=>{
+      const dot=document.createElement("span");
+      dot.className="tour-dot"+(i===index?" active":"");
+      dot.addEventListener("click",()=>renderTourStep(i));
+      dotsEl.appendChild(dot);
+    });
+  }
+
+  if(step.targetId){
+    setTimeout(()=>{
+      const target=document.getElementById(step.targetId);
+      if(target){
+        target.classList.add("tour-highlight");
+        activeHighlightEl=target;
+        target.scrollIntoView({behavior:"smooth",block:"center"});
+      }
+    },100);
+  }
+
+  overlay.classList.remove("hidden");
+}
+
+let tourTooltipTimer=null;
+
+function pointToTopTourButton(msg){
+  const btn=$("player-tour-btn");
+  const tip=$("tour-top-tooltip");
+  if(!btn)return;
+  btn.classList.add("tour-btn-spotlight-pulse");
+  if(tip){
+    if(msg){
+      const textEl=tip.querySelector(".tour-tooltip-content span:last-child")||tip.querySelector("span:last-child");
+      if(textEl)textEl.innerHTML=msg;
+    }
+    tip.classList.remove("hidden");
+  }
+  if(tourTooltipTimer)clearTimeout(tourTooltipTimer);
+  tourTooltipTimer=setTimeout(()=>{
+    btn.classList.remove("tour-btn-spotlight-pulse");
+    if(tip)tip.classList.add("hidden");
+  },5500);
+}
+
+function clearTourCoachmark(){
+  const btn=$("player-tour-btn");
+  const tip=$("tour-top-tooltip");
+  if(btn)btn.classList.remove("tour-btn-spotlight-pulse");
+  if(tip)tip.classList.add("hidden");
+  if(tourTooltipTimer)clearTimeout(tourTooltipTimer);
+}
+
+function showTourWelcomeModal(){
+  const modal=$("tour-welcome-modal");
+  if(!modal)return;
+  modal.classList.remove("hidden");
+}
+
+function dismissTourWelcomeModal(startInteractiveTour=false){
+  const modal=$("tour-welcome-modal");
+  if(modal)modal.classList.add("hidden");
+  try{localStorage.setItem("vcf_ss_tour_welcomed","true");}catch(_e){}
+  if(startInteractiveTour){
+    startTour(0);
+  }else{
+    pointToTopTourButton("Need help or features? Click <strong>Tour</strong> right here anytime!");
+  }
+}
+
+function startTour(stepIndex=0){
+  clearTourCoachmark();
+  renderTourStep(stepIndex);
+}
+
+function endTour(){
+  clearTourHighlight();
+  $("quick-tour-overlay")?.classList.add("hidden");
+  try{
+    localStorage.setItem("vcf_ss_tour_done","true");
+    localStorage.setItem("vcf_ss_tour_welcomed","true");
+  }catch(_e){}
+  pointToTopTourButton("You can restart the <strong>Tour</strong> anytime right here!");
+}
+
+$("player-tour-btn")?.addEventListener("click",()=>{
+  clearTourCoachmark();
+  startTour(0);
+});
+$("menu-tour-btn")?.addEventListener("click",()=>{
+  clearTourCoachmark();
+  startTour(0);
+});
+$("tour-close-btn")?.addEventListener("click",endTour);
+$("tour-backdrop")?.addEventListener("click",endTour);
+$("tour-prev-btn")?.addEventListener("click",()=>renderTourStep(currentTourIndex-1));
+$("tour-next-btn")?.addEventListener("click",()=>renderTourStep(currentTourIndex+1));
+
+$("welcome-start-tour-btn")?.addEventListener("click",()=>dismissTourWelcomeModal(true));
+$("welcome-skip-btn")?.addEventListener("click",()=>dismissTourWelcomeModal(false));
+$("tour-welcome-close")?.addEventListener("click",()=>dismissTourWelcomeModal(false));
+$("tour-welcome-backdrop")?.addEventListener("click",()=>dismissTourWelcomeModal(false));
+
 $("refresh-personal").addEventListener("click",run(async()=>{
   await loadPlayer();
   toast("Your private Santa notebook is up to date.");
@@ -2526,15 +4140,47 @@ $("child-toggle").addEventListener("click",()=>{
 });
 $("task-form").addEventListener("submit",run(async e=>{
   e.preventDefault();
-  await api("add_task",{task_date:$("task-date").value,task_text:$("task-text").value});
+  const dateVal=$("task-date").value||new Date().toISOString().slice(0,10);
+  const textVal=$("task-text").value.trim();
+  if(!textVal)return;
+
+  if(player?.me?.id==="demo-guest"){
+    if(!player.myChild)player.myChild={id:"colleague-sneha",name:"Sneha Rao",wishlist:[],tasks:[],gift_purchased:false,message:""};
+    if(!Array.isArray(player.myChild.tasks))player.myChild.tasks=[];
+    player.myChild.tasks.push({
+      id:"demo-task-"+Date.now(),
+      task_date:dateVal,
+      task_text:textVal,
+      status:"pending"
+    });
+    try{localStorage.setItem("vcf_ss_demo_child_tasks",JSON.stringify(player.myChild.tasks));}catch{}
+    $("task-text").value="";
+    renderPersonalHub();
+    toast("Task saved for your Secret Child.");
+    return;
+  }
+
+  await api("add_task",{task_date:dateVal,task_text:textVal});
   $("task-text").value="";
   await loadPlayer();toast("Task saved for your Secret Child.");
 }));
 $("gift-purchased").addEventListener("change",run(async e=>{
+  if(player?.me?.id==="demo-guest"){
+    if(player?.myChild)player.myChild.gift_purchased=e.target.checked;
+    try{localStorage.setItem("vcf_ss_demo_gift_purchased",String(e.target.checked));}catch{}
+    toast("Gift status saved.");
+    return;
+  }
   await api("gift_status",{purchased:e.target.checked});
   await loadPlayer();toast("Gift status saved.");
 }));
 $("save-message").addEventListener("click",run(async()=>{
+  if(player?.me?.id==="demo-guest"){
+    if(player?.myChild)player.myChild.message=$("santa-message").value;
+    try{localStorage.setItem("vcf_ss_demo_message",$("santa-message").value);}catch{}
+    toast("Private message saved for the ceremony.");
+    return;
+  }
   await api("save_message",{message:$("santa-message").value});
   toast("Private message saved for the ceremony.");
 }));
@@ -2571,6 +4217,10 @@ actionCollapseBtn?.addEventListener("click",(e)=>{
 
 // Demo / Guest Mode for Instant Play without invitation code
 function loadDemoPlayer(){
+  const todayStr=new Date().toISOString().slice(0,10);
+  const yesterdayStr=new Date(Date.now()-86400000).toISOString().slice(0,10);
+  const tomorrowStr=new Date(Date.now()+86400000).toISOString().slice(0,10);
+
   const demoPlayer={
     me:{
       id:"demo-guest",
@@ -2610,7 +4260,17 @@ function loadDemoPlayer(){
       wishlist:[
         {id:"sw1",text:"Sci-Fi paperback novel or bookstore gift card 📚"},
         {id:"sw2",text:"Dark roasted gourmet coffee beans ☕"}
-      ]
+      ],
+      tasks:[
+        {
+          id:"demo-child-t1",
+          task_date:todayStr,
+          task_text:"Check out the Christmas Tree near the break room!",
+          status:"pending"
+        }
+      ],
+      gift_purchased:false,
+      message:""
     },
     colleagues:[
       {id:"c1",name:"Arjun Sharma",desk_index:0,prop:"plant",avatar:{outfit:"sweater-snowflake",hairstyle:"short",skin:"medium"}},
@@ -2620,21 +4280,83 @@ function loadDemoPlayer(){
     ],
     receivedTasks:[
       {
-        id:"task-demo-1",
-        title:"Office Warm-Up",
-        date:new Date().toISOString().slice(0,10),
-        status:"pending",
-        details:"Visit the Retro Arcade Room and set a high score in Monster Racers!"
+        id:"task-demo-racer",
+        task_date:todayStr,
+        task_text:"🏎️ Race in Retro Arcade and complete a lap in Voxel Racers!",
+        status:"pending"
+      },
+      {
+        id:"task-demo-bike",
+        task_date:todayStr,
+        task_text:"🏍️ Ride Voxel Bikes in the Arcade and finish the speed circuit!",
+        status:"pending"
+      },
+      {
+        id:"task-demo-chimney",
+        task_date:todayStr,
+        task_text:"🎁 Play Chimney Gift Drop in the Arcade and catch 20 presents!",
+        status:"pending"
+      },
+      {
+        id:"task-demo-memory",
+        task_date:todayStr,
+        task_text:"🃏 Play Holiday Memory Match and find all 8 office prop pairs!",
+        status:"pending"
+      },
+      {
+        id:"task-demo-cocoa",
+        task_date:tomorrowStr,
+        task_text:"☕ Sip hot cocoa at the break-room kitchen counter and relax!",
+        status:"pending"
       }
     ],
-    today:new Date().toISOString().slice(0,10),
+    today:todayStr,
     mystery:{
       hints:[
         "Your Secret Santa loves retro gaming and hot chocolate!",
-        "Your Secret Santa sits on the bright window side of the office!"
+        "Your Secret Santa sits on the bright window side of the office!",
+        "Your Secret Santa always keeps hot cocoa and peppermint treats nearby!"
       ]
     }
   };
+
+  try{
+    const savedWishlist=JSON.parse(localStorage.getItem("vcf_ss_demo_wishlist")||"null");
+    if(Array.isArray(savedWishlist)&&savedWishlist.length) demoPlayer.me.wishlist=savedWishlist;
+
+    const savedTasks=JSON.parse(localStorage.getItem("vcf_ss_demo_child_tasks")||"null");
+    if(Array.isArray(savedTasks)) demoPlayer.myChild.tasks=savedTasks;
+
+    const savedRecTasks=JSON.parse(localStorage.getItem("vcf_ss_demo_received_tasks")||"null");
+    if(Array.isArray(savedRecTasks)&&savedRecTasks.length){
+      for(const t of demoPlayer.receivedTasks){
+        const isRacer=(t.task_text||"").includes("Voxel Racers");
+        const isBike=(t.task_text||"").includes("Voxel Bikes");
+        const isChimney=(t.task_text||"").includes("Chimney");
+        const isMem=(t.task_text||"").includes("Memory");
+        if(isRacer&&!savedRecTasks.some(st=>(st.task_text||"").includes("Voxel Racers"))){
+          savedRecTasks.unshift(t);
+        }
+        if(isBike&&!savedRecTasks.some(st=>(st.task_text||"").includes("Voxel Bikes"))){
+          savedRecTasks.splice(1, 0, t);
+        }
+        if(isChimney&&!savedRecTasks.some(st=>(st.task_text||"").includes("Chimney"))){
+          savedRecTasks.splice(2, 0, t);
+        }
+        if(isMem&&!savedRecTasks.some(st=>(st.task_text||"").includes("Memory"))){
+          savedRecTasks.splice(3, 0, t);
+        }
+      }
+      demoPlayer.receivedTasks=savedRecTasks;
+    }
+
+    const savedMsg=localStorage.getItem("vcf_ss_demo_message");
+    if(savedMsg!==null) demoPlayer.myChild.message=savedMsg;
+
+    demoPlayer.myChild.gift_purchased=localStorage.getItem("vcf_ss_demo_gift_purchased")==="true";
+  }catch(e){
+    console.warn("Could not load saved demo tasks/wishes",e);
+  }
 
   player=demoPlayer;
   $("welcome").classList.add("hidden");
@@ -2643,6 +4365,7 @@ function loadDemoPlayer(){
   document.body.classList.add("office-playing");
   christmasMusic.enter();
   void enterOffice(player);
+  renderPersonalHub();
 
   $("player-greeting").textContent="✦ "+player.me.display_name;
   $("player-event-title").textContent=player.event.title;
@@ -2655,11 +4378,23 @@ function loadDemoPlayer(){
   }else{
     toast("✨ Welcome, Holiday Explorer! Walk around the 3D office or press ☰ Menu.");
   }
+  checkOverdueTasks(true);
 }
 
 $("demo-entry-btn")?.addEventListener("click",()=>{
   christmasMusic.unlock();
   loadDemoPlayer();
+});
+
+$("btn-reset-demo-tasks")?.addEventListener("click",()=>{
+  try{
+    localStorage.removeItem("vcf_ss_demo_received_tasks");
+    localStorage.removeItem("vcf_ss_arcade_records");
+  }catch(_e){}
+  loadDemoPlayer();
+  const resetMsg="🔄 Demo tasks & arcade telemetry reset! Ready to test fresh.";
+  if(typeof officeToast==="function")officeToast(resetMsg);
+  else toast(resetMsg);
 });
 
 
@@ -2670,12 +4405,45 @@ $("btn-copy-team-url")?.addEventListener("click",async()=>{
   if(ok)toast("📋 Team event link copied to clipboard!");
 });
 
-$("btn-copy-team-announcement")?.addEventListener("click",async()=>{
+function getTeamAnnouncementText(format="slack"){
   const url=eventUrl();
   const title=event?.title||"Secret Santa";
-  const announcement=`🎄 *${title} · Team Secret Santa 2027* 🎅\n\nHey Team! Our 3D Christmas office space is officially open!\n\n✨ Explore our virtual office in 3D\n🕹️ Race in the Retro Arcade Lounge\n📝 Fill out your ₹${event?.budget||500} gift wishlist\n\n👉 Join our Team Space here (1-Click):\n${url}\n\nSee you in the holiday break-room! 🎁`;
+  const budget=event?.gift_budget_recommendation_inr||event?.budget||500;
+  if(format==="whatsapp"){
+    return `🎄 *${title} · Team Secret Santa 2026* 🎅\n\n`+
+      `Hey Team! Our 3D Christmas office space is officially open!\n\n`+
+      `✨ Explore our virtual office in 3D\n`+
+      `🕹️ Race & play in the Retro Arcade Lounge\n`+
+      `🎁 Fill out your ₹${budget} gift wishlist & discover secret Santa tasks\n\n`+
+      `👉 *Join our Team Space here (1-Click):*\n${url}\n\n`+
+      `Enter your 4-digit code to get started. See you in the holiday break-room! 🥳`;
+  }
+  // Default Slack Markdown formatting
+  return `:christmas_tree: *${title} · Team Secret Santa 2026* :santa:\n\n`+
+    `Hey team! Our 3D holiday office space is now officially open!\n\n`+
+    `:sparkles: *Explore our virtual office in 3D* & discover colleagues' desks\n`+
+    `:video_game: *Play in the Retro Arcade Lounge* (Pixel Runner, Claw Machine, Chimney Drop)\n`+
+    `:gift: *Fill out your ₹${budget} gift wishlist* & receive secret daily tasks\n\n`+
+    `:point_right: *Join our Team Office Space here:*\n${url}\n\n`+
+    `Enter using your private 4-digit code. See you in the holiday lounge! :tada:`;
+}
+
+$("btn-copy-slack-announcement")?.addEventListener("click",async()=>{
+  const announcement=getTeamAnnouncementText("slack");
   const ok=await copyTextWithFallback(announcement);
-  if(ok)toast("📢 Team Announcement copied! Ready to paste into Slack or WhatsApp.");
+  if(ok)toast("💬 Slack Announcement copied! Ready to paste into your team channel.");
+});
+
+$("btn-copy-whatsapp-announcement")?.addEventListener("click",async()=>{
+  const announcement=getTeamAnnouncementText("whatsapp");
+  const ok=await copyTextWithFallback(announcement);
+  if(ok)toast("📱 WhatsApp Announcement copied! Ready to paste into your team group.");
+});
+
+$("btn-copy-team-announcement")?.addEventListener("click",async()=>{
+  const announcement=getTeamAnnouncementText("slack");
+  const ok=await copyTextWithFallback(announcement);
+  if(ok)toast("📢 Team Announcement copied to clipboard!");
 });
 
 $("btn-toggle-bulk-add")?.addEventListener("click",()=>{
@@ -2695,13 +4463,16 @@ $("btn-cancel-bulk-add")?.addEventListener("click",()=>{
 $("btn-submit-bulk-add")?.addEventListener("click",run(async()=>{
   if(!event)return;
   const raw=$("bulk-add-names")?.value||"";
-  const names=raw.split(/[\n,]/).map(s=>s.trim()).filter(Boolean);
+  const names=raw.split(/[\n,]/)
+    .map(s=>s.replace(/^[\s\d•\-\.\)]+/, "").trim())
+    .filter(Boolean);
   if(!names.length){
     toast("Please enter at least one employee name.",true);
     return;
   }
   const statusEl=$("bulk-add-status");
   let added=0;
+  const startingDeskCount=(participants||[]).length;
   for(let i=0;i<names.length;i++){
     const name=names[i];
     if(statusEl)statusEl.textContent=`Adding ${i+1} of ${names.length}: ${name}…`;
@@ -2709,7 +4480,7 @@ $("btn-submit-bulk-add")?.addEventListener("click",run(async()=>{
       await api("add_participant",{
         event_id:event.id,
         display_name:name,
-        desk_key:""
+        desk_key:"Desk "+(startingDeskCount+i+1)
       });
       added++;
     }catch(e){
@@ -2720,7 +4491,7 @@ $("btn-submit-bulk-add")?.addEventListener("click",run(async()=>{
   if($("bulk-add-names"))$("bulk-add-names").value="";
   if(statusEl)statusEl.textContent="";
   await openEvent(event);
-  toast(`🎉 Successfully registered ${added} teammates!`);
+  toast(`🎉 Successfully registered ${added} teammates and generated codes!`);
 }));
 
 $("btn-copy-all-direct-links")?.addEventListener("click",async()=>{
@@ -2733,7 +4504,7 @@ $("btn-copy-all-direct-links")?.addEventListener("click",async()=>{
     .filter(p=>p.is_active)
     .map(p=>{
       const c=codes.get(p.id);
-      return `• ${p.display_name}: ${base}${c?"&code="+c:""}`;
+      return `• ${p.display_name}: ${base}${c?"&code="+c:""} (Code: ${c||"••••"})`;
     });
   const text=`🎄 *${event.title} · Teammate Direct Login Links* 🎁\n\n`+lines.join("\n");
   const ok=await copyTextWithFallback(text);
@@ -2742,6 +4513,27 @@ $("btn-copy-all-direct-links")?.addEventListener("click",async()=>{
 
 async function init(){
   snowfall();
+
+  // If visiting via team link (?event=slug), show team welcome banner
+  if(EVENT_SLUG){
+    try{
+      const info=await api("event_info",{event_slug:EVENT_SLUG});
+      if(info?.event){
+        const banner=$("welcome-team-banner");
+        const titleEl=$("welcome-team-title");
+        const subEl=$("welcome-team-subtitle");
+        if(banner&&titleEl){
+          titleEl.textContent="🎄 "+info.event.title;
+          if(subEl)subEl.textContent=`Gift Budget: ₹${info.event.budget||500} · Enter your 4-digit code to enter:`;
+          banner.classList.remove("hidden");
+        }
+        if($("entry-event"))$("entry-event").textContent="Enter your 4-digit code to step into your team's Christmas office space.";
+      }
+    }catch(err){
+      console.warn("Could not fetch team event info",err);
+    }
+  }
+
   // 1-Click Direct Link Auto-Login (?event=slug&code=1234)
   const directCode=PARAMS.get("code");
   if(EVENT_SLUG&&directCode&&/^[0-9]{4}$/.test(directCode)){

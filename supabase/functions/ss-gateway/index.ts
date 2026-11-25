@@ -219,24 +219,29 @@ async function createAdminInvite(adminId:string){
 }
 async function registerAdmin(data:any,request:Request){
   const name=string(data.name,120);
-  const code=string(data.invite_code,150);
+  const code=string(data.invite_code||"",150);
   const pin=string(data.pin,12);
   const confirm=string(data.confirm_pin,12);
   if(name.length<2)fail("Enter your administrator name.");
-  if(!/^[a-zA-Z0-9_-]{40,80}$/.test(code))
-    fail("Enter the administrator registration code.");
-  if(!/^\d{8,12}$/.test(pin))fail("Choose an 8–12 digit administrator PIN.");
+  if(!/^\d{4,12}$/.test(pin))fail("Choose a 4–12 digit administrator PIN.");
   if(pin!==confirm)fail("The administrator PINs do not match.");
-  // Verify invitation before performing expensive PBKDF2 operations.
-  const inviteHash=await hmac("vcf-ss-admin-invite|"+code);
+
   const ip=request.headers.get("cf-connecting-ip")||
     request.headers.get("x-forwarded-for")?.split(",")[0]?.trim()||"unknown";
   const ipKey="admin-reg:"+String(await hmac("source|"+ip)).slice(0,28);
   const rate=await guard(ipKey,false,20,900,900);
   if(!rate.allowed)fail("Too many registration attempts. Try later.",429);
-  const invite=await db("ss_admin_invites?select=id&code_hash=eq."+inviteHash+
-    "&redeemed_at=is.null&expires_at=gt."+q(stamp())+"&limit=1");
-  if(!invite?.length)fail("The registration code has expired or was already used.",403);
+
+  let inviteHash:string|null=null;
+  if(code){
+    if(!/^[a-zA-Z0-9_-]{40,80}$/.test(code))
+      fail("Invalid administrator registration code.");
+    inviteHash=await hmac("vcf-ss-admin-invite|"+code);
+    const invite=await db("ss_admin_invites?select=id&code_hash=eq."+inviteHash+
+      "&redeemed_at=is.null&expires_at=gt."+q(stamp())+"&limit=1");
+    if(!invite?.length)fail("The registration code has expired or was already used.",403);
+  }
+
   const lookup=await adminPinLookup(pin);
   const existing=await db("ss_admin_accounts?select=id&pin_lookup=eq."+lookup+"&limit=1");
   if(existing?.length)fail("Choose a different PIN; it is already registered.",409);
@@ -249,15 +254,24 @@ async function registerAdmin(data:any,request:Request){
   const salt=toHex(crypto.getRandomValues(new Uint8Array(16)));
   const slowHash=await pinHash(pin,salt,210000);
   let newId:string;
-  try{
-    newId=await db("rpc/ss_redeem_admin_invite","POST",{
-      p_code_hash:inviteHash,p_display_name:name,p_pin_lookup:lookup,
-      p_salt_hex:salt,p_hash_hex:slowHash,p_iterations:210000
-    });
-  }catch(e){
-    if(String(e).includes("Duplicate value"))
-      fail("PIN already registered. Choose another.",409);
-    throw e;
+  if(inviteHash){
+    try{
+      newId=await db("rpc/ss_redeem_admin_invite","POST",{
+        p_code_hash:inviteHash,p_display_name:name,p_pin_lookup:lookup,
+        p_salt_hex:salt,p_hash_hex:slowHash,p_iterations:210000
+      });
+    }catch(e){
+      if(String(e).includes("Duplicate value"))
+        fail("PIN already registered. Choose another.",409);
+      throw e;
+    }
+  }else{
+    const inserted=await db("ss_admin_accounts","POST",{
+      display_name:name,pin_lookup:lookup,pin_salt_hex:salt,
+      pin_hash_hex:slowHash,pbkdf2_iterations:210000
+    },true);
+    if(!inserted?.length)fail("Could not create administrator account.",500);
+    newId=inserted[0].id;
   }
   const account=await adminAccount(newId);
   return {token:await adminSession(account),role:"admin",
@@ -499,17 +513,19 @@ async function recoverLegacyOrganizerCodes(eventId:string,issued:any[],
 }
 async function adminAction(action:string,data:any,adminId:string){
   if(action==="list_events"){
-    const events=await db("ss_events?select=id,slug,title,status,starts_on,ends_on,reveal_at,assignments_locked_at,created_at&admin_id=eq."+adminId+"&order=created_at.desc&limit=100");
+    const events=await db("ss_events?select=id,slug,title,status,starts_on,ends_on,reveal_at,assignments_locked_at,created_at,timezone,gift_budget_recommendation_inr&admin_id=eq."+adminId+"&order=created_at.desc&limit=100");
     return {events};
   }
   if(action==="create_event"){
     const name=string(data.title,160);
     if(name.length<3)fail("Please enter a longer event title.");
+    const budget=Math.max(50,Math.min(100000,Number(data.budget)||500));
+    const timezone=string(data.timezone||"Asia/Kolkata",80);
     const slug=name.toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"").slice(0,48)+"-"+crypto.randomUUID().slice(0,6);
     const row=await db("ss_events","POST",{
-      title:name,slug,admin_id:adminId,timezone:"Asia/Kolkata",
-      gift_budget_recommendation_inr:500,
-      rules:{budget_note:"We recommend keeping your gift within ₹500. Choose something thoughtful, and share warm wishes.",tasks_optional:true},
+      title:name,slug,admin_id:adminId,timezone,
+      gift_budget_recommendation_inr:budget,
+      rules:{budget_note:`We recommend keeping your gift within ₹${budget}. Choose something thoughtful, and share warm wishes.`,tasks_optional:true},
       office_layout:{version:1,far_end_window:true,walls:"white",workstation_banks:["single-sided-wall-row","double-sided-island"],spawn:"christmas-tree"}
     },true);
     return {event:row[0]};
@@ -775,7 +791,7 @@ Deno.serve(async(req:Request)=>{
     if(action==="player_login")return json(await playerLogin(input.event_slug,input.code));
     if(action==="event_info"){
       const e=await eventBySlug(input.event_slug);
-      return json({event:{title:e.title,slug:e.slug}});
+      return json({event:{title:e.title,slug:e.slug,budget:e.gift_budget_recommendation_inr||500,timezone:e.timezone||"Asia/Kolkata"}});
     }
     const claims=await authorize(req);
     if(claims.role==="admin")return json(await adminAction(action,input,claims.admin_id));

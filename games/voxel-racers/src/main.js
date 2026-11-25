@@ -1618,6 +1618,10 @@ function start() {
     last = now;
     clock += dt;
 
+    if (flow.state === 'boot') {
+      maybeStart();
+    }
+
     // Watchdog: If dimensions changed or camera has NaN, force a clean resize/snap
     const curW = window.innerWidth || canvas.clientWidth || 0;
     const curH = window.innerHeight || canvas.clientHeight || 0;
@@ -1698,6 +1702,7 @@ function start() {
       const h = window.innerHeight || canvas.clientHeight || 0;
       if (w > 50 && h > 50) {
         flow.send('ready');
+        resize();
       }
     }
   }
@@ -1706,6 +1711,12 @@ function start() {
   maybeStart();
   setTimeout(maybeStart, 150);
   setTimeout(maybeStart, 500);
+  setTimeout(() => {
+    if (flow.state === 'boot') {
+      flow.send('ready');
+      resize();
+    }
+  }, 1200);
 
   // Handle for tests / debugging
   window.__voxelRacers = {
