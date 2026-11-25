@@ -636,12 +636,13 @@ function sign(parent,x,y,z,text){
  * their varied materials while dramatically reducing draw calls on phones.
  * Animated bulbs and camera-aware fixtures are deliberately excluded.
  */
-function batchOfficeStaticGeometry(root,twinkle,viewWalls){
+function batchOfficeStaticGeometry(root,twinkle,viewWalls,arcadeRoom){
   if(!root.updateMatrixWorld||!THREE.InstancedMesh)return 0;
   root.updateMatrixWorld(true);
   const protectedObjects=new Set(twinkle);
   // Removable cutaway walls must stay separate from instanced static geometry.
   for(const wall of Object.values(viewWalls))wall.traverse(o=>protectedObjects.add(o));
+  if(arcadeRoom)arcadeRoom.traverse(o=>protectedObjects.add(o));
   const groups=new Map(),inv=root.matrixWorld.clone().invert();
   root.traverse(object=>{
     if(!object.isMesh||protectedObjects.has(object))return;
@@ -726,7 +727,7 @@ export function buildOffice(count=12){
   }
   // A clearly visible but separate decorated zone starts after the last desks.
   const partyStart=rowEnd+4.35,partyEnd=partyStart+7.35;
-  const arcadeStart=partyEnd,arcadeDepth=8.8;
+  const arcadeStart=partyEnd,arcadeDepth=12.5;
   const back=arcadeStart+arcadeDepth;
   const width=16,left=-8,right=8,front=-3.65;
   const root=new THREE.Group(),colliders=[],seats=[],twinkle=[];
@@ -960,55 +961,742 @@ export function buildOffice(count=12){
   arcadeRoom.position.z=arcadeStart;
   root.add(arcadeRoom);
 
-  // Dark Synthwave Cyber Floor
-  block(arcadeRoom,0,.024,4.40,15.60,.03,8.60,0x090c16,false);
-  // Neon Cyber Grid Lines
+  // --- Vibrant Retro Arcade Cyber Floor (Spacious 15.8m x 12.4m) ---
+  // Rich navy synthwave base material (NOT pitch black)
+  block(arcadeRoom,0,.024,6.25,15.80,.03,12.40,0x161e32,false);
+
+  // High-Contrast Neon Cyber Grid Lines
   for(let gx=-6;gx<=6;gx+=2){
-    block(arcadeRoom,gx,.039,4.40,.035,.006,8.40,0x00e5ff,false);
+    block(arcadeRoom,gx,.039,6.25,.04,.008,12.30,0x00e5ff,false);
   }
-  for(let gz=1.0;gz<=8.2;gz+=1.44){
-    block(arcadeRoom,0,.039,gz,14.60,.006,.035,0xff0066,false);
+  for(let gz=1.2;gz<=11.8;gz+=1.75){
+    block(arcadeRoom,0,.039,gz,15.60,.008,.04,0xff007f,false);
   }
 
-  // Cyber Wall Panels & Trims
-  // North back wall (z: 8.65)
-  block(arcadeRoom,0,2.15,8.65,15.60,4.30,.28,0x111625,false);
-  block(arcadeRoom,0,4.25,8.51,15.60,.08,.08,0x00f0ff);
-  block(arcadeRoom,0,.08,8.51,15.60,.08,.08,0xff007f);
+  // Classic 90s Retro Arcade Carpet Medallions at Grid Intersections
+  const carpetColors=[0x00f0ff,0xff00aa,0xffea00,0x8844ff];
+  let cColorIdx=0;
+  for(let gx=-6;gx<=6;gx+=2){
+    for(let gz=1.2;gz<=11.8;gz+=1.75){
+      const dia=block(arcadeRoom,gx,.041,gz,.22,.006,.22,carpetColors[(cColorIdx++)%carpetColors.length],false);
+      dia.rotation.y=Math.PI/4;
+    }
+  }
 
-  // North Wall Giant Leaderboard Marquee Canvas
+  // Luminous Perimeter LED Baseboards & Top Wall Cornices
+  block(arcadeRoom,-7.80,.08,6.25,.06,.12,12.30,0x00f0ff,false);
+  block(arcadeRoom,7.80,.08,6.25,.06,.12,12.30,0xff007f,false);
+  block(arcadeRoom,0,.08,12.38,15.60,.12,.06,0x00f0ff,false);
+  block(arcadeRoom,0,4.22,12.38,15.60,.08,.08,0xff007f,false);
+
+  // Modern Charcoal/Slate Walls with Warmth (NOT Pitch Black)
+  block(arcadeRoom,0,2.15,12.45,15.80,4.30,.28,0x202738,false); // South back wall
+  block(arcadeRoom,-7.85,2.15,6.25,.28,4.30,12.40,0x202738,false); // West wall
+  block(arcadeRoom,7.85,2.15,6.25,.28,4.30,12.40,0x202738,false); // East wall
+
+  // --- Vibrant Overhead Retro Arcade Illumination ---
+  // Ambient room wash
+  const arcAmbient=new THREE.PointLight(0x385580,2.0,24.0);
+  arcAmbient.position.set(0,3.6,6.2);
+  arcadeRoom.add(arcAmbient);
+
+  // 4 Suspended Overhead Neon Tube Luminaires
+  const overheadLamps=[
+    {x:-4.2,z:3.6,color:0x00f0ff,glow:0x00e5ff},
+    {x:4.2,z:3.6,color:0xff007f,glow:0xff1493},
+    {x:-4.2,z:9.0,color:0x00ffff,glow:0x00c8ff},
+    {x:4.2,z:9.0,color:0xffaa00,glow:0xffb700}
+  ];
+  overheadLamps.forEach(lamp=>{
+    // Luminaire chassis
+    block(arcadeRoom,lamp.x,3.88,lamp.z,2.80,.10,.18,0x1b202c,false);
+    // Glowing neon tube
+    block(arcadeRoom,lamp.x,3.82,lamp.z,2.60,.06,.06,lamp.glow,false);
+    // Suspension cables
+    cyl(arcadeRoom,lamp.x-1.1,4.08,lamp.z,.01,.01,.40,0x94a3b8);
+    cyl(arcadeRoom,lamp.x+1.1,4.08,lamp.z,.01,.01,.40,0x94a3b8);
+    // Point light
+    const pl=new THREE.PointLight(lamp.color,2.4,14.0);
+    pl.position.set(lamp.x,3.60,lamp.z);
+    arcadeRoom.add(pl);
+  });
+
+  // Center Skylight / Dais Downlight
+  const daisDownlight=new THREE.PointLight(0xffffff,2.0,12.0);
+  daisDownlight.position.set(0.60,3.90,5.80);
+  arcadeRoom.add(daisDownlight);
+
+  // =========================================================================
+  // 1) WEST WALL: 4 AUTHENTIC 3D ARCADE CABINETS WITH ILLUMINATED GAME TITLES
+  // =========================================================================
+  const CAB_DEFS=[
+    {
+      id:"racers",
+      title:"VOXEL RACERS",
+      subtitle:"TURBO 3D",
+      themeColor:0x00f0ff,
+      trimColor:0xff0055,
+      z:2.30,
+      drawMarquee:(ctx,w,h)=>{
+        const bg=ctx.createLinearGradient(0,0,w,0);
+        bg.addColorStop(0,"#05152a");
+        bg.addColorStop(0.5,"#0a2e5c");
+        bg.addColorStop(1,"#05152a");
+        ctx.fillStyle=bg;
+        ctx.fillRect(0,0,w,h);
+        ctx.strokeStyle="#00f0ff";
+        ctx.lineWidth=6;
+        ctx.strokeRect(6,6,w-12,h-12);
+        ctx.strokeStyle="#ff0055";
+        ctx.lineWidth=2;
+        ctx.strokeRect(12,12,w-24,h-24);
+        ctx.fillStyle="#ffffff";
+        for(let r=0;r<4;r++)for(let c=0;c<3;c++)if((r+c)%2===0){
+          ctx.fillRect(20+c*12,20+r*12,12,12);
+          ctx.fillRect(w-56+c*12,20+r*12,12,12);
+        }
+        ctx.textAlign="center";
+        ctx.shadowColor="#00f0ff";
+        ctx.shadowBlur=16;
+        ctx.fillStyle="#ffd700";
+        ctx.font="900 38px -apple-system, Impact, sans-serif";
+        ctx.fillText("VOXEL RACERS",w/2,52);
+        ctx.fillStyle="#00ffff";
+        ctx.font="bold 20px 'Courier New', monospace";
+        ctx.fillText("★ TURBO DRIFT DX ★",w/2,82);
+      },
+      drawScreen:(ctx,w,h)=>{
+        ctx.fillStyle="#060c18";
+        ctx.fillRect(0,0,w,h);
+        const sky=ctx.createLinearGradient(0,0,0,h*0.5);
+        sky.addColorStop(0,"#2a0845");
+        sky.addColorStop(1,"#ff4e50");
+        ctx.fillStyle=sky;
+        ctx.fillRect(0,0,w,h*0.5);
+        ctx.fillStyle="#1a052e";
+        ctx.beginPath();
+        ctx.moveTo(0,h*0.5);ctx.lineTo(60,h*0.3);ctx.lineTo(140,h*0.5);
+        ctx.lineTo(220,h*0.25);ctx.lineTo(300,h*0.5);ctx.lineTo(w,h*0.5);
+        ctx.fill();
+        ctx.fillStyle="#2b303c";
+        ctx.beginPath();
+        ctx.moveTo(w*0.35,h*0.5);ctx.lineTo(w*0.65,h*0.5);
+        ctx.lineTo(w*0.95,h);ctx.lineTo(w*0.05,h);
+        ctx.closePath();
+        ctx.fill();
+        ctx.strokeStyle="#ff0044";
+        ctx.lineWidth=8;
+        ctx.beginPath();ctx.moveTo(w*0.35,h*0.5);ctx.lineTo(w*0.05,h);ctx.stroke();
+        ctx.strokeStyle="#00f0ff";
+        ctx.beginPath();ctx.moveTo(w*0.65,h*0.5);ctx.lineTo(w*0.95,h);ctx.stroke();
+        ctx.fillStyle="#ff2244";
+        ctx.fillRect(w*0.42,h*0.70,w*0.16,h*0.15);
+        ctx.fillStyle="#111111";
+        ctx.fillRect(w*0.40,h*0.78,w*0.04,h*0.08);
+        ctx.fillRect(w*0.56,h*0.78,w*0.04,h*0.08);
+        ctx.fillStyle="#00e5ff";
+        ctx.fillRect(w*0.44,h*0.72,w*0.12,h*0.04);
+        ctx.fillStyle="#ffffff";
+        ctx.font="bold 16px 'Courier New', monospace";
+        ctx.textAlign="left";
+        ctx.fillText("LAP 2/3",16,28);
+        ctx.textAlign="right";
+        ctx.fillStyle="#ffd700";
+        ctx.fillText("POS 1ST",w-16,28);
+        ctx.textAlign="center";
+        ctx.fillStyle="#00ff88";
+        ctx.fillText("148 MPH",w/2,h-16);
+      }
+    },
+    {
+      id:"space",
+      title:"SPACE DEFENDER",
+      subtitle:"GALAXY WARS",
+      themeColor:0x9d4edd,
+      trimColor:0x00ff88,
+      z:4.50,
+      drawMarquee:(ctx,w,h)=>{
+        const bg=ctx.createLinearGradient(0,0,w,0);
+        bg.addColorStop(0,"#120024");
+        bg.addColorStop(0.5,"#240046");
+        bg.addColorStop(1,"#120024");
+        ctx.fillStyle=bg;
+        ctx.fillRect(0,0,w,h);
+        ctx.strokeStyle="#9d4edd";
+        ctx.lineWidth=6;
+        ctx.strokeRect(6,6,w-12,h-12);
+        ctx.strokeStyle="#00ff88";
+        ctx.lineWidth=2;
+        ctx.strokeRect(12,12,w-24,h-24);
+        ctx.textAlign="center";
+        ctx.shadowColor="#00ff88";
+        ctx.shadowBlur=16;
+        ctx.fillStyle="#00ff88";
+        ctx.font="900 34px -apple-system, Impact, sans-serif";
+        ctx.fillText("SPACE DEFENDER",w/2,52);
+        ctx.fillStyle="#e0aaff";
+        ctx.font="bold 20px 'Courier New', monospace";
+        ctx.fillText("👾 1984 ALIEN INVASION 👾",w/2,82);
+      },
+      drawScreen:(ctx,w,h)=>{
+        ctx.fillStyle="#05030a";
+        ctx.fillRect(0,0,w,h);
+        ctx.fillStyle="#ffffff";
+        for(let s=0;s<40;s++){
+          const sx=(s*47)%w,sy=(s*31)%h;
+          ctx.fillRect(sx,sy,2,2);
+        }
+        const invCols=["#ff0055","#00ff88","#ffd700"];
+        for(let row=0;row<3;row++){
+          ctx.fillStyle=invCols[row];
+          for(let col=0;col<5;col++){
+            const ix=40+col*48,iy=45+row*32;
+            ctx.fillRect(ix,iy,24,14);
+            ctx.fillRect(ix+4,iy+14,6,6);
+            ctx.fillRect(ix+14,iy+14,6,6);
+          }
+        }
+        ctx.fillStyle="#00e5ff";
+        ctx.beginPath();
+        ctx.moveTo(w/2,h-50);ctx.lineTo(w/2-18,h-20);ctx.lineTo(w/2+18,h-20);
+        ctx.closePath();
+        ctx.fill();
+        ctx.fillStyle="#ff0055";
+        ctx.fillRect(w/2-6,h-90,3,25);
+        ctx.fillRect(w/2+3,h-90,3,25);
+        ctx.fillStyle="#00ff88";
+        ctx.font="bold 16px 'Courier New', monospace";
+        ctx.textAlign="left";
+        ctx.fillText("SCORE: 28450",16,24);
+        ctx.textAlign="right";
+        ctx.fillStyle="#ff0055";
+        ctx.fillText("LIVES: ♥♥♥",w-16,24);
+      }
+    },
+    {
+      id:"pac",
+      title:"PAC-VOXEL",
+      subtitle:"CHOMP FEVER",
+      themeColor:0xffea00,
+      trimColor:0x0055ff,
+      z:6.70,
+      drawMarquee:(ctx,w,h)=>{
+        const bg=ctx.createLinearGradient(0,0,w,0);
+        bg.addColorStop(0,"#000814");
+        bg.addColorStop(0.5,"#001d3d");
+        bg.addColorStop(1,"#000814");
+        ctx.fillStyle=bg;
+        ctx.fillRect(0,0,w,h);
+        ctx.strokeStyle="#0055ff";
+        ctx.lineWidth=6;
+        ctx.strokeRect(6,6,w-12,h-12);
+        ctx.strokeStyle="#ffea00";
+        ctx.lineWidth=2;
+        ctx.strokeRect(12,12,w-24,h-24);
+        ctx.textAlign="center";
+        ctx.shadowColor="#ffea00";
+        ctx.shadowBlur=16;
+        ctx.fillStyle="#ffea00";
+        ctx.font="900 38px -apple-system, Impact, sans-serif";
+        ctx.fillText("PAC - VOXEL",w/2,52);
+        ctx.fillStyle="#00b4d8";
+        ctx.font="bold 20px 'Courier New', monospace";
+        ctx.fillText("🟡 CHOMP MANIA DX 🟡",w/2,82);
+      },
+      drawScreen:(ctx,w,h)=>{
+        ctx.fillStyle="#000814";
+        ctx.fillRect(0,0,w,h);
+        ctx.strokeStyle="#0055ff";
+        ctx.lineWidth=4;
+        ctx.strokeRect(20,30,w-40,h-50);
+        ctx.strokeRect(45,55,60,40);
+        ctx.strokeRect(w-105,55,60,40);
+        ctx.strokeRect(80,120,w-160,35);
+        ctx.fillStyle="#ffd166";
+        for(let d=0;d<8;d++){
+          ctx.beginPath();ctx.arc(32+d*30,h-40,3,0,Math.PI*2);ctx.fill();
+        }
+        ctx.fillStyle="#ffea00";
+        ctx.beginPath();
+        ctx.arc(w/2,h*0.48,22,0.2*Math.PI,1.8*Math.PI);
+        ctx.lineTo(w/2,h*0.48);
+        ctx.fill();
+        ctx.fillStyle="#ff0055";
+        ctx.fillRect(w/2-65,h*0.43,20,20);
+        ctx.fillStyle="#00f0ff";
+        ctx.fillRect(w/2+45,h*0.43,20,20);
+        ctx.fillStyle="#ffffff";
+        ctx.font="bold 16px 'Courier New', monospace";
+        ctx.textAlign="left";
+        ctx.fillText("HIGH: 45,900",16,22);
+        ctx.textAlign="right";
+        ctx.fillStyle="#ffd700";
+        ctx.fillText("LEVEL 05",w-16,22);
+      }
+    },
+    {
+      id:"brawler",
+      title:"STREET BRAWLER",
+      subtitle:"CHAMPION DX",
+      themeColor:0xff0055,
+      trimColor:0xff9900,
+      z:8.90,
+      drawMarquee:(ctx,w,h)=>{
+        const bg=ctx.createLinearGradient(0,0,w,0);
+        bg.addColorStop(0,"#1f0008");
+        bg.addColorStop(0.5,"#3d0010");
+        bg.addColorStop(1,"#1f0008");
+        ctx.fillStyle=bg;
+        ctx.fillRect(0,0,w,h);
+        ctx.strokeStyle="#ff0055";
+        ctx.lineWidth=6;
+        ctx.strokeRect(6,6,w-12,h-12);
+        ctx.strokeStyle="#ffaa00";
+        ctx.lineWidth=2;
+        ctx.strokeRect(12,12,w-24,h-24);
+        ctx.textAlign="center";
+        ctx.shadowColor="#ff0055";
+        ctx.shadowBlur=16;
+        ctx.fillStyle="#ff3300";
+        ctx.font="900 36px -apple-system, Impact, sans-serif";
+        ctx.fillText("STREET BRAWLER",w/2,52);
+        ctx.fillStyle="#ffea00";
+        ctx.font="bold 20px 'Courier New', monospace";
+        ctx.fillText("🥊 GRAND CHAMPION DX 🥊",w/2,82);
+      },
+      drawScreen:(ctx,w,h)=>{
+        const bg=ctx.createLinearGradient(0,0,0,h);
+        bg.addColorStop(0,"#2b001a");
+        bg.addColorStop(0.6,"#4a154b");
+        bg.addColorStop(1,"#1a1a2e");
+        ctx.fillStyle=bg;
+        ctx.fillRect(0,0,w,h);
+        ctx.fillStyle="#ff0044";
+        ctx.fillRect(20,20,100,12);
+        ctx.fillStyle="#00e5ff";
+        ctx.fillRect(w-120,20,100,12);
+        ctx.fillStyle="#ffd700";
+        ctx.font="900 18px Impact, sans-serif";
+        ctx.textAlign="center";
+        ctx.fillText("KO",w/2,32);
+        ctx.fillStyle="#ffffff";
+        ctx.fillRect(70,h*0.5,30,55);
+        ctx.fillStyle="#ff2200";
+        ctx.fillRect(w-100,h*0.5,30,55);
+        ctx.fillStyle="#ffe600";
+        ctx.font="900 24px Impact, sans-serif";
+        ctx.fillText("COMBO 5X!",w/2,h*0.48);
+        ctx.fillStyle="#00ff88";
+        ctx.font="bold 14px 'Courier New', monospace";
+        ctx.fillText("ROUND 2 - FIGHT!",w/2,h-16);
+      }
+    }
+  ];
+
+  CAB_DEFS.forEach((cd,cIdx)=>{
+    const cab=new THREE.Group();
+    cab.position.set(-6.40,0,cd.z);
+    cab.rotation.y=Math.PI/2;
+    cab.name="arcadeCabinet_"+cd.id;
+    arcadeRoom.add(cab);
+
+    // Cabinet chassis body
+    block(cab,0,1.05,0,.88,2.10,.86,0x141824);
+    // Colored side T-molding
+    block(cab,-.45,1.05,0,.04,2.08,.84,cd.themeColor);
+    block(cab,.45,1.05,0,.04,2.08,.84,cd.themeColor);
+    // Outer side art accent panels
+    block(cab,-.452,1.25,0,.005,.80,.50,cd.trimColor);
+    block(cab,.452,1.25,0,.005,.80,.50,cd.trimColor);
+
+    // Top Illuminated Marquee Header
+    block(cab,0,1.95,.22,.84,.28,.24,0x0c0f18);
+    block(cab,0,2.10,.35,.86,.03,.03,cd.themeColor);
+    block(cab,0,1.80,.35,.86,.03,.03,cd.trimColor);
+
+    const canM=document.createElement("canvas");
+    canM.width=512;
+    canM.height=128;
+    cd.drawMarquee(canM.getContext("2d"),512,128);
+    const texM=new THREE.CanvasTexture(canM);
+    texM.colorSpace=THREE.SRGBColorSpace;
+    const meshM=new THREE.Mesh(new THREE.PlaneGeometry(.80,.26),new THREE.MeshBasicMaterial({map:texM}));
+    meshM.position.set(0,1.95,.342);
+    cab.add(meshM);
+
+    // Slanted CRT Screen Bezel & Dynamic Game Screen Canvas
+    const cScreen=block(cab,0,1.42,.18,.74,.54,.10,0x080b12);
+    cScreen.rotation.x=-.26;
+
+    const canS=document.createElement("canvas");
+    canS.width=512;
+    canS.height=384;
+    cd.drawScreen(canS.getContext("2d"),512,384);
+    const texS=new THREE.CanvasTexture(canS);
+    texS.colorSpace=THREE.SRGBColorSpace;
+    const meshS=new THREE.Mesh(new THREE.PlaneGeometry(.68,.48),new THREE.MeshBasicMaterial({map:texS}));
+    meshS.position.set(0,1.42,.23);
+    meshS.rotation.x=-.26;
+    cab.add(meshS);
+
+    // Slanted Control Deck
+    const cDeck=block(cab,0,.98,.38,.80,.10,.36,0x1a2130);
+    cDeck.rotation.x=.18;
+
+    // Dual Chrome Joysticks with Colored Ball Tops
+    cyl(cab,-.22,1.05,.36,.016,.016,.10,0xd0d8e0);
+    ball(cab,-.22,1.11,.36,.042,cd.themeColor);
+    cyl(cab,.22,1.05,.36,.016,.016,.10,0xd0d8e0);
+    ball(cab,.22,1.11,.36,.042,cd.trimColor);
+
+    // Action Buttons
+    [-.32,-.22,-.12].forEach((bx,i)=>{
+      cyl(cab,bx,1.02,.42,.02,.02,.02,[0xff0044,0x00e5ff,0xffea00][i]);
+    });
+    [.12,.22,.32].forEach((bx,i)=>{
+      cyl(cab,bx,1.02,.42,.02,.02,.02,[0x00ff88,0xffffff,0xaa00ff][i]);
+    });
+    // Start buttons
+    cyl(cab,-.06,1.03,.28,.015,.015,.02,0xffffff);
+    cyl(cab,.06,1.03,.28,.015,.015,.02,0xffffff);
+
+    // Lower Coin Door with Glowing Orange 25¢ Inserts
+    block(cab,0,.48,.42,.48,.52,.03,0x0a0d14);
+    block(cab,-.10,.56,.44,.05,.07,.01,0xff6600);
+    block(cab,.10,.56,.44,.05,.07,.01,0xff6600);
+    block(cab,-.10,.40,.44,.07,.08,.02,0x222a38);
+    block(cab,.10,.40,.44,.07,.08,.02,0x222a38);
+
+    // Matching Chrome Swivel Bar Stool
+    const stool=new THREE.Group();
+    stool.position.set(-5.30,0,cd.z);
+    arcadeRoom.add(stool);
+    cyl(stool,0,.02,0,.26,.26,.03,0xd0d8e0,18);
+    cyl(stool,0,.34,0,.028,.028,.66,0xd0d8e0,14);
+    cyl(stool,0,.20,0,.17,.17,.025,0xd0d8e0,18);
+    cyl(stool,0,.67,0,.22,.22,.09,cd.themeColor,18);
+    ball(stool,0,.72,0,.21,cd.trimColor);
+
+    // Dedicated Machine Downlight
+    const cLight=new THREE.PointLight(cd.themeColor,1.4,5.5);
+    cLight.position.set(-5.8,2.4,cd.z);
+    arcadeRoom.add(cLight);
+  });
+
+  // =========================================================================
+  // 2) EAST WALL: PINBALL, GLASS VENDING MACHINE, & NEON AIR HOCKEY
+  // =========================================================================
+
+  // --- 2A) DELUXE ILLUMINATED PINBALL MACHINES (z: 2.40 & 4.20) ---
+  const PB_DEFS=[
+    {title:"GALAXY PINBALL DX",score:"5,420,800",color:0x00f0ff,accent:0xffea00},
+    {title:"SANTA'S MULTIBALL",score:"6,810,250",color:0xff0055,accent:0x00ff88}
+  ];
+  PB_DEFS.forEach((pbd,pIdx)=>{
+    const pz=2.40+pIdx*1.80;
+    const pb=new THREE.Group();
+    pb.position.set(6.40,0,pz);
+    pb.rotation.y=-Math.PI/2;
+    arcadeRoom.add(pb);
+
+    // Chrome legs
+    for(const lx of [-.28,.28])for(const lz of [-.60,.60]){
+      cyl(pb,lx,.34,lz,.022,.016,.68,0xd0d8e0,8);
+    }
+    // Sloped wooden cabinet body
+    const pbBody=block(pb,0,.72,0,.68,.38,1.38,0x161c28);
+    pbBody.rotation.x=.12;
+    // Playfield glass cover
+    const pbGlass=block(pb,0,.88,.04,.62,.03,1.22,pbd.color);
+    pbGlass.rotation.x=.12;
+
+    // Interior 3D bumpers & flippers under glass
+    cyl(pb,-.12,.88,-.15,.05,.05,.04,0xff0055,12);
+    cyl(pb,.12,.88,-.15,.05,.05,.04,0x00f0ff,12);
+    cyl(pb,0,.85,.05,.05,.05,.04,0xffea00,12);
+    block(pb,-.08,.82,.42,.10,.02,.03,0xffffff);
+    block(pb,.08,.82,.42,.10,.02,.03,0xffffff);
+    ball(pb,.24,.82,.32,.022,0xdfe6ed); // Chrome pinball bearing
+
+    // Elevated Backbox with illuminated scoreboard & speaker grill
+    block(pb,0,1.48,-.62,.72,.68,.26,0x121724);
+    const canPB=document.createElement("canvas");
+    canPB.width=512;
+    canPB.height=320;
+    const ctxPB=canPB.getContext("2d");
+    ctxPB.fillStyle="#080c14";
+    ctxPB.fillRect(0,0,512,320);
+    ctxPB.strokeStyle=pIdx===0?"#00f0ff":"#ff0055";
+    ctxPB.lineWidth=8;
+    ctxPB.strokeRect(8,8,496,304);
+    ctxPB.fillStyle=pIdx===0?"#00f0ff":"#ffea00";
+    ctxPB.font="900 36px Impact, sans-serif";
+    ctxPB.textAlign="center";
+    ctxPB.fillText(pbd.title,256,64);
+    ctxPB.fillStyle="#ff8800";
+    ctxPB.font="bold 28px 'Courier New', monospace";
+    ctxPB.fillText("HIGH SCORE",256,130);
+    ctxPB.fillStyle="#00ff88";
+    ctxPB.font="900 42px 'Courier New', monospace";
+    ctxPB.fillText(pbd.score,256,188);
+    ctxPB.fillStyle="#94a3b8";
+    ctxPB.font="18px sans-serif";
+    ctxPB.fillText("INSERT COIN TO PLAY (25¢)",256,260);
+
+    const texPB=new THREE.CanvasTexture(canPB);
+    texPB.colorSpace=THREE.SRGBColorSpace;
+    const pbMesh=new THREE.Mesh(new THREE.PlaneGeometry(.66,.62),new THREE.MeshBasicMaterial({map:texPB}));
+    pbMesh.position.set(0,1.48,-.485);
+    pb.add(pbMesh);
+
+    // Spring Plunger Knob
+    cyl(pb,.26,.72,.68,.015,.015,.08,0xd0d8e0);
+    ball(pb,.26,.72,.72,.025,0xd0d8e0);
+  });
+
+  // --- 2B) DELUXE GLASS-FRONT ILLUMINATED VENDING MACHINE (x: 6.40, z: 6.20) ---
+  const soda=new THREE.Group();
+  soda.position.set(6.40,0,6.20);
+  soda.rotation.y=-Math.PI/2;
+  arcadeRoom.add(soda);
+
+  // Outer cabinet chassis frame
+  block(soda,0,1.15,0,1.36,2.30,.94,0x161c28);
+
+  // Top Illuminated Marquee Header: "COLD DRINKS & SNACKS"
+  const canVM=document.createElement("canvas");
+  canVM.width=512;
+  canVM.height=120;
+  const ctxVM=canVM.getContext("2d");
+  const bgVM=ctxVM.createLinearGradient(0,0,512,0);
+  bgVM.addColorStop(0,"#001e3d");
+  bgVM.addColorStop(0.5,"#003566");
+  bgVM.addColorStop(1,"#001e3d");
+  ctxVM.fillStyle=bgVM;
+  ctxVM.fillRect(0,0,512,120);
+  ctxVM.strokeStyle="#00f0ff";
+  ctxVM.lineWidth=6;
+  ctxVM.strokeRect(6,6,500,108);
+  ctxVM.fillStyle="#ffffff";
+  ctxVM.font="900 32px -apple-system, BlinkMacSystemFont, sans-serif";
+  ctxVM.textAlign="center";
+  ctxVM.shadowColor="#00f0ff";
+  ctxVM.shadowBlur=12;
+  ctxVM.fillText("🥤 REFRESH & SNACK OASIS 🍫",256,58);
+  ctxVM.fillStyle="#00e5ff";
+  ctxVM.font="bold 16px 'Courier New', monospace";
+  ctxVM.fillText("ICE COLD SODAS • CRISPY CHIPS • CANDY",256,92);
+
+  const texVM=new THREE.CanvasTexture(canVM);
+  texVM.colorSpace=THREE.SRGBColorSpace;
+  const meshVM=new THREE.Mesh(new THREE.PlaneGeometry(1.24,.22),new THREE.MeshBasicMaterial({map:texVM}));
+  meshVM.position.set(0,2.14,.475);
+  soda.add(meshVM);
+
+  // Recessed White Interior Display Cavity
+  block(soda,-.20,1.21,-.15,.78,1.54,.04,0xe2eaf2,false); // Back panel
+  block(soda,-.59,1.21,.16,.04,1.54,.62,0xd0dce8,false);  // Left wall
+  block(soda,.19,1.21,.16,.04,1.54,.62,0xd0dce8,false);   // Divider wall
+
+  // Dual Internal White LED Strip Lights illuminating items
+  block(soda,-.57,1.21,.44,.03,1.50,.03,0xffffff,false);
+  block(soda,.17,1.21,.44,.03,1.50,.03,0xffffff,false);
+  const vmLight=new THREE.PointLight(0xffffff,2.2,5.0);
+  vmLight.position.set(-.20,1.50,.25);
+  soda.add(vmLight);
+
+  // Transparent Front Glass Door Pane (clear window through which items are visible)
+  const glassMat=new THREE.MeshStandardMaterial({
+    color:0xebf8ff,
+    transparent:true,
+    opacity:0.22,
+    roughness:0.05,
+    metalness:0.15
+  });
+  const glassMesh=new THREE.Mesh(new THREE.PlaneGeometry(.78,1.54),glassMat);
+  glassMesh.position.set(-.20,1.21,.475);
+  soda.add(glassMesh);
+
+  // Chrome Bezel Frame around Glass
+  block(soda,-.20,1.98,.48,.82,.04,.03,0x8899aa);
+  block(soda,-.20,.44,.48,.82,.04,.03,0x8899aa);
+  block(soda,-.60,1.21,.48,.04,1.54,.03,0x8899aa);
+  block(soda,.20,1.21,.48,.04,1.54,.03,0x8899aa);
+
+  // --- 4 INTERIOR ILLUMINATED SHELVES WITH CLEARLY VISIBLE 3D ITEMS ---
+
+  // Shelf 1 (y: 1.68): 5 Colorful Soda Cans with Pop Tabs
+  block(soda,-.20,1.60,.16,.76,.03,.58,0x94a3b8);
+  block(soda,-.20,1.60,.46,.76,.025,.02,0xffffff); // Price label strip
+  const canColors=[0xd32f2f,0x2e7d32,0xf57c00,0x1976d2,0x7b1fa2]; // Cola Red, Sprite Green, Orange, Blue Energy, Grape
+  canColors.forEach((col,idx)=>{
+    const cx=-.48+idx*.14;
+    cyl(soda,cx,1.68,.18,.036,.036,.12,col); // Can body
+    cyl(soda,cx,1.745,.18,.034,.034,.01,0xd0d8e0); // Aluminum lid
+    block(soda,cx,1.752,.18,.015,.005,.025,0xb0bac8); // Pop pull-tab
+  });
+
+  // Shelf 2 (y: 1.30): 5 Cold Beverage Bottles with Caps
+  block(soda,-.20,1.22,.16,.76,.03,.58,0x94a3b8);
+  block(soda,-.20,1.22,.46,.76,.025,.02,0xffffff);
+  const bottleColors=[
+    {liquid:0x80d8ff,cap:0xffffff}, // Water
+    {liquid:0x43a047,cap:0xffd700}, // Green Tea
+    {liquid:0xe91e63,cap:0xffffff}, // Berry
+    {liquid:0x6d4c41,cap:0x4e342e}, // Iced Coffee
+    {liquid:0xc6ff00,cap:0x111111}  // Sport Drink
+  ];
+  bottleColors.forEach((b,idx)=>{
+    const cx=-.48+idx*.14;
+    cyl(soda,cx,1.31,.18,.034,.034,.13,b.liquid); // Bottle body
+    cyl(soda,cx,1.39,.18,.016,.024,.05,b.liquid);  // Neck
+    cyl(soda,cx,1.42,.18,.018,.018,.02,b.cap);     // Cap
+  });
+
+  // Shelf 3 (y: 0.94): 4 Snack Chip Bags with Silver Dispenser Coils
+  block(soda,-.20,.86,.16,.76,.03,.58,0x94a3b8);
+  block(soda,-.20,.86,.46,.76,.025,.02,0xffffff);
+  const snackColors=[0xfbc02d,0xd50000,0x388e3c,0x0d47a1]; // Cheddar Gold, Hot Chili Red, Sour Cream Green, BBQ Blue
+  snackColors.forEach((col,idx)=>{
+    const cx=-.44+idx*.16;
+    // Silver wire spiral dispensing coil
+    cyl(soda,cx,.92,.10,.035,.035,.015,0xc0c8d4);
+    cyl(soda,cx,.92,.20,.035,.035,.015,0xc0c8d4);
+    // Snack bag
+    block(soda,cx,.96,.22,.11,.15,.05,col);
+    block(soda,cx,1.04,.22,.11,.015,.015,0xe0e6ed); // Top crimp
+  });
+
+  // Shelf 4 (y: 0.58): 5 Chocolate & Candy Bars
+  block(soda,-.20,.50,.16,.76,.03,.58,0x94a3b8);
+  block(soda,-.20,.50,.46,.76,.025,.02,0xffffff);
+  const candyColors=[0x3e2723,0xb71c1c,0xff8f00,0x00897b,0xff4081];
+  candyColors.forEach((col,idx)=>{
+    const cx=-.48+idx*.14;
+    block(soda,cx,.56,.24,.09,.06,.14,col);
+    block(soda,cx,.56,.32,.095,.065,.02,0xffd700); // Gold foil end
+  });
+
+  // Right Side Interface Column
+  // Blue LED Digital Price Readout: "$1.50"
+  block(soda,.42,1.62,.46,.24,.08,.02,0x001428);
+  block(soda,.42,1.62,.472,.20,.05,.01,0x00f0ff);
+  // Numeric Keypad
+  block(soda,.42,1.35,.46,.24,.32,.02,0x0c1018);
+  for(let kr=0;kr<4;kr++)for(let kc=0;kc<3;kc++){
+    cyl(soda,.35+kc*.07,1.45-kr*.06,.475,.015,.015,.015,0x94a3b8);
+  }
+  // Coin Drop Slot with Chrome Bezel & Red Coin Return
+  block(soda,.42,1.08,.46,.12,.08,.02,0x222a38);
+  block(soda,.42,1.09,.472,.05,.01,.01,0x05070a);
+  cyl(soda,.46,1.05,.475,.015,.015,.015,0xff2244);
+  // Dollar Bill Validator with Soft Green LED Light
+  block(soda,.42,.90,.46,.20,.10,.02,0x161e2a);
+  block(soda,.42,.90,.472,.14,.015,.01,0x00ff66);
+  // Coin Return Cup
+  block(soda,.42,.65,.46,.18,.16,.06,0x080b12);
+
+  // Bottom Dispenser Bin with Stainless Push Door Flap
+  block(soda,-.20,.24,.32,.76,.28,.26,0x080b12);
+  block(soda,-.20,.24,.45,.72,.24,.03,0x222a36);
+  cyl(soda,-.20,.32,.47,.01,.01,.50,0xd0d8e2); // Silver handle
+
+  // --- 2C) DELUXE NEON AIR HOCKEY TABLE (x: 6.40, z: 8.80) ---
+  const ah=new THREE.Group();
+  ah.position.set(6.40,0,8.80);
+  ah.rotation.y=-Math.PI/2;
+  arcadeRoom.add(ah);
+
+  // Table legs and chassis
+  block(ah,0,.42,0,1.45,.84,2.40,0x141a26);
+  block(ah,-.72,.80,0,.04,.14,2.42,0x00f0ff);
+  block(ah,.72,.80,0,.04,.14,2.42,0x00f0ff);
+  block(ah,0,.80,-1.21,1.48,.14,.04,0xff0055);
+  block(ah,0,.80,1.21,1.48,.14,.04,0xff0055);
+
+  // Ice-smooth cyan illuminated playfield
+  block(ah,0,.84,0,1.35,.02,2.28,0x0a2236);
+  cyl(ah,0,.852,0,.28,.28,.005,0x00f0ff,24); // Center face-off circle
+  block(ah,0,.852,0,1.35,.005,.03,0xff0044); // Center dividing line
+
+  // Goal slots
+  block(ah,0,.845,-1.05,.44,.02,.12,0x050810);
+  block(ah,0,.845,1.05,.44,.02,.12,0x050810);
+
+  // Dual Ergonomic Strikers & Glowing Puck
+  cyl(ah,-.22,.88,-.60,.05,.07,.05,0x00f0ff);
+  cyl(ah,-.22,.92,-.60,.02,.02,.04,0xffffff);
+  cyl(ah,.22,.88,.60,.05,.07,.05,0xff0044);
+  cyl(ah,.22,.92,.60,.02,.02,.04,0xffffff);
+  cyl(ah,.08,.86,.12,.045,.045,.015,0xff2244,16); // Puck
+
+  // Overhead Score Archway
+  cyl(ah,-.70,1.25,0,.02,.02,.82,0x94a3b8);
+  cyl(ah,.70,1.25,0,.02,.02,.82,0x94a3b8);
+  block(ah,0,1.66,0,1.44,.03,.03,0x94a3b8);
+  block(ah,0,1.62,0,.52,.16,.12,0x0c1018);
+  block(ah,0,1.62,.062,.44,.10,.01,0xff2244); // Score display
+
+  // =========================================================================
+  // 3) SOUTH-EAST: VIP GAMER CHILLOUT LOUNGE (x: 3.60, z: 11.20)
+  // =========================================================================
+  const gamerLounge=new THREE.Group();
+  gamerLounge.position.set(3.60,0,11.20);
+  arcadeRoom.add(gamerLounge);
+
+  // Modern L-sectional sofa in slate charcoal
+  block(gamerLounge,0,.38,0,3.60,.54,.90,0x1e2638);
+  block(gamerLounge,0,.72,.40,3.60,.52,.20,0x121824);
+  block(gamerLounge,1.45,.38,-.80,.70,.54,1.10,0x1e2638); // Chaise
+  // Colorful accent throw pillows
+  block(gamerLounge,-1.20,.60,.28,.36,.28,.14,0x00f0ff);
+  block(gamerLounge,0,.60,.28,.36,.28,.14,0xff007f);
+  block(gamerLounge,1.20,.60,.28,.36,.28,.14,0xffea00);
+
+  // Low frosted glass cocktail table
+  block(gamerLounge,-.40,.28,-.60,1.10,.48,.70,0x161e2c);
+  block(gamerLounge,-.40,.53,-.60,1.16,.02,.76,0x80d8ff); // Glass top
+  // Soda cans & pizza box on table
+  cyl(gamerLounge,-.65,.62,-.60,.035,.035,.12,0xd32f2f);
+  cyl(gamerLounge,-.52,.62,-.50,.035,.035,.12,0x00e5ff);
+  block(gamerLounge,-.15,.58,-.60,.38,.06,.38,0xd2a679); // Pizza box
+
+  // =========================================================================
+  // 4) NORTH BACK WALL: GIANT CHAMPIONSHIP LEADERBOARD & SYNTHWAVE ART (z: 12.35)
+  // =========================================================================
   const canBoard=document.createElement("canvas");
   canBoard.width=1024;
-  canBoard.height=260;
+  canBoard.height=280;
   const ctxBoard=canBoard.getContext("2d");
-  const bgGrad=ctxBoard.createLinearGradient(0,0,0,260);
+  const bgGrad=ctxBoard.createLinearGradient(0,0,0,280);
   bgGrad.addColorStop(0,"#090f1d");
   bgGrad.addColorStop(1,"#04070d");
   ctxBoard.fillStyle=bgGrad;
-  ctxBoard.fillRect(0,0,1024,260);
+  ctxBoard.fillRect(0,0,1024,280);
   ctxBoard.strokeStyle="#00f0ff";
   ctxBoard.lineWidth=8;
-  ctxBoard.strokeRect(10,10,1004,240);
+  ctxBoard.strokeRect(10,10,1004,260);
   ctxBoard.strokeStyle="#ff007f";
   ctxBoard.lineWidth=3;
-  ctxBoard.strokeRect(18,18,988,224);
+  ctxBoard.strokeRect(18,18,988,244);
 
   ctxBoard.shadowColor="#00f0ff";
   ctxBoard.shadowBlur=16;
   ctxBoard.fillStyle="#ffffff";
-  ctxBoard.font="900 42px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+  ctxBoard.font="900 40px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
   ctxBoard.textAlign="center";
-  ctxBoard.fillText("🏆 RETRO ARCADE LEADERBOARD 🏆",512,64);
+  ctxBoard.fillText("🏆 RETRO ARCADE CHAMPIONSHIP 🏆",512,58);
 
-  ctxBoard.font="bold 26px 'Courier New', monospace";
+  ctxBoard.font="bold 24px 'Courier New', monospace";
   ctxBoard.textAlign="left";
   const scores=[
     {rank:"1ST",name:"SANTA SPEEDSTER",time:"0:41.82",game:"VOXEL RACERS",color:"#00f0ff"},
     {rank:"2ND",name:"HOLIDAY ELX",time:"0:44.20",game:"REDLINE BIKES",color:"#fbbf24"},
-    {rank:"3RD",name:"RUDOLPH DRIFT",time:"0:46.05",game:"VOXEL RACERS",color:"#ff3b94"}
+    {rank:"3RD",name:"RUDOLPH DRIFT",time:"0:46.05",game:"VOXEL RACERS",color:"#ff3b94"},
+    {rank:"4TH",name:"CYBER FROST",time:"0:47.38",game:"VOXEL RACERS",color:"#00ff88"}
   ];
   scores.forEach((s,idx)=>{
-    const yy=115+idx*44;
+    const yy=102+idx*40;
     ctxBoard.fillStyle=s.color;
     ctxBoard.shadowColor=s.color;
     ctxBoard.shadowBlur=8;
@@ -1016,155 +1704,57 @@ export function buildOffice(count=12){
   });
   const texBoard=new THREE.CanvasTexture(canBoard);
   texBoard.colorSpace=THREE.SRGBColorSpace;
-  const boardMesh=new THREE.Mesh(new THREE.PlaneGeometry(5.20,1.32),new THREE.MeshBasicMaterial({map:texBoard}));
-  boardMesh.position.set(1.00,2.85,8.49);
-  boardMesh.rotation.y=Math.PI; // Face south towards arcade lounge players
+  const boardMesh=new THREE.Mesh(new THREE.PlaneGeometry(6.20,1.52),new THREE.MeshBasicMaterial({map:texBoard}));
+  boardMesh.position.set(0.60,2.85,12.35);
+  boardMesh.rotation.y=Math.PI; // Face south towards entering players
   arcadeRoom.add(boardMesh);
 
-  // West & East cyber wall panelling
-  block(arcadeRoom,-7.75,2.15,4.40,.28,4.30,8.60,0x111625,false);
-  block(arcadeRoom,7.75,2.15,4.40,.28,4.30,8.60,0x111625,false);
+  // Flanking Synthwave Neon Wall Art Panels
+  block(arcadeRoom,-4.80,2.80,12.38,1.80,1.80,.04,0x101422);
+  block(arcadeRoom,-4.80,2.80,12.36,1.60,1.60,.01,0xff007f);
+  block(arcadeRoom,5.40,2.80,12.38,1.80,1.80,.04,0x101422);
+  block(arcadeRoom,5.40,2.80,12.36,1.60,1.60,.01,0x00f0ff);
 
-  // Atmospheric Overhead Neon Tube Lights
-  const neonCyan=new THREE.PointLight(0x00f0ff,1.30,9.0);
-  neonCyan.position.set(-3.2,3.5,4.2);
-  arcadeRoom.add(neonCyan);
-  const neonMagenta=new THREE.PointLight(0xff007f,1.30,9.0);
-  neonMagenta.position.set(4.2,3.5,4.2);
-  arcadeRoom.add(neonMagenta);
-  const neonWarm=new THREE.PointLight(0xffaa22,.80,7.0);
-  neonWarm.position.set(1.0,3.5,6.8);
-  arcadeRoom.add(neonWarm);
-
-  // 1) WEST WALL: 3 Full-Size 3D Voxel Arcade Cabinets with CRT screens & bar stools
-  const CAB_DEFS=[
-    {name:"VOXEL RACERS",title:"RACERS",color:0x00f0ff,screen:0x00ffff,z:2.20},
-    {name:"CYBER RUNNER",title:"CYBER",color:0xff007f,screen:0xff0099,z:3.90},
-    {name:"NEON STRIKE",title:"STRIKE",color:0xffaa00,screen:0x00ff88,z:5.60}
-  ];
-  CAB_DEFS.forEach((cd,cIdx)=>{
-    const cab=new THREE.Group();
-    cab.position.set(-6.40,0,cd.z);
-    cab.rotation.y=Math.PI/2;
-    cab.name="arcadeCabinet_"+cIdx;
-    arcadeRoom.add(cab);
-
-    // Cabinet chassis
-    block(cab,0,.95,0,.76,1.90,.82,0x101420);
-    // Neon side T-molding
-    block(cab,-.39,.95,0,.04,1.86,.80,cd.color);
-    block(cab,.39,.95,0,.04,1.86,.80,cd.color);
-
-    // Beveled CRT screen with glow
-    const cScreen=block(cab,0,1.28,.24,.60,.46,.08,0x060c14);
-    cScreen.rotation.x=-.22;
-    const cScreenGlow=block(cab,0,1.28,.26,.54,.40,.02,cd.screen);
-    cScreenGlow.rotation.x=-.22;
-
-    // Control deck
-    const cDeck=block(cab,0,.92,.40,.68,.08,.38,0x1b202c);
-    cDeck.rotation.x=.15;
-    // Dual joysticks
-    cyl(cab,-.16,.98,.38,.015,.015,.09,0xd0d8e0);
-    ball(cab,-.16,1.03,.38,.04,cd.color);
-    cyl(cab,.14,.98,.38,.015,.015,.09,0xd0d8e0);
-    ball(cab,.14,1.03,.38,.04,0xffea00);
-    // Action buttons
-    for(const bx of [-.06,.02,.10]){
-      cyl(cab,bx,.96,.34,.02,.02,.02,0x00ff88);
-      cyl(cab,bx,.96,.40,.02,.02,.02,0xff2244);
-    }
-
-    // Glowing Marquee Header Box
-    block(cab,0,1.78,.20,.70,.20,.14,cd.color);
-    block(cab,0,1.78,.26,.64,.15,.03,0xffffff);
-
-    // Lower Coin Door & reject slots
-    block(cab,0,.45,.41,.40,.46,.02,0x0c0f16);
-    cyl(cab,-.08,.52,.43,.02,.04,.02,0xff5500);
-    cyl(cab,.08,.52,.43,.02,.04,.02,0xff5500);
-
-    // Chrome Bar Stool in front of cabinet
-    const stool=new THREE.Group();
-    stool.position.set(-5.35,0,cd.z);
-    arcadeRoom.add(stool);
-    cyl(stool,0,.02,0,.22,.22,.03,0x99a3b0,16);
-    cyl(stool,0,.32,0,.024,.024,.62,0xc0c8d4,12);
-    cyl(stool,0,.18,0,.15,.15,.02,0x99a3b0,16);
-    // Cushioned red leather seat
-    cyl(stool,0,.64,0,.20,.20,.08,0x991b1b,16);
-    ball(stool,0,.68,0,.19,0xb91c1c);
-  });
-  colliders.push({x:-6.30,z:arcadeStart+3.90,hx:1.10,hz:2.60});
-
-  // 2) EAST WALL: 2 Pinball Machines & Retro Cyber Soda Machine
-  // Pinball 1 (z: 2.40) & Pinball 2 (z: 4.20)
-  for(const [pIdx,pz] of [[0,2.40],[1,4.20]]){
-    const pb=new THREE.Group();
-    pb.position.set(6.20,0,pz);
-    pb.rotation.y=-Math.PI/2;
-    arcadeRoom.add(pb);
-
-    // Sloped pinball body
-    block(pb,0,.70,0,.64,.36,1.40,0x161e2e);
-    // Glass playfield
-    const glass=block(pb,0,.82,.08,.56,.04,1.10,pIdx===0?0x00e5ff:0xff007f);
-    glass.rotation.x=.14;
-    // Chrome legs
-    for(const lx of [-.28,.28])for(const lz of [-.62,.62]){
-      cyl(pb,lx,.32,lz,.018,.018,.66,0xc2c9d4,8);
-    }
-    // Elevated Backbox with illuminated glass scoreboard
-    block(pb,0,1.38,-.62,.68,.62,.24,0x121724);
-    block(pb,0,1.38,-.50,.58,.52,.03,pIdx===0?0xffea00:0x00f0ff);
-  }
-
-  // Retro Cyber Soda Vending Machine (x: 6.20, z: 6.00)
-  const soda=new THREE.Group();
-  soda.position.set(6.20,0,6.00);
-  soda.rotation.y=-Math.PI/2;
-  arcadeRoom.add(soda);
-  block(soda,0,1.05,0,.84,2.10,.82,0x1e2638);
-  // Glowing front display
-  block(soda,0,1.32,.42,.72,.88,.04,0x00f0ff);
-  block(soda,0,.65,.42,.72,.30,.03,0x0f1522);
-  // Dispenser flap
-  block(soda,0,.28,.42,.42,.22,.04,0x080c14);
-  colliders.push({x:6.20,z:arcadeStart+4.20,hx:1.10,hz:2.60});
-
-  // 3) SOUTH-EAST: Cyber Lounge Chillout Corner
-  const gamerLounge=new THREE.Group();
-  gamerLounge.position.set(3.80,0,7.20);
-  arcadeRoom.add(gamerLounge);
-  block(gamerLounge,0,.38,0,2.60,.54,.80,0x141b2c);
-  block(gamerLounge,0,.70,.36,2.60,.52,.18,0x0c111e);
-  // Low cocktail table
-  block(gamerLounge,-1.60,.28,0,.70,.52,.60,0x1c2436);
-  cyl(gamerLounge,-1.60,.58,0,.04,.04,.12,0x00f0ff);
-  cyl(gamerLounge,-1.50,.58,.10,.04,.04,.12,0xff007f);
-  colliders.push({x:3.80,z:arcadeStart+7.20,hx:1.60,hz:.80});
-
-  // 4) CENTER INTERACTIVE TELEMETRY DAIS (x: 1.00, z: 4.20)
+  // =========================================================================
+  // 5) CENTER INTERACTIVE TELEMETRY DAIS & FLOATING TROPHY HOLOGRAM (x: 0.60, z: 5.80)
+  // =========================================================================
   const dais=new THREE.Group();
-  dais.position.set(1.00,0,4.20);
+  dais.position.set(0.60,0,5.80);
   dais.name="arcadeDais";
   arcadeRoom.add(dais);
-  // Dual glowing floor rings
-  cyl(dais,0,.04,0,1.30,1.30,.06,0x00f0ff,28);
-  cyl(dais,0,.05,0,1.05,1.05,.05,0xff007f,28);
-  cyl(dais,0,.06,0,.90,.90,.05,0x0c111e,24);
-  // Low holographic tech pedestal
-  cyl(dais,0,.45,0,.32,.26,.82,0x1b2334,16);
-  block(dais,0,.88,0,.50,.06,.50,0x00f0ff);
-  // Floating Arcade Game Controller Hologram
-  const joyPad=block(dais,0,1.18,0,.38,.16,.24,0xff007f);
-  joyPad.rotation.y=Math.PI/4;
-  joyPad.rotation.x=.15;
 
-  // North wall boundary collider
-  colliders.push({x:0,z:arcadeStart+8.55,hx:7.80,hz:.30});
-  // Center dais collider
-  colliders.push({x:1.00,z:arcadeStart+4.20,hx:.65,hz:.65});
+  // Triple concentric glowing floor rings
+  cyl(dais,0,.04,0,1.60,1.60,.06,0x00f0ff,28);
+  cyl(dais,0,.05,0,1.25,1.25,.05,0xff007f,28);
+  cyl(dais,0,.06,0,.90,.90,.05,0xffea00,24);
+
+  // High-tech holographic telemetry pedestal
+  cyl(dais,0,.45,0,.36,.30,.82,0x1b2334,16);
+  block(dais,0,.88,0,.54,.06,.54,0x00f0ff);
+
+  // Floating 3D Golden Arcade Trophy & Joystick Hologram
+  const trophyStem=cyl(dais,0,1.15,0,.06,.12,.34,0xffd700,12);
+  const trophyCup=cyl(dais,0,1.38,0,.18,.08,.24,0xffd700,16);
+  ball(dais,0,1.52,0,.06,0xffea00);
+  // Side handles
+  block(dais,-.22,1.38,0,.03,.18,.03,0xffd700);
+  block(dais,.22,1.38,0,.03,.18,.03,0xffd700);
+
+  // =========================================================================
+  // 6) UPDATED COLLIDERS: SPACIOUS ROOM & FULLY PROTECTED BOUNDARIES
+  // =========================================================================
+  // Room perimeter wall colliders
+  colliders.push({x:-7.85,z:arcadeStart+6.25,hx:.30,hz:6.25});
+  colliders.push({x:7.85,z:arcadeStart+6.25,hx:.30,hz:6.25});
+  colliders.push({x:0,z:arcadeStart+12.45,hx:7.85,hz:.30});
+
+  // Equipment colliders (leaves wide center aisle x: -4.5 to +4.5 completely walkable)
+  colliders.push({x:-6.40,z:arcadeStart+5.60,hx:1.20,hz:4.50}); // West arcade row
+  colliders.push({x:6.40,z:arcadeStart+3.30,hx:1.10,hz:1.80});  // East pinball row
+  colliders.push({x:6.40,z:arcadeStart+6.20,hx:1.10,hz:0.90});  // East vending machine
+  colliders.push({x:6.40,z:arcadeStart+8.80,hx:1.10,hz:1.50});  // East air hockey table
+  colliders.push({x:3.80,z:arcadeStart+11.20,hx:2.20,hz:0.90}); // VIP Gamer Lounge
+  colliders.push({x:0.60,z:arcadeStart+5.80,hx:0.80,hz:0.80});  // Center telemetry dais
 
   // Stage & party colliders
   colliders.push({x:-3.23,z:partyStart+5.03,hx:3.48,hz:1.15});
@@ -1190,9 +1780,9 @@ export function buildOffice(count=12){
   buildArchitecturalBays(root,{left,right,front,partyStart,bays,rowZ,viewWalls,twinkle},
     {softBlock,block,ball,mat});
   sculptCelebrationStage(party,{twinkle},{softBlock,block,ball,mat});
-  const optimizedBatches=batchOfficeStaticGeometry(root,twinkle,viewWalls);
+  const optimizedBatches=batchOfficeStaticGeometry(root,twinkle,viewWalls,arcadeRoom);
   return {root,colliders,seats,spawn,bays,optimizedBatches,
-    arcadeStation:{x:1.00,z:arcadeStart+4.20,approachX:1.00,approachZ:arcadeStart+2.20,roomZ:arcadeStart},
+    arcadeStation:{x:0.60,z:arcadeStart+5.80,approachX:1.00,approachZ:arcadeStart+2.60,roomZ:arcadeStart},
     // Structural wall passages are not additional explorable rooms.
     room:{left,right,front,back},
     partyStart,twinkle,viewWalls,passageCenters,rowZ,deskPitch:step,passageGap};

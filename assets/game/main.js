@@ -1099,7 +1099,7 @@ export function mountOffice(host,profile,notice=()=>{}){
     const arcAppX=office.arcadeStation?.approachX??1.20;
     const arcAppZ=office.arcadeStation?.approachZ??(office.partyStart+9.55);
     const arcadePos=new THREE.Vector3(arcX,1.0,arcZ);
-    if(ray.ray.distanceToPoint(arcadePos)<3.2){
+    if(ray.ray.distanceToPoint(arcadePos)<1.85){
       if(hero?.seated) standUp(false);
       moveTo(arcAppX,arcAppZ);
       notice("🕹️ Walking into the Retro Arcade Room!");
